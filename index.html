@@ -2863,6 +2863,56 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .sk-gate{margin-top:11px;padding:9px;text-align:center;border:1px solid #4a5565;
   background:#171b22;color:#9aa5b1;font:700 9.5px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase}
 .sk-gate b{color:#ffeec4}
+/* ══ STREET FIGHT ═════════════════════════════════════════════ */
+.sfight{position:fixed;inset:0;z-index:68;background:#0a0710;display:flex;flex-direction:column}
+.sfight #sf-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.sf-hud{position:relative;z-index:3;display:flex;align-items:flex-start;gap:clamp(8px,2vw,22px);
+  padding:clamp(8px,1.8vh,16px) clamp(10px,2vw,22px)}
+.sf-hud u{display:block;text-decoration:none;font:700 8px/1.5 var(--mono);
+  letter-spacing:.2em;text-transform:uppercase;color:#9183a8}
+.sf-timer b,.sf-kills b{display:block;font:400 clamp(24px,4.6vw,40px)/1 var(--serif);
+  color:#ffeec4;font-variant-numeric:tabular-nums}
+.sf-kills{text-align:right}
+.sf-mid{flex:1;min-width:0}
+.sf-bar{height:clamp(10px,1.8vh,15px);border:2px solid #6d3bd1;background:#18112a;overflow:hidden}
+.sf-bar i{display:block;height:100%;width:100%;transition:width .12s}
+.sf-combo{margin-top:5px;text-align:center;min-height:16px;
+  font:700 clamp(11px,1.7vw,15px)/1 var(--mono);letter-spacing:.14em;
+  text-transform:uppercase;color:#ffd36a;text-shadow:0 2px 8px #000}
+.sf-exit{flex:none;width:34px;height:34px;cursor:pointer;border:0;background:transparent;
+  color:#9183a8;font:300 26px/1 var(--mono)}
+.sf-exit:hover{color:#fff}
+.sf-bar2{position:absolute;left:50%;bottom:clamp(28px,5vh,46px);transform:translateX(-50%);z-index:3;
+  display:flex;gap:clamp(5px,1vw,10px)}
+.sf-slot{position:relative;min-width:clamp(62px,9vw,96px);padding:7px 8px 6px;cursor:pointer;
+  border:2px solid #6d3bd1;background:rgba(14,9,22,.88);text-align:center;transition:.1s}
+.sf-slot:hover,.sf-slot:active{background:rgba(109,59,209,.35);transform:translateY(-2px)}
+.sf-slot u{position:absolute;left:0;top:0;text-decoration:none;padding:1px 5px;
+  background:#6d3bd1;color:#f3edff;font:700 8.5px/1.3 var(--mono)}
+.sf-slot b{display:block;margin-top:5px;font:700 clamp(8.5px,1.1vw,10.5px)/1.2 var(--mono);
+  letter-spacing:.04em;color:#efe8ff;text-transform:uppercase}
+.sf-slot s{display:block;margin-top:2px;text-decoration:none;
+  font:700 clamp(10px,1.4vw,13px)/1 var(--mono);color:#ffd36a}
+.sf-keys{position:absolute;left:50%;bottom:clamp(8px,1.6vh,14px);transform:translateX(-50%);z-index:3;
+  font:400 9.5px/1.4 Arial,sans-serif;color:#6b5d82;white-space:nowrap}
+.sf-over{position:absolute;inset:0;z-index:5;display:grid;place-items:center;
+  background:rgba(8,5,14,.86);padding:16px}
+.sf-card{width:min(430px,100%);border:2px solid #6d3bd1;background:#0e0a16;
+  box-shadow:0 16px 46px rgba(0,0,0,.8);padding:clamp(14px,2.6vw,24px);text-align:center}
+.sf-card span{font:700 8.5px/1.6 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:#9183a8}
+.sf-card h3{margin:3px 0 13px;font:400 clamp(22px,4vw,36px)/1 var(--serif);
+  letter-spacing:.06em;text-transform:uppercase;color:#ffeec4}
+.sf-rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:7px;text-align:left}
+.sf-rows div{padding:7px 9px;border:1px solid #2b2140;background:#120c1d}
+.sf-rows u{display:block;text-decoration:none;font:700 8px/1.5 var(--mono);
+  letter-spacing:.14em;text-transform:uppercase;color:#8a7aa6}
+.sf-rows b{display:block;margin-top:2px;font:700 clamp(11px,1.5vw,14px)/1 var(--mono);color:#ffeec4}
+.sf-btns{display:flex;gap:8px;margin-top:14px}
+@media(max-width:620px){
+  .sf-slot{min-width:56px;padding:6px 5px}
+  .sf-keys{display:none}
+  .sf-timer b,.sf-kills b{font-size:22px}
+}
 @media(max-width:860px){
   .sk-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(120px,1fr) auto}
   .sk-body .gu-left{grid-column:1;grid-row:1}
@@ -4724,8 +4774,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         { id: "missions", label: "Missions", live: true,
           sub: "The career. Eight bouts, then the title — and every call in between.",
           art: 0 },
-        { id: "workout", label: "Workout", live: false,
-          sub: "Camp drills as their own mode: bag work, pads and load you have to manage.",
+        { id: "street", label: "Street Fight", live: true,
+          sub: "Arcade. Hold the middle of the street for sixty seconds against waves from both sides.",
           art: 1 },
         { id: "duel", label: "1v1", live: false,
           sub: "Two players, one fighter. One of you in each corner, making opposite calls.",
@@ -4883,13 +4933,462 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         el.querySelectorAll("[data-mode]").forEach((btn) =>
           btn.addEventListener("click", () => {
             const m = MODES.find((x) => x.id === btn.dataset.mode);
-            if (m && m.live) { closeModeSelect(); return openMissionSetup(); }
+            if (m && m.live) {
+              closeModeSelect();
+              return m.id === "street" ? openStreetFight() : openMissionSetup();
+            }
             maintenance(btn.dataset.mode);
           }));
         document.addEventListener("keydown", function esc(e) {
           if (e.key === "Escape") { closeModeSelect(); document.removeEventListener("keydown", esc); }
         });
       }
+
+      /* ── STREET FIGHT ────────────────────────────────────────────
+         A stylised arcade mode, deliberately nothing like the bout
+         simulation: no rounds, no corner, no stoppage. Waves come at
+         you from both sides and you hold the middle of the street for
+         sixty seconds using the skills you actually unlocked.
+         Fictional and cartoonish on purpose. */
+      const SF = {
+        on: false, raf: 0, last: 0, over: false,
+        t: 0, left: 60, kills: 0, combo: 0, best: 0,
+        foes: [], spawnT: 0, side: 1, firstBlood: false,
+        shake: 0, hitStop: 0, flash: 0, pops: [],
+        cam: { x: 0, z: 1, tx: 0, tz: 1 },
+        p: null, keys: new Set(),
+      };
+      const SF_W = 1000;                       /* world half-width */
+      const SF_TIERS = [
+        { n: "Scrapper",  hp: 40,  dmg: 5,  spd: 62,  col: "#6a7a90", reach: 44 },
+        { n: "Bruiser",   hp: 75,  dmg: 9,  spd: 54,  col: "#8a6a4e", reach: 48 },
+        { n: "Enforcer",  hp: 120, dmg: 14, spd: 48,  col: "#9a4a5c", reach: 52 },
+        { n: "Headliner", hp: 190, dmg: 20, spd: 44,  col: "#6e58a8", reach: 58 },
+      ];
+
+      function sfReset() {
+        const sk = skillStats();
+        SF.on = true; SF.over = false; SF.t = 0; SF.left = 60;
+        SF.kills = 0; SF.combo = 0; SF.best = 0;
+        SF.foes = []; SF.spawnT = .6; SF.side = 1; SF.firstBlood = false;
+        SF.shake = 0; SF.hitStop = 0; SF.flash = 0; SF.pops = [];
+        SF.cam = { x: 0, z: 1, tx: 0, tz: 1 };
+        SF.keys.clear();
+        SF.p = {
+          x: 0, hp: 100, max: 100, face: 1, step: 0,
+          atk: null, guard: false, dashT: 0, hurtT: 0, evadeT: 0,
+          sk,
+        };
+      }
+      function sfPunches() {
+        /* the hotbar is literally what you own, strongest last */
+        return SF.p.sk.punches.slice().sort((a, b) => a.dmg - b.dmg).slice(0, 4);
+      }
+      function sfPop(x, txt, col) { SF.pops.push({ x, y: 0, t: 0, txt, col }); }
+
+      function sfSpawn() {
+        const pressure = Math.min(1, SF.t / 45);
+        let tier = 0;
+        const r = Math.random();
+        if (r < pressure * .18) tier = 3;
+        else if (r < pressure * .45) tier = 2;
+        else if (r < .3 + pressure * .4) tier = 1;
+        const T = SF_TIERS[tier];
+        const side = SF.side; SF.side *= -1;
+        SF.foes.push({
+          x: side * (SF_W * .62 + Math.random() * 120),
+          hp: T.hp, max: T.hp, tier, T,
+          face: -side, state: "walk", wind: 0, cool: .5 + Math.random(),
+          hurtT: 0, dead: 0,
+        });
+      }
+
+      function sfAttack(idx) {
+        const p = SF.p;
+        if (SF.over || p.atk || p.hurtT > 0) return;
+        const list = sfPunches();
+        const s = list[Math.min(idx, list.length - 1)];
+        if (!s) return;
+        p.atk = { s, t: 0, dur: s.wind ? .42 : .20, hit: false, heavy: !!s.wind };
+      }
+      function sfDash() {
+        const p = SF.p;
+        if (SF.over || p.dashT > 0 || !p.sk.dash) return;
+        p.dashT = .22;
+      }
+
+      function sfStep(dt) {
+        const p = SF.p;
+        if (SF.hitStop > 0) { SF.hitStop -= dt; return; }
+        SF.t += dt;
+        SF.left = Math.max(0, SF.left - dt);
+        if (SF.left <= 0 && !SF.over) return sfEnd("Time");
+
+        /* ── player ── */
+        const mv = (SF.keys.has("a") || SF.keys.has("arrowleft") ? -1 : 0)
+                 + (SF.keys.has("d") || SF.keys.has("arrowright") ? 1 : 0);
+        p.guard = SF.keys.has("s") || SF.keys.has("arrowdown");
+        const spd = 210 * p.sk.move * (p.guard ? .45 : 1);
+        if (p.dashT > 0) {
+          p.dashT -= dt;
+          p.x += p.face * 760 * p.sk.dash * dt;
+        } else if (mv && !p.atk && p.hurtT <= 0) {
+          p.x += mv * spd * dt;
+          p.face = mv > 0 ? 1 : -1;
+          p.step += dt * 10;
+        } else p.step = 0;
+        p.x = Math.max(-SF_W, Math.min(SF_W, p.x));
+        if (p.hurtT > 0) p.hurtT -= dt;
+        if (p.evadeT > 0) p.evadeT -= dt;
+
+        if (p.atk) {
+          p.atk.t += dt * p.sk.spd;
+          const a = p.atk;
+          if (!a.hit && a.t >= a.dur * .45) {
+            a.hit = true;
+            const reach = (a.heavy ? 96 : 76);
+            let landed = 0;
+            for (const f of SF.foes) {
+              if (f.dead) continue;
+              const d = (f.x - p.x) * p.face;
+              if (d > -18 && d < reach) {
+                const chain = Math.min(SF.combo + 1, p.sk.chain);
+                const mult = (SF.combo > 0 ? p.sk.combo : 1)
+                           * (p.evadeT > 0 ? p.sk.counter : 1)
+                           * (1 + chain * .05);
+                const dmg = Math.round(a.s.dmg * mult);
+                f.hp -= dmg; f.hurtT = .18;
+                f.x += p.face * (a.heavy ? 34 : 16);
+                landed++;
+                sfPop(f.x, dmg, p.evadeT > 0 ? "#b9a0f0" : a.heavy ? "#ffd36a" : "#fff3cf");
+                if (Math.random() < (a.s.stun || 0) + p.sk.stun) { f.state = "stun"; f.wind = .7; }
+                if (f.hp <= 0) {
+                  f.dead = .01; SF.kills++;
+                  sfPop(f.x, f.T.n + " down", "#8ad17e");
+                }
+              }
+            }
+            if (landed) {
+              SF.combo++; SF.best = Math.max(SF.best, SF.combo);
+              SF.shake = a.heavy ? 12 : 6;
+              SF.hitStop = a.heavy ? .085 : .045;
+              SF.flash = .3;
+              if (!SF.firstBlood) {               /* the camera closes in on the first one that lands */
+                SF.firstBlood = true;
+                const tgt = SF.foes.find((f) => !f.dead);
+                SF.cam.tz = 1.42;
+                SF.cam.tx = tgt ? (p.x + tgt.x) / 2 : p.x;
+                setTimeout(() => { SF.cam.tz = 1.12; }, 1100);
+              }
+            }
+          }
+          if (p.atk.t >= p.atk.dur) p.atk = null;
+        }
+
+        /* ── foes ── */
+        SF.spawnT -= dt;
+        const want = 2 + Math.floor(SF.t / 14);
+        if (SF.spawnT <= 0 && SF.foes.filter((f) => !f.dead).length < want) {
+          sfSpawn();
+          SF.spawnT = Math.max(.7, 2.1 - SF.t / 32);
+        }
+        for (const f of SF.foes) {
+          if (f.dead) { f.dead += dt; continue; }
+          if (f.hurtT > 0) f.hurtT -= dt;
+          const d = p.x - f.x;
+          f.face = d > 0 ? 1 : -1;
+          if (f.state === "stun") {
+            f.wind -= dt;
+            if (f.wind <= 0) f.state = "walk";
+          } else if (Math.abs(d) > f.T.reach) {
+            f.x += Math.sign(d) * f.T.spd * dt;
+            f.state = "walk";
+          } else {
+            f.cool -= dt;
+            if (f.state === "wind") {
+              f.wind -= dt;
+              if (f.wind <= 0) {
+                f.state = "walk"; f.cool = 1.1 + Math.random() * .7;
+                if (Math.abs(p.x - f.x) <= f.T.reach + 10 && p.dashT <= 0) {
+                  if (Math.random() < p.sk.evade) {
+                    p.evadeT = .55; sfPop(p.x, "slip", "#7fd1ff");
+                  } else {
+                    const soak = p.guard ? Math.min(.85, p.sk.soak + .35) : p.sk.soak;
+                    const dmg = Math.max(1, Math.round(f.T.dmg * (1 - soak)));
+                    p.hp -= dmg; p.hurtT = .3; SF.combo = 0;
+                    p.x += f.face * 22; SF.shake = 9;
+                    sfPop(p.x, "-" + dmg, "#ff6a5a");
+                    if (p.hp <= 0) { p.hp = 0; return sfEnd("Down"); }
+                  }
+                }
+              }
+            } else if (f.cool <= 0) { f.state = "wind"; f.wind = .42; }
+          }
+        }
+        SF.foes = SF.foes.filter((f) => !f.dead || f.dead < .8);
+        if (SF.combo > 0 && !p.atk) {
+          SF.comboT = (SF.comboT || 0) + dt;
+          if (SF.comboT > 1.6) { SF.combo = 0; SF.comboT = 0; }
+        } else SF.comboT = 0;
+
+        /* ── camera ── */
+        if (!SF.firstBlood) SF.cam.tx = p.x;
+        else {
+          const near = SF.foes.filter((f) => !f.dead)
+            .sort((a, b) => Math.abs(a.x - p.x) - Math.abs(b.x - p.x))[0];
+          SF.cam.tx = near && Math.abs(near.x - p.x) < 380 ? (p.x + near.x) / 2 : p.x;
+        }
+        SF.cam.x += (SF.cam.tx - SF.cam.x) * Math.min(1, dt * 5);
+        SF.cam.z += (SF.cam.tz - SF.cam.z) * Math.min(1, dt * 3);
+        if (SF.shake > 0) SF.shake = Math.max(0, SF.shake - dt * 46);
+        if (SF.flash > 0) SF.flash = Math.max(0, SF.flash - dt * 2.6);
+        for (const o of SF.pops) { o.t += dt; o.y += dt * 46; }
+        SF.pops = SF.pops.filter((o) => o.t < .9);
+      }
+
+      /* ── STREET FIGHT · RENDER ───────────────────────────────── */
+      function sfDraw(ctx, W, H) {
+        const b = artBlock(ctx);
+        const z = SF.cam.z, camx = SF.cam.x;
+        const sx = (SF.shake ? (Math.random() - .5) * SF.shake : 0);
+        const sy = (SF.shake ? (Math.random() - .5) * SF.shake * .5 : 0);
+        const ground = H * .74;
+        const toX = (wx) => W / 2 + (wx - camx) * (z * W / 620) + sx;
+        const sc = z * W / 620;                        /* world → screen scale */
+
+        /* night sky over a wet street */
+        const sky = ctx.createLinearGradient(0, 0, 0, ground);
+        sky.addColorStop(0, "#3d2c58"); sky.addColorStop(.5, "#6d4a68"); sky.addColorStop(1, "#b4736a");
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+        /* far skyline, slow parallax */
+        for (let i = -8; i < 20; i++) {
+          const bw = 120, bx = toX(i * bw * 1.3 - camx * .55);
+          const bh = ground * (.22 + rnd(i * 3.1) * .34);
+          b(bx, ground - bh, bw * sc * 1.1, bh, "#3c2f56");
+          for (let r = 0; r < 6; r++) for (let c = 0; c < 3; c++) {
+            if ((i * 7 + r * 3 + c) % 3) continue;
+            b(bx + (6 + c * 13) * sc, ground - bh + (10 + r * 16) * sc, 7 * sc, 9 * sc, "#ffd98a");
+          }
+        }
+        /* shutters and a wall behind the action */
+        for (let i = -10; i < 24; i++) {
+          const wx = i * 180, px = toX(wx - camx * .18);
+          b(px, ground - 230 * sc, 170 * sc, 230 * sc, i % 2 ? "#50425f" : "#5d4c6d");
+          b(px + 14 * sc, ground - 160 * sc, 142 * sc, 130 * sc, "#3a3048");
+          for (let k = 0; k < 8; k++) b(px + 14 * sc, ground - 158 * sc + k * 17 * sc, 142 * sc, 7 * sc, "#564768");
+          if (i % 2 === 0) {
+            b(px + 70 * sc, ground - 256 * sc, 8 * sc, 30 * sc, "#2a2a2a");
+            b(px + 52 * sc, ground - 266 * sc, 44 * sc, 16 * sc, "#fff0c0");
+            const g = ctx.createRadialGradient(px + 74 * sc, ground - 250 * sc, 2, px + 74 * sc, ground - 250 * sc, 230 * sc);
+            g.addColorStop(0, "rgba(255,214,130,.42)"); g.addColorStop(1, "rgba(255,214,130,0)");
+            ctx.fillStyle = g; ctx.fillRect(px - 120 * sc, ground - 330 * sc, 380 * sc, 340 * sc);
+          }
+        }
+        /* road */
+        b(0, ground, W, H - ground, "#453b4c");
+        b(0, ground, W, 4, "#6b5c78");
+        for (let i = -14; i < 28; i++) {
+          const px = toX(i * 120);
+          b(px, ground + (H - ground) * .45, 64 * sc, 4 * sc, "rgba(236,226,196,.38)");
+        }
+
+        /* ── fighters ── */
+        const drawFoe = (f) => {
+          const x = toX(f.x), s = 58 * sc * (f.tier === 3 ? 1.16 : f.tier === 2 ? 1.08 : 1);
+          const hurt = f.hurtT > 0;
+          if (f.dead) { ctx.save(); ctx.globalAlpha = Math.max(0, 1 - f.dead / .8); }
+          ctx.fillStyle = "rgba(0,0,0,.42)";
+          ctx.beginPath(); ctx.ellipse(x, ground + 3, s * .42, s * .13, 0, 0, 6.3); ctx.fill();
+          const bodyC = hurt ? "#fff2f4" : f.T.col;
+          const lean = f.state === "wind" ? -f.face * s * .10 : 0;
+          b(x - s * .20, ground - s * .46, s * .16, s * .46, "#1d1b26");
+          b(x + s * .04, ground - s * .46, s * .16, s * .46, "#1d1b26");
+          b(x - s * .28 + lean, ground - s * .96, s * .56, s * .52, bodyC);
+          b(x - s * .22 + lean, ground - s * .90, s * .44, s * .38, hurt ? "#fff" : "#00000022");
+          b(x - s * .20 + lean, ground - s * 1.28, s * .40, s * .34, hurt ? "#fff" : "#caa184");
+          b(x - s * .20 + lean, ground - s * 1.34, s * .40, s * .12, "#15121b");
+          /* the fist he is winding up with */
+          const ar = f.state === "wind" ? s * .42 : s * .26;
+          b(x + f.face * ar + lean, ground - s * .86, s * .18, s * .18, f.state === "wind" ? "#e8453a" : bodyC);
+          /* health bar */
+          const bw2 = s * .9, bx2 = x - bw2 / 2, by2 = ground - s * 1.62;
+          b(bx2 - 1, by2 - 1, bw2 + 2, s * .11 + 2, "#0a0a0f");
+          b(bx2, by2, bw2 * Math.max(0, f.hp / f.max), s * .11,
+            f.tier === 3 ? "#b17ae0" : f.tier === 2 ? "#e8453a" : f.tier === 1 ? "#e8883a" : "#8ad17e");
+          if (f.dead) ctx.restore();
+        };
+        const p = SF.p, px2 = toX(p.x), ps = 62 * sc;
+        SF.foes.filter((f) => f.x < p.x).forEach(drawFoe);
+        /* player */
+        ctx.fillStyle = "rgba(0,0,0,.45)";
+        ctx.beginPath(); ctx.ellipse(px2, ground + 3, ps * .44, ps * .14, 0, 0, 6.3); ctx.fill();
+        const bob = Math.sin(p.step) * ps * .04;
+        const hurt = p.hurtT > 0;
+        const kick = p.atk ? Math.sin(Math.min(1, p.atk.t / p.atk.dur) * Math.PI) : 0;
+        b(px2 - ps * .22, ground - ps * .48 + bob, ps * .17, ps * .48, "#243247");
+        b(px2 + ps * .05, ground - ps * .48 + bob, ps * .17, ps * .48, "#243247");
+        b(px2 - ps * .30, ground - ps * 1.00 + bob, ps * .60, ps * .54, hurt ? "#ffd9d4" : "#9d2b22");
+        b(px2 - ps * .24, ground - ps * .94 + bob, ps * .48, ps * .40, hurt ? "#fff" : "#c2402f");
+        b(px2 - ps * .21, ground - ps * 1.34 + bob, ps * .42, ps * .36, "#e0a478");
+        b(px2 - ps * .21, ground - ps * 1.40 + bob, ps * .42, ps * .12, "#1d1711");
+        /* guard up, or the glove out on a punch */
+        if (p.guard) {
+          b(px2 - ps * .34, ground - ps * 1.30 + bob, ps * .26, ps * .26, "#cc3728");
+          b(px2 + ps * .08, ground - ps * 1.30 + bob, ps * .26, ps * .26, "#cc3728");
+        } else {
+          const reach = p.atk ? (p.atk.heavy ? ps * 1.1 : ps * .86) * kick : ps * .24;
+          b(px2 + p.face * reach - (p.face < 0 ? ps * .24 : 0), ground - ps * .96 + bob,
+            ps * .26, ps * .24, "#cc3728");
+          b(px2 + p.face * reach * .55 - (p.face < 0 ? ps * .16 : 0), ground - ps * .92 + bob,
+            ps * .18, ps * .17, "#e0a478");
+          if (p.atk && kick > .6) {
+            ctx.strokeStyle = "rgba(255,226,168,.75)"; ctx.lineWidth = Math.max(1, 2 * sc);
+            ctx.beginPath();
+            ctx.arc(px2 + p.face * reach, ground - ps * .86 + bob, ps * .34, -1, 1);
+            ctx.stroke();
+          }
+        }
+        if (p.dashT > 0) { ctx.fillStyle = "rgba(226,232,240,.25)";
+          for (let i = 1; i < 4; i++) ctx.fillRect(px2 - p.face * i * ps * .3, ground - ps * 1.1, ps * .1, ps * 1.05); }
+        if (p.evadeT > 0) { ctx.strokeStyle = "rgba(127,209,255,.6)"; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(px2, ground - ps * .8, ps * .7, 0, 6.3); ctx.stroke(); }
+        SF.foes.filter((f) => f.x >= p.x).forEach(drawFoe);
+
+        /* damage numbers */
+        ctx.textAlign = "center";
+        for (const o of SF.pops) {
+          ctx.globalAlpha = Math.max(0, 1 - o.t / .9);
+          ctx.fillStyle = o.col;
+          ctx.font = "700 " + Math.round(15 * sc + 6) + "px ui-monospace, monospace";
+          ctx.fillText(o.txt, toX(o.x), ground - 110 * sc - o.y);
+        }
+        ctx.globalAlpha = 1; ctx.textAlign = "left";
+        if (SF.flash > 0) { ctx.fillStyle = "rgba(255,240,205," + (SF.flash * .16).toFixed(3) + ")"; ctx.fillRect(0, 0, W, H); }
+        /* edge arrows for anyone off-screen */
+        for (const f of SF.foes) {
+          if (f.dead) continue;
+          const fx2 = toX(f.x);
+          if (fx2 < 8) { b(6, ground - 70, 10, 10, "#e8453a"); }
+          else if (fx2 > W - 8) { b(W - 16, ground - 70, 10, 10, "#e8453a"); }
+        }
+        const v = ctx.createRadialGradient(W / 2, H * .55, Math.min(W, H) * .42, W / 2, H * .55, H);
+        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.20)");
+        ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+      }
+
+      /* ── STREET FIGHT · SCREEN ───────────────────────────────── */
+      function closeStreetFight() {
+        SF.on = false;
+        cancelAnimationFrame(SF.raf);
+        document.querySelectorAll(".sfight").forEach((n) => n.remove());
+      }
+      function sfEnd(why) {
+        if (SF.over) return;
+        SF.over = true; SF.on = false;
+        const secs = Math.round(60 - SF.left);
+        const gold = Math.round(SF.kills * 55 + secs * 6 + SF.best * 18);
+        const xp = Math.round(SF.kills * 22 + secs * 3);
+        P.gold += gold; P.xp += xp;
+        let levels = 0;
+        while (P.xp >= xpNeed(P.lv)) { P.xp -= xpNeed(P.lv); P.lv++; levels++; }
+        if (SF.kills >= 12) { P.sp = (P.sp || 0) + 1; }
+        saveProfile(); refreshLobbyCard();
+        const host = document.querySelector("#sf-over");
+        if (!host) return;
+        host.hidden = false;
+        host.innerHTML = `
+          <div class="sf-card">
+            <span>${why === "Down" ? "You went down" : "Time"}</span>
+            <h3>${SF.kills} dropped</h3>
+            <div class="sf-rows">
+              <div><u>Survived</u><b>${secs}s</b></div>
+              <div><u>Best combo</u><b>${SF.best}</b></div>
+              <div><u>Gold</u><b>+${gold.toLocaleString()}</b></div>
+              <div><u>Experience</u><b>+${xp.toLocaleString()}</b></div>
+              ${SF.kills >= 12 ? `<div><u>Skill point</u><b>+1</b></div>` : ""}
+              ${levels ? `<div><u>Level up</u><b>${P.lv}</b></div>` : ""}
+            </div>
+            <div class="sf-btns">
+              <button class="tr-btn" id="sf-again" type="button">Again</button>
+              <button class="tr-btn ghost" id="sf-quit" type="button">Leave</button>
+            </div>
+          </div>`;
+        host.querySelector("#sf-again").addEventListener("click", () => { host.hidden = true; sfBegin(); });
+        host.querySelector("#sf-quit").addEventListener("click", closeStreetFight);
+      }
+
+      function openStreetFight() {
+        ensureSkills();
+        closeModeSelect(); closeStreetFight();
+        const el = document.createElement("div");
+        el.className = "sfight";
+        el.innerHTML = `
+          <canvas id="sf-canvas" aria-label="Street fight arcade mode"></canvas>
+          <div class="sf-hud">
+            <div class="sf-timer"><u>Time</u><b id="sf-time">60</b></div>
+            <div class="sf-mid">
+              <div class="sf-cond"><u>Condition</u><div class="sf-bar"><i id="sf-hp"></i></div></div>
+              <div class="sf-combo" id="sf-combo"></div>
+            </div>
+            <div class="sf-kills"><u>Dropped</u><b id="sf-kills">0</b></div>
+            <button class="sf-exit" id="sf-exit" type="button" aria-label="Leave">&times;</button>
+          </div>
+          <div class="sf-bar2" id="sf-hotbar"></div>
+          <div class="sf-keys">A / D move &middot; S guard &middot; 1&ndash;4 punch &middot; Shift dash</div>
+          <div class="sf-over" id="sf-over" hidden></div>`;
+        document.body.appendChild(el);
+        el.querySelector("#sf-exit").addEventListener("click", closeStreetFight);
+        const cv = $("#sf-canvas"), ctx = cv.getContext("2d");
+        const fit = () => {
+          const r = cv.getBoundingClientRect();
+          cv.width = Math.max(320, Math.round(r.width));
+          cv.height = Math.max(200, Math.round(r.height));
+        };
+        fit();
+        if (window.ResizeObserver) new ResizeObserver(fit).observe(cv);
+
+        const bar = $("#sf-hotbar");
+        const paintBar = () => {
+          bar.innerHTML = sfPunches().map((s, i) =>
+            `<button class="sf-slot" data-p="${i}" type="button"><u>${i + 1}</u><b>${escapeUI(s.name)}</b><s>${Math.round(s.dmg)}</s></button>`).join("");
+          bar.querySelectorAll("[data-p]").forEach((bn) =>
+            bn.addEventListener("click", () => sfAttack(Number(bn.dataset.p))));
+        };
+        sfBegin = function () {
+          sfReset(); paintBar();
+          SF.last = 0;
+          cancelAnimationFrame(SF.raf);
+          SF.raf = requestAnimationFrame(frame);
+        };
+        function frame(ts) {
+          if (!document.querySelector(".sfight")) return;
+          const dt = SF.last ? Math.min(.10, (ts - SF.last) / 1000) : 0;
+          SF.last = ts;
+          if (SF.on) sfStep(dt);
+          sfDraw(ctx, cv.width, cv.height);
+          const tEl = $("#sf-time"), hEl = $("#sf-hp"), kEl = $("#sf-kills"), cEl = $("#sf-combo");
+          if (tEl) tEl.textContent = Math.ceil(SF.left);
+          if (hEl) { hEl.style.width = (SF.p.hp / SF.p.max * 100) + "%";
+                     hEl.style.background = SF.p.hp < 30 ? "#e8453a" : SF.p.hp < 60 ? "#e8883a" : "#6fcf5e"; }
+          if (kEl) kEl.textContent = SF.kills;
+          if (cEl) cEl.textContent = SF.combo > 1 ? SF.combo + " hit" : "";
+          SF.raf = requestAnimationFrame(frame);
+        }
+        sfBegin();
+      }
+      let sfBegin = () => {};
+      /* keys: only while the street fight is actually on screen */
+      window.addEventListener("keydown", (e) => {
+        if (!document.querySelector(".sfight")) return;
+        const t = e.target;
+        if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || "")) return;
+        const k = e.key.toLowerCase();
+        if (["a", "d", "s", "arrowleft", "arrowright", "arrowdown"].includes(k)) { SF.keys.add(k); e.preventDefault(); }
+        else if (k >= "1" && k <= "4") { sfAttack(Number(k) - 1); e.preventDefault(); }
+        else if (k === "shift") { sfDash(); e.preventDefault(); }
+        else if (k === "escape") closeStreetFight();
+      });
+      window.addEventListener("keyup", (e) => SF.keys.delete(e.key.toLowerCase()));
 
       /* ── MISSION SETUP ───────────────────────────────────────────
          Pick the room and the level of fight. Difficulty is the honest
@@ -5173,7 +5672,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       }
       function hotkeysBlocked() {
         if (document.querySelector(".st-key.binding")) return true;
-        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup")) return true;
+        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight")) return true;
         return !!document.querySelector("dialog[open]");
       }
       window.addEventListener("keydown", (e) => {
@@ -5858,7 +6357,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       /* ── gym input ───────────────────────────────────────────── */
       function gymActive() {
         return lobbyView === "gym" && !!document.querySelector(".lobby")
-          && !document.querySelector(".trainer,.settings,.market,.gearup,.msetup,.modesel,#gymload,.boardwrap,.tradewrap");
+          && !document.querySelector(".trainer,.settings,.market,.gearup,.msetup,.modesel,#gymload,.boardwrap,.tradewrap,.sfight");
       }
       window.addEventListener("keydown", (e) => {
         if (!gymActive()) return;

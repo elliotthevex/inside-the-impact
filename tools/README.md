@@ -18,8 +18,16 @@ do not apply and the stray backslash killed the whole script.
 
 ## 2. `smoke.js` — does it actually start?
 
+Serve it over HTTP rather than opening the file directly. The build is
+now too large for the browser pane's `file://` snapshot, and a real
+origin also gives you working `localStorage`, which `data:` URLs block:
+
+```sh
+python3 tools/serve.py        # http://127.0.0.1:8781
 ```
-open file:///…/inside-the-impact.html   # wait ~9s for boot to clear
+
+```
+open http://localhost:8781/   # wait ~9s for boot to clear
 paste site/tools/smoke.js into the console
 ```
 
