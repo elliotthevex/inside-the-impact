@@ -2151,10 +2151,7 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
   display:flex;flex-direction:column;align-items:center;
 }
 #gymload.out{opacity:0;transition:opacity .35s ease}
-#gymload .gl-name,#gymload .gl-art,#gymload .gl-foot{animation:glIn .34s ease both}
-#gymload .gl-art{animation-delay:.04s}
-#gymload .gl-foot{animation-delay:.09s}
-@keyframes glIn{from{opacity:0}to{opacity:1}}
+/* deliberately no entrance animation: the room is readable on frame one */
 .gl-name{
   position:relative;z-index:3;width:100%;padding:clamp(14px,3.4vh,34px) 16px clamp(8px,1.6vh,14px);
   text-align:center;
@@ -2174,8 +2171,8 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
 .gl-art::after{
   content:"";position:absolute;inset:0;pointer-events:none;
   background:
-    linear-gradient(180deg,rgba(0,0,0,.92),rgba(0,0,0,.1) 15%,rgba(0,0,0,.06) 62%,rgba(0,0,0,.92)),
-    radial-gradient(ellipse at 50% 50%,transparent 46%,rgba(0,0,0,.5));
+    linear-gradient(180deg,rgba(0,0,0,.9),rgba(0,0,0,.06) 13%,rgba(0,0,0,.04) 66%,rgba(0,0,0,.9)),
+    radial-gradient(ellipse at 50% 50%,transparent 58%,rgba(0,0,0,.34));
 }
 .gl-foot{
   position:relative;z-index:3;width:100%;padding:0 16px clamp(16px,4vh,40px);
