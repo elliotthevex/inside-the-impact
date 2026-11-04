@@ -4243,7 +4243,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
           const mult = 1 + P.lv * 0.01;
           $("#mz-rewards").innerHTML =
             `<div class="mz-rw">${COIN}<b>${Math.round(d.gold * mult).toLocaleString()}</b><s>Coins</s></div>
-             <div class="mz-rw gem">${GEM}<b>${d.gems}</b><s>Gems</s></div>`;
+             <div class="mz-rw gem">${GEM}<b>${d.gems}</b><s>Gem${d.gems === 1 ? "" : "s"}</s></div>`;
           $("#mz-note").textContent = locked
             ? `Locked until level ${d.lv}. You are level ${P.lv}.`
             : "Paid out when the bout ends — a stoppage to protect the fighter pays the full amount.";
