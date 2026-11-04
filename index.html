@@ -2498,6 +2498,25 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 }
 .lb-mult.boosted u{background:rgba(138,209,126,.2);color:#b5e8aa}
 .lb-mult.boosted s{color:#8ad17e}
+.gym-stations{
+  position:absolute;left:50%;bottom:clamp(96px,16vh,150px);transform:translateX(-50%);z-index:6;
+  display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(6px,1vw,11px);
+  width:min(620px,calc(100% - 28px));
+}
+.gym-st{
+  flex:1 1 128px;max-width:160px;padding:clamp(7px,1.3vh,12px) 8px;cursor:pointer;text-align:center;
+  border:2px solid var(--lb-gold);background:rgba(8,11,17,.86);
+  box-shadow:0 5px 16px rgba(0,0,0,.6);transition:.12s;
+}
+.gym-st:hover{background:rgba(232,194,114,.18);transform:translateY(-2px)}
+.gym-st b{display:block;font:400 clamp(11px,1.5vw,15px)/1.15 var(--serif);letter-spacing:.06em;
+  text-transform:uppercase;color:#ffeec4}
+.gym-st small{display:block;margin-top:3px;font:400 9px/1.4 Arial,sans-serif;color:#8ad17e}
+.gym-st span{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;
+  font:700 10.5px/1 var(--mono);color:#f1e6cc;font-variant-numeric:tabular-nums}
+.gym-st span svg{width:13px;height:13px}
+.gym-st i{font-style:normal}
+@media(max-height:620px){.gym-stations{bottom:clamp(84px,13vh,120px)}.gym-st{padding:6px}}
 @media(max-width:620px){
   .mk-grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}
   .mk-title{font-size:16px}
@@ -3535,7 +3554,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           gold: 1 + (lv - 1) * 0.01,
           luck: 1 + (lv - 1) * 0.01,
           exp: 1 + (lv - 1) * 0.02,
-          str: 1.05 + (lv - 1) * 0.01,
+          str: 1.05 + (lv - 1) * 0.01 + ((P && P.train) || 0) * 0.01,
         };
         /* a running boost multiplies its own number */
         if (typeof BOOST_DEF === "object" && P && P.boosts) {
@@ -3551,7 +3570,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       };
       let P = null;
       function loadProfile() {
-        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, boosts: {} };
+        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {} };
         try {
           const raw = localStorage.getItem(PROFILE_KEY);
           P = raw ? Object.assign(base, JSON.parse(raw)) : base;
@@ -4053,7 +4072,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         { id: "inventory", label: "Inventory" },
         { id: "market", label: "Market", live: true },
         { id: "rankings", label: "Rankings" },
-        { id: "gym", label: "Gym" },
+        { id: "gym", label: "Gym", live: true },
         { id: "battlepass", label: "Battlepass" },
       ];
       const MAINT_COPY = {
@@ -4074,6 +4093,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         if (id === "play") return openModeSelect();
         if (id === "gear") return;
         if (id === "market") return openMarket();
+        if (id === "gym") return setLobbyView("gym");
+        if (id === "switchview") return setLobbyView(lobbyView === "gym" ? "ring" : "gym");
         if (id === "guide") return instructions();
         if (id === "settings") return openSettings();
         maintenance(id);
@@ -4115,7 +4136,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         el.className = "lobby";
         el.innerHTML = `
           <canvas class="lb-art" id="lobby-art" role="img"
-            aria-label="Pixel art: a boxer taking a straight right flush on the cheek, head twisting off the impact"></canvas>
+            aria-label="${lobbyView === \"gym\" ? \"Pixel art of a weights room: squat rack, bench and dumbbell racks\" : \"Pixel art: a boxer taking a straight right flush on the cheek, head twisting off the impact\"}"></canvas>
           <div class="lb-shade"></div>
 
           <div class="lb-top">
@@ -4135,14 +4156,27 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           </div>
 
           <div class="lb-stage">
+            ${lobbyView === "gym" ? `
+            <div class="lb-tagline">
+              <b>Training Arena</b>
+              <i>Strength is built here. Judgement is built in the corner.</i>
+            </div>
+            <div class="gym-stations">
+              ${STATIONS.map((st) => `
+                <button class="gym-st" data-train="${st.id}" type="button" title="${escapeUI(st.blurb)}">
+                  <b>${st.name}</b>
+                  <small>+${st.gain.toFixed(2)}x strength</small>
+                  <span>${COIN_SVG}<i data-cost>${trainCost().toLocaleString()}</i></span>
+                </button>`).join("")}
+            </div>` : `
             <div class="lb-tagline">
               <b>Corner · Season One</b>
               <i>A safety stop pays more than a win. That is the whole game.</i>
-            </div>
+            </div>`}
 
             <div class="lb-profile">
               <div class="lb-av"><canvas id="lb-avatar" width="34" height="34" aria-hidden="true"></canvas><b>LV. ${P.lv}</b></div>
-              <button class="lb-switch" data-lobby="gym">Switch gym</button>
+              <button class="lb-switch" data-lobby="switchview">${lobbyView === "gym" ? "Switch lobby" : "Switch gym"}</button>
               <div class="lb-mults">
                 <div class="lb-mult ${boostActive("gold") ? "boosted" : ""}" data-m="gold" title="Coins earned from a bout"><u>GOLD</u><s>${fx(PM.gold)}</s></div>
                 <div class="lb-mult ${boostActive("luck") ? "boosted" : ""}" data-m="luck" title="Rare drop chance — not applied yet"><u>LUCK</u><s>${fx(PM.luck)}</s></div>
@@ -4163,6 +4197,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 
         el.querySelectorAll("[data-lobby]").forEach((btn) =>
           btn.addEventListener("click", () => lobbyGo(btn.dataset.lobby)));
+        el.querySelectorAll("[data-train]").forEach((btn) =>
+          btn.addEventListener("click", () => trainAt(btn.dataset.train)));
         document.body.appendChild(el);
 
         const av = $("#lb-avatar");
@@ -4189,7 +4225,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const reduced = document.body.dataset.reduceMotion === "1"
           || document.body.dataset.lowDetail === "1"
           || matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const paint = () => drawPunchScene(actx, AW, AH, lobbyT);
+        const paint = () => (lobbyView === "gym" ? drawGymArena : drawPunchScene)(actx, AW, AH, lobbyT);
         if (reduced) { lobbyT = .49; paint(); }
         else {
           /* Wall-clock driven: the punch takes the same 5.3s whether the
@@ -4896,6 +4932,134 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           }
         });
         renderTab();
+      }
+
+      /* ── TRAINING ARENA ──────────────────────────────────────────
+         The lobby has two views. The ring is where he gets punched;
+         the gym is where he gets strong. Switch Gym / Switch Lobby
+         flips between them without leaving the lobby chrome. */
+      let lobbyView = "ring";
+      const STATIONS = [
+        { id: "bench",  name: "Bench Press",   gain: .01, blurb: "Flat bench, free weight. Builds the pressing strength behind a cross." },
+        { id: "squat",  name: "Squat Rack",    gain: .01, blurb: "Everything a punch is worth starts at the floor." },
+        { id: "dumb",   name: "Dumbbells",     gain: .01, blurb: "Curls and raises. Slow, boring, and the reason the last round still has a jab in it." },
+        { id: "core",   name: "Medicine Ball", gain: .01, blurb: "Core work and body conditioning, so a shot downstairs does less." },
+      ];
+      const trainCost = () => 100 + ((P && P.train) || 0) * 25;
+
+      function drawGymArena(ctx, W, H, t) {
+        const b = (X, Y, Wd, Ht, c) => {
+          ctx.fillStyle = c;
+          ctx.fillRect(Math.round(X), Math.round(Y), Math.max(1, Math.round(Wd)), Math.max(1, Math.round(Ht)));
+        };
+        const rep = Math.sin(t * Math.PI * 2);               /* one rep per cycle */
+        const floor = H * .66;
+        /* room */
+        b(-4, -4, W + 8, H + 8, "#0b0f16");
+        b(-4, -4, W + 8, floor, "#161d28");
+        /* mirrored back wall */
+        b(W * .30, H * .14, W * .42, floor - H * .18, "#1e2733");
+        b(W * .31, H * .15, W * .40, floor - H * .20, "#26323f");
+        for (let i = 0; i < 4; i++) b(W * .31 + i * W * .10, H * .15, 1, floor - H * .20, "#33414f");
+        /* breeze block */
+        for (let y = 0; y < floor; y += H * .055) {
+          for (let x = ((y / (H * .055)) % 2 ? -W * .04 : 0); x < W; x += W * .09) {
+            if (x > W * .28 && x < W * .72 && y > H * .13) continue;
+            b(x, y, W * .085, H * .048, (x * 7 + y * 11) % 3 ? "#1a2230" : "#202a38");
+          }
+        }
+        /* strip lights */
+        for (let i = 0; i < 3; i++) {
+          const lx = W * (.2 + i * .3);
+          b(lx - W * .07, H * .035, W * .14, H * .022, "#ffeab4");
+          const g = ctx.createRadialGradient(lx, H * .05, 2, lx, H * .05, H * .5);
+          g.addColorStop(0, "rgba(255,226,168,.16)"); g.addColorStop(1, "rgba(255,226,168,0)");
+          ctx.fillStyle = g; ctx.fillRect(lx - H * .5, 0, H, H);
+        }
+        /* rubber floor */
+        b(-4, floor, W + 8, H, "#141a22");
+        b(-4, floor, W + 8, H * .012, "#222c38");
+        for (let x = 0; x < W; x += W * .07) b(x, floor + H * .02, 1, H - floor, "rgba(0,0,0,.25)");
+
+        /* ── squat rack, left ── */
+        const rx = W * .12, ry = floor - H * .40;
+        b(rx, ry, W * .022, H * .40, "#9a2a22");
+        b(rx + W * .14, ry, W * .022, H * .40, "#9a2a22");
+        b(rx - W * .02, floor - H * .015, W * .20, H * .02, "#6d1b15");
+        b(rx - W * .03, ry + H * .06, W * .23, H * .016, "#c9ced6");     /* bar */
+        for (const px of [rx - W * .025, rx + W * .185]) {
+          b(px, ry + H * .02, W * .022, H * .085, "#2b3340");
+          b(px + W * .004, ry + H * .03, W * .014, H * .065, "#3d4756");
+        }
+        /* ── bench, centre, with a figure pressing ── */
+        const bx = W * .42, by = floor - H * .10;
+        b(bx, by, W * .17, H * .030, "#2a3240");
+        b(bx + W * .01, by + H * .004, W * .15, H * .018, "#3a4454");
+        b(bx + W * .015, by + H * .03, W * .018, H * .07, "#20262f");
+        b(bx + W * .135, by + H * .03, W * .018, H * .07, "#20262f");
+        /* lifter */
+        const lift = rep * H * .018;
+        b(bx + W * .03, by - H * .022, W * .11, H * .024, SK2);          /* torso */
+        b(bx + W * .04, by - H * .018, W * .09, H * .016, SK);
+        b(bx + W * .015, by - H * .030, W * .03, H * .030, SK2);         /* head */
+        b(bx + W * .018, by - H * .026, W * .022, H * .022, SK);
+        b(bx + W * .015, by - H * .034, W * .03, H * .012, HR);
+        b(bx + W * .045, by - H * .052 - lift, W * .012, H * .034, SK2); /* arms */
+        b(bx + W * .105, by - H * .052 - lift, W * .012, H * .034, SK2);
+        b(bx + W * .02, by - H * .060 - lift, W * .16, H * .013, "#c9ced6");  /* bar */
+        for (const px of [bx + W * .005, bx + W * .155]) {
+          b(px, by - H * .082 - lift, W * .022, H * .060, "#2b3340");
+          b(px + W * .004, by - H * .072 - lift, W * .014, H * .042, "#3d4756");
+        }
+        /* ── dumbbell rack, right ── */
+        const dx = W * .70;
+        b(dx, floor - H * .17, W * .25, H * .025, "#2a3240");
+        b(dx, floor - H * .09, W * .25, H * .025, "#2a3240");
+        b(dx, floor - H * .19, W * .016, H * .19, "#20262f");
+        b(dx + W * .235, floor - H * .19, W * .016, H * .19, "#20262f");
+        for (let i = 0; i < 6; i++) {
+          const ox = dx + W * .025 + i * W * .038;
+          for (const oy of [floor - H * .195, floor - H * .115]) {
+            b(ox, oy, W * .026, H * .012, "#c9ced6");
+            b(ox - W * .004, oy - H * .006, W * .010, H * .024, "#38424f");
+            b(ox + W * .020, oy - H * .006, W * .010, H * .024, "#38424f");
+          }
+        }
+        /* plates leaning against the wall, and a kettlebell */
+        b(W * .03, floor - H * .09, W * .05, H * .09, "#262f3b");
+        b(W * .035, floor - H * .08, W * .04, H * .07, "#333d4a");
+        b(W * .33, floor - H * .05, W * .035, H * .05, "#2b3340");
+        b(W * .338, floor - H * .062, W * .018, H * .016, "#3d4756");
+        /* chalk dust */
+        for (let i = 0; i < 26; i++) {
+          const px = rnd(i * 5.1) * W, py = floor - rnd(i * 2.7) * H * .3;
+          b(px, py, 1 + (i % 2), 1, i % 3 ? "rgba(226,232,240,.16)" : "rgba(226,232,240,.3)");
+        }
+        /* grade */
+        const v = ctx.createRadialGradient(W / 2, H * .5, Math.min(W, H) * .3, W / 2, H * .5, H * .95);
+        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.62)");
+        ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "rgba(8,11,18,.13)";
+        const st = Math.max(2, Math.round(H * .017));
+        for (let y = 0; y < H; y += st) ctx.fillRect(0, y, W, 1);
+      }
+
+      function trainAt(id) {
+        const st = STATIONS.find((x) => x.id === id);
+        if (!st || !P) return;
+        const cost = trainCost();
+        if (P.gold < cost) return gateToast(`Need ${cost.toLocaleString()} gold to train.`);
+        P.gold -= cost;
+        P.train = (P.train || 0) + 1;
+        saveProfile();
+        refreshLobbyCard();
+        const host = document.querySelector(".gym-stations");
+        if (host) host.querySelectorAll("[data-cost]").forEach((n) => { n.textContent = trainCost().toLocaleString(); });
+        gateToast(`+${st.gain.toFixed(2)}x strength · ${st.name}`);
+      }
+      function setLobbyView(v) {
+        lobbyView = v;
+        intro();
       }
 
       /* ── MARKET ──────────────────────────────────────────────────
