@@ -5596,6 +5596,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       });
       window.addEventListener("blur", () => gymKeys.clear());
 
+      /* which room the lobby is showing */
+      let lobbyView = "ring";
       const VIEW_ORDER = ["ring", "gym", "plaza"];
       const VIEW_NEXT = { ring: "Switch gym", gym: "Switch plaza", plaza: "Switch lobby" };
       function setLobbyView(v) {
