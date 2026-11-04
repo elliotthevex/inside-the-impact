@@ -2583,19 +2583,30 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .tr-bar{height:7px;margin:6px 0;background:#1b2430;overflow:hidden}
 .tr-bar i{display:block;height:100%;transition:width .25s}
 .tr-run{text-align:center;padding-top:6px}
-.tr-set{font:400 clamp(22px,4vw,36px)/1 var(--serif);color:#ffeec4;letter-spacing:.08em}
-.tr-bigbar{position:relative;height:clamp(22px,4vh,32px);margin:12px 0;
+.tr-view{position:relative;width:100%;aspect-ratio:16/11;max-height:46vh;
+  border:2px solid #2a3340;background:#0b1019;overflow:hidden}
+.tr-view canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
+.tr-setbadge{position:absolute;left:0;top:0;padding:4px 10px;
+  background:rgba(5,7,11,.82);border-right:1px solid var(--lb-gold);
+  border-bottom:1px solid var(--lb-gold);
+  font:400 clamp(13px,2.2vw,20px)/1.2 var(--serif);color:#ffeec4;letter-spacing:.06em}
+.tr-timer{position:absolute;right:0;top:0;padding:4px 10px;
+  background:rgba(5,7,11,.82);border-left:1px solid var(--lb-gold);
+  border-bottom:1px solid var(--lb-gold);
+  font:700 clamp(13px,2.2vw,19px)/1.2 var(--mono);color:#ffd9a0;font-variant-numeric:tabular-nums}
+.tr-bigbar{position:relative;height:clamp(20px,3.4vh,28px);margin:9px 0;
   border:2px solid var(--lb-gold);background:#0d1219;overflow:hidden}
-.tr-bigbar i{display:block;height:100%;width:0}
+.tr-bigbar i{display:block;height:100%;width:0;transition:width .06s linear}
 .tr-bigbar span{position:absolute;inset:0;display:grid;place-items:center;
   font:700 11px/1 var(--mono);color:#fff6e2;text-shadow:0 1px 3px #000}
 .tr-smash{
-  width:100%;padding:clamp(16px,4vh,34px) 10px;cursor:pointer;
+  width:100%;padding:clamp(12px,2.6vh,22px) 10px;cursor:pointer;
   border:3px solid var(--lb-gold);background:linear-gradient(180deg,#f0d593,#c79f49);color:#140e04;
-  font:400 clamp(26px,5vw,44px)/1 var(--serif);letter-spacing:.14em;
+  font:400 clamp(24px,4.4vw,38px)/1 var(--serif);letter-spacing:.14em;
+  transition:transform .05s;
 }
 .tr-smash small{display:block;margin-top:6px;font:400 10px/1.3 Arial,sans-serif;letter-spacing:.04em;opacity:.7}
-.tr-smash.pop{transform:scale(.97)}
+.tr-smash.pop{transform:scale(.955)}
 .tr-foot{display:flex;justify-content:space-between;margin-top:9px;
   font:700 11px/1 var(--mono);color:#9aa5b1;font-variant-numeric:tabular-nums}
 .tr-end{text-align:center;padding-top:8px}
@@ -5459,6 +5470,163 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         b(x + ex + s * .16 * gymPlayer.face, y - s * 1.22 + bob, s * .10, s * .08, "#1b1109");
       }
 
+      /* ── EXERCISE ANIMATION ──────────────────────────────────────
+         The set is a thing you watch, not a number that goes up. Each
+         click drives one rep and the figure actually performs it:
+         the squat sinks and stands, the bench bar comes to the chest
+         and back, the curls close, the runner's legs turn over. */
+      function drawExercise(ctx, W, H, kind, phase, drive, rate) {
+        const b = artBlock(ctx);
+        /* bend: 0 at the top of the rep, 1 at the bottom */
+        const bend = Math.sin(Math.max(0, Math.min(1, phase)) * Math.PI);
+        const BAR = "#c9ced6", PL = "#2b3340", PL2 = "#3d4756", KIT = "#8a2820", KIT2 = "#b03a2c";
+        const u = H / 100;                               /* one percent of height */
+        const cx = W * .52, ground = H * .88;
+
+        /* room behind: a wall, a skirting line and the mat */
+        b(-2, -2, W + 4, H + 4, "#0d131c");
+        b(-2, -2, W + 4, ground - u * 2, "#161e2a");
+        for (let y = 0; y < ground - u * 2; y += u * 9) {
+          for (let x = ((y / (u * 9)) % 2 ? -W * .05 : 0); x < W; x += W * .11) {
+            b(x, y, W * .105, u * 8, (x * 7 + y * 3) % 3 ? "#1a2330" : "#1e2836");
+          }
+        }
+        b(-2, ground - u * 2, W + 4, u * 2, "#2b3542");
+        b(-2, ground, W + 4, H, "#11171f");
+
+        if (kind === "squat") {
+          /* rack uprights behind the lifter */
+          b(cx - W * .34, ground - u * 62, W * .05, u * 62, "#7d231d");
+          b(cx + W * .29, ground - u * 62, W * .05, u * 62, "#7d231d");
+          const drop = bend * u * 20;
+          const hip = ground - u * 40 + drop;
+          const sh = ground - u * 62 + drop;
+          /* legs fold as the hips drop */
+          const knee = ground - u * 21 + drop * .35;
+          for (const s of [-1, 1]) {
+            const lx = cx + s * W * .07;
+            b(lx - W * .035, sh + u * 22, W * .07, knee - (sh + u * 22), SKIN2);   /* thigh */
+            b(lx - W * .032 - bend * W * .03 * s, knee, W * .064, ground - knee, SKIN2);
+            b(lx - W * .04, ground - u * 3, W * .08, u * 3, "#2a3240");             /* shoe */
+          }
+          b(cx - W * .12, hip - u * 4, W * .24, u * 9, PL);                         /* shorts */
+          b(cx - W * .13, sh + u * 2, W * .26, hip - sh, KIT);                      /* torso */
+          b(cx - W * .10, sh + u * 5, W * .20, hip - sh - u * 7, KIT2);
+          b(cx - W * .08, sh - u * 11, W * .16, u * 12, SKIN2);                     /* head */
+          b(cx - W * .06, sh - u * 9, W * .12, u * 9, SKIN);
+          b(cx - W * .08, sh - u * 13, W * .16, u * 5, "#17120d");
+          /* arms up on the bar */
+          b(cx - W * .20, sh - u * 2, W * .055, u * 12, SKIN2);
+          b(cx + W * .145, sh - u * 2, W * .055, u * 12, SKIN2);
+          /* the bar, with plates, riding the shoulders */
+          b(cx - W * .40, sh - u * 3, W * .80, u * 4, BAR);
+          for (const px of [cx - W * .44, cx + W * .36]) {
+            b(px, sh - u * 13, W * .08, u * 24, PL);
+            b(px + W * .012, sh - u * 10, W * .056, u * 18, PL2);
+          }
+        } else if (kind === "bench") {
+          /* bench, seen from the side, lifter on his back */
+          const benchY = ground - u * 26;
+          b(cx - W * .34, benchY, W * .68, u * 7, PL);
+          b(cx - W * .30, benchY + u * 1.5, W * .60, u * 4, PL2);
+          b(cx - W * .26, benchY + u * 7, W * .06, u * 19, "#20262f");
+          b(cx + W * .20, benchY + u * 7, W * .06, u * 19, "#20262f");
+          b(cx - W * .46, benchY - u * 20, W * .05, u * 20, "#7d231d");
+          b(cx + W * .41, benchY - u * 20, W * .05, u * 20, "#7d231d");
+          /* body lying along the bench */
+          b(cx - W * .22, benchY - u * 9, W * .46, u * 10, KIT);
+          b(cx - W * .18, benchY - u * 7, W * .38, u * 6, KIT2);
+          b(cx - W * .34, benchY - u * 9, W * .13, u * 10, SKIN2);                  /* head end */
+          b(cx - W * .32, benchY - u * 7, W * .09, u * 7, SKIN);
+          b(cx - W * .34, benchY - u * 11, W * .13, u * 4, "#17120d");
+          b(cx + W * .22, benchY - u * 6, W * .17, u * 7, PL);                      /* legs off the end */
+          b(cx + W * .34, benchY - u * 2, W * .07, u * 16, SKIN2);
+          /* the bar travels from locked out down to the chest */
+          const top = benchY - u * 42, bottom = benchY - u * 13;
+          const barY = top + (bottom - top) * bend;
+          b(cx - W * .10, barY, W * .055, benchY - u * 8 - barY, SKIN2);            /* arms */
+          b(cx + W * .05, barY, W * .055, benchY - u * 8 - barY, SKIN2);
+          b(cx - W * .42, barY - u * 2, W * .84, u * 4, BAR);
+          for (const px of [cx - W * .46, cx + W * .38]) {
+            b(px, barY - u * 11, W * .08, u * 22, PL);
+            b(px + W * .012, barY - u * 8, W * .056, u * 16, PL2);
+          }
+        } else if (kind === "rack") {
+          /* standing curls, seen from the front */
+          const sh = ground - u * 56;
+          b(cx - W * .09, ground - u * 26, W * .07, u * 26, SKIN2);                 /* legs */
+          b(cx + W * .02, ground - u * 26, W * .07, u * 26, SKIN2);
+          b(cx - W * .11, ground - u * 3, W * .09, u * 3, "#2a3240");
+          b(cx + W * .02, ground - u * 3, W * .09, u * 3, "#2a3240");
+          b(cx - W * .11, ground - u * 30, W * .22, u * 8, PL);
+          b(cx - W * .13, sh, W * .26, u * 24, KIT);                                /* torso */
+          b(cx - W * .10, sh + u * 3, W * .20, u * 18, KIT2);
+          b(cx - W * .08, sh - u * 12, W * .16, u * 13, SKIN2);                     /* head */
+          b(cx - W * .06, sh - u * 10, W * .12, u * 10, SKIN);
+          b(cx - W * .08, sh - u * 14, W * .16, u * 5, "#17120d");
+          /* upper arms hang; forearms swing up with the rep */
+          for (const s of [-1, 1]) {
+            const ax = cx + s * W * .17 - (s < 0 ? W * .055 : 0);
+            b(ax, sh + u * 2, W * .055, u * 15, SKIN2);
+            const fy = sh + u * 17 - bend * u * 15;
+            b(ax + (s > 0 ? -W * .004 : W * .004), fy, W * .055, u * 15 - bend * u * 9, SKIN2);
+            if (bend > .3) b(ax, sh + u * 5, W * .055, u * 8 * bend, SKINH);        /* bicep */
+            const dy = fy - u * 4;
+            b(ax - W * .012, dy, W * .08, u * 5, BAR);                              /* dumbbell */
+            b(ax - W * .03, dy - u * 3, W * .035, u * 11, PL);
+            b(ax + W * .055, dy - u * 3, W * .035, u * 11, PL);
+          }
+        } else {
+          /* treadmill: the belt scrolls and the legs turn over */
+          const beltY = ground - u * 12;
+          b(cx - W * .40, beltY, W * .80, u * 12, "#232c38");
+          b(cx - W * .36, beltY + u * 2, W * .72, u * 7, "#0f141c");
+          const scroll = (rate * 26) % (W * .09);
+          for (let x = -W * .09; x < W * .78; x += W * .09) {
+            b(cx - W * .36 + x + scroll, beltY + u * 3, W * .035, u * 5, "#1d2630");
+          }
+          b(cx + W * .30, beltY - u * 38, W * .05, u * 38, "#2a3340");               /* console post */
+          b(cx + W * .22, beltY - u * 46, W * .20, u * 10, "#2f3a48");
+          b(cx + W * .25, beltY - u * 43, W * .14, u * 4, "#5fa8e8");
+          /* runner */
+          const cyc = phase * Math.PI * 2;
+          const bob = Math.abs(Math.sin(cyc)) * u * 3;
+          const hip = beltY - u * 24 - bob, sh = beltY - u * 44 - bob;
+          for (const s of [1, -1]) {
+            const th = Math.sin(cyc + (s > 0 ? 0 : Math.PI));
+            const kx = cx + th * W * .09, ky = hip + u * 12 - Math.abs(th) * u * 3;
+            b(cx - W * .03, hip, W * .06, ky - hip, s > 0 ? SKIN2 : SKIN3);
+            const fx2 = kx + th * W * .05;
+            b(kx - W * .028, ky, W * .056, beltY - ky, s > 0 ? SKIN2 : SKIN3);
+            b(fx2 - W * .035, beltY - u * 3, W * .08, u * 3, s > 0 ? "#2a3240" : "#1e252f");
+          }
+          b(cx - W * .09, hip - u * 4, W * .18, u * 8, PL);
+          b(cx - W * .10, sh, W * .20, u * 22, KIT);
+          b(cx - W * .075, sh + u * 3, W * .15, u * 16, KIT2);
+          b(cx - W * .07, sh - u * 12, W * .14, u * 13, SKIN2);
+          b(cx - W * .05, sh - u * 10, W * .10, u * 10, SKIN);
+          b(cx - W * .07, sh - u * 14, W * .14, u * 5, "#17120d");
+          for (const s of [1, -1]) {                                                 /* pumping arms */
+            const sw = Math.sin(cyc + (s > 0 ? Math.PI : 0));
+            b(cx + s * W * .09 - W * .025, sh + u * 2, W * .05, u * 13, SKIN2);
+            b(cx + s * W * .09 - W * .025 + sw * W * .035, sh + u * 13, W * .05, u * 11, SKIN2);
+          }
+        }
+        /* effort tells: sweat flies and the frame shakes when you are working */
+        if (drive > .15) {
+          for (let i = 0; i < Math.round(drive * 7); i++) {
+            const a = -2.6 + rnd(i * 4.1 + Math.floor(rate)) * 3.4;
+            const r = u * (12 + rnd(i * 2.3) * 22) * drive;
+            b(cx + Math.cos(a) * r, ground - u * 52 + Math.sin(a) * r * .8,
+              Math.max(1, u * 1.6), Math.max(1, u * 1.6), i % 3 ? "#cfe2f2" : "#ffe9c4");
+          }
+        }
+        /* grade */
+        const v = ctx.createRadialGradient(W / 2, H * .5, Math.min(W, H) * .3, W / 2, H * .5, H);
+        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.45)");
+        ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+      }
+
       /* ── the minigame ────────────────────────────────────────── */
       function closeTrainer() {
         document.querySelectorAll(".trainer").forEach((n) => n.remove());
@@ -5487,7 +5655,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const stage = $("#tr-stage");
         function pick() {
           stage.innerHTML = `
-            <p class="tr-note">Pick your setting. Harder means more clicks in the same ten seconds — and a bigger payout.</p>
+            <p class="tr-note">Harder is more reps in the same ten seconds, and pays more.</p>
             <div class="tr-diffs">
               ${m.diffs.map((d, i) => `
                 <button class="tr-diff" data-d="${d}" type="button">
@@ -5508,20 +5676,41 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           let clicks = 0, prog = 0, left = 10.0, done = false;
           stage.innerHTML = `
             <div class="tr-run">
-              <div class="tr-set">${d} ${m.unit}</div>
+              <div class="tr-view"><canvas id="tr-canvas" aria-hidden="true"></canvas>
+                <span class="tr-setbadge">${d} ${m.unit}</span>
+                <span class="tr-timer" id="tr-time">10.0</span></div>
               <div class="tr-bigbar"><i id="tr-fill" style="background:${st.col}"></i>
-                <span id="tr-pct">0%</span></div>
-              <button class="tr-smash" id="tr-smash" type="button">GO<small>click / tap / press space</small></button>
-              <div class="tr-foot"><span id="tr-clicks">0 / ${target}</span><span id="tr-time">10.0s</span></div>
+                <span id="tr-clicks">0 / ${target}</span></div>
+              <button class="tr-smash" id="tr-smash" type="button">GO</button>
             </div>`;
-          const fill = $("#tr-fill"), pct = $("#tr-pct"),
+          const fill = $("#tr-fill"),
                 cl = $("#tr-clicks"), tm = $("#tr-time"), smash = $("#tr-smash");
+          const pct = { textContent: "" };
+          /* the figure actually performs the lift, one rep per click */
+          const cvx = $("#tr-canvas"), g2 = cvx.getContext("2d");
+          let shownReps = 0, raf = 0;
+          const sizeIt = () => {
+            const r = cvx.parentElement.getBoundingClientRect();
+            const w = Math.max(120, Math.min(300, Math.round((r.width || 300) / 1.9)));
+            cvx.width = w;
+            cvx.height = Math.max(90, Math.round(w * ((r.height || 170) / Math.max(1, r.width || 300))));
+            g2.imageSmoothingEnabled = false;
+          };
+          sizeIt();
+          const loop = () => {
+            if (done || !cvx.isConnected) return;
+            shownReps += (clicks - shownReps) * .22;        /* chases your clicking */
+            const drive = Math.min(1, Math.abs(clicks - shownReps) * .9);
+            drawExercise(g2, cvx.width, cvx.height, m.kind,
+                         shownReps % 1, drive, shownReps);
+            raf = requestAnimationFrame(loop);
+          };
+          loop();
           const hit = () => {
             if (done) return;
             clicks++;
             prog = Math.min(100, (clicks / target) * 100);
             fill.style.width = prog + "%";
-            pct.textContent = Math.round(prog) + "%";
             cl.textContent = clicks + " / " + target;
             smash.classList.remove("pop"); void smash.offsetWidth; smash.classList.add("pop");
             if (prog >= 100) finish(true);
@@ -5538,15 +5727,15 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             prog = Math.max(0, prog - (m.kind === "tread" ? .55 : .35));
             clicks = Math.round((prog / 100) * target);
             fill.style.width = prog + "%";
-            pct.textContent = Math.round(prog) + "%";
             cl.textContent = clicks + " / " + target;
-            tm.textContent = Math.max(0, left).toFixed(1) + "s";
+            tm.textContent = Math.max(0, left).toFixed(1);
             if (left <= 0) finish(false);
           }, 100);
           function finish(won) {
             if (done) return;
             done = true;
             clearInterval(tick);
+            cancelAnimationFrame(raf);
             window.removeEventListener("keydown", keyHit);
             const gained = won ? reward : Math.round(reward * (prog / 100) * .4);
             P.gymStat = P.gymStat || { strength: 0, stamina: 0 };
@@ -5929,86 +6118,135 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           ctx.fillRect(Math.round(X), Math.round(Y), Math.max(1, Math.round(W)), Math.max(1, Math.round(H)));
         };
       }
-      /* n: 0..1 normalised rank for each of the three build stats */
+      /* n: 0..1 normalised rank for each of the three build stats.
+         He is a boxer in kit, not an anatomy mannequin: vest, shorts,
+         wraps and a face. The build still reads - damage widens the
+         shoulders and arms, durability thickens him, speed cuts the
+         waist and sharpens the definition - but on a person. */
       function drawBust(ctx, W, H, spd, dur, dmg, full) {
         const b = artBlock(ctx);
         const cx = W * .5;
-        const headY = full ? H * .07 : H * .11;
-        const hw = W * .085;                                  /* head half width */
-        const shoulder = W * (.17 + dmg * .075 + dur * .03);  /* half shoulder span */
-        const waist = W * (.125 + dur * .045 - spd * .035);   /* half waist */
-        const chestH = full ? H * .25 : H * .40;
-        const chestY = headY + (full ? H * .13 : H * .20);
-        const armW = W * (.045 + dmg * .035 + dur * .012);
-        /* head */
-        b(cx - hw, headY, hw * 2, H * (full ? .10 : .155), SKIN2);
-        b(cx - hw * .75, headY + H * .012, hw * 1.5, H * (full ? .075 : .12), SKIN);
-        b(cx - hw, headY - H * .012, hw * 2, H * .035, "#17120d");
-        b(cx - hw * .5, headY + H * (full ? .035 : .055), hw * .3, H * .012, "#1b1109");
-        b(cx + hw * .2, headY + H * (full ? .035 : .055), hw * .3, H * .012, "#1b1109");
-        /* neck thickens with durability */
-        const neckW = W * (.05 + dur * .028);
-        b(cx - neckW, chestY - H * .035, neckW * 2, H * .045, SKIN2);
-        /* trapezius / shoulders */
-        b(cx - shoulder, chestY, shoulder * 2, H * .055, SKIN2);
-        b(cx - shoulder * .92, chestY + H * .008, shoulder * 1.84, H * .038, SKIN);
-        /* torso tapering to the waist */
-        const steps = 9;
+        const VEST = "#9d2b22", VEST2 = "#c2402f", VEST3 = "#6e1b15";
+        const SHORT = "#243247", SHORT2 = "#32455f", WRAP = "#e4e8ee";
+        /* vertical landmarks */
+        const headTop = full ? H * .05 : H * .09;
+        const headH   = full ? H * .13 : H * .19;
+        const headW   = (full ? W * .13 : W * .18) * (1 + dur * .06);
+        const neckY   = headTop + headH;
+        const shY     = neckY + (full ? H * .035 : H * .05);
+        const waistY  = full ? H * .50 : H * .74;
+        const hipY    = full ? H * .57 : H * .86;
+        const halfSh  = W * (full ? .15 : .20) * (1 + dmg * .38 + dur * .14);
+        const halfWa  = W * (full ? .105 : .14) * (1 + dur * .30 - spd * .16);
+        const armW    = W * (full ? .045 : .060) * (1 + dmg * .45 + dur * .18);
+
+        /* ── torso: shoulders tapering to the waist ── */
+        const steps = 12;
         for (let i = 0; i < steps; i++) {
           const k = i / (steps - 1);
-          const wHere = shoulder + (waist - shoulder) * k;
-          const y = chestY + H * .05 + k * chestH;
-          b(cx - wHere, y, wHere * 2, chestH / steps + 2, i < 4 ? SKIN : SKIN2);
+          const hw = halfSh + (halfWa - halfSh) * Math.pow(k, .8);
+          const y = shY + k * (waistY - shY);
+          b(cx - hw, y, hw * 2, (waistY - shY) / steps + 2, SKIN2);
         }
-        /* pectorals scale with damage, abdominals sharpen with speed */
-        b(cx - shoulder * .72, chestY + H * .07, shoulder * .66, H * (.07 + dmg * .035), SKINH);
-        b(cx + shoulder * .06, chestY + H * .07, shoulder * .66, H * (.07 + dmg * .035), SKINH);
-        b(cx - W * .003, chestY + H * .07, W * .006, H * (.10 + dmg * .04), SKIN3);
-        const absRows = Math.round(2 + spd * 2);
-        for (let r = 0; r < absRows; r++) {
-          const ay = chestY + H * (.20 + dmg * .04) + r * H * .045;
-          if (ay > chestY + H * .05 + chestH - H * .02) break;
-          b(cx - waist * .62, ay, waist * 1.24, H * .006, SKIN3);
+        /* trapezius slope into the neck */
+        b(cx - halfSh * .62, shY - H * .018, halfSh * 1.24, H * .03, SKIN2);
+        /* ── the vest ── */
+        const vTop = shY + (waistY - shY) * .30;
+        for (let i = 0; i < steps; i++) {
+          const k = i / (steps - 1);
+          const y = vTop + k * (waistY - vTop);
+          const kk = (vTop - shY + k * (waistY - vTop)) / (waistY - shY);
+          const hw = (halfSh + (halfWa - halfSh) * Math.pow(kk, .8)) * .94;
+          b(cx - hw, y, hw * 2, (waistY - vTop) / steps + 2, i < 5 ? VEST2 : VEST);
         }
-        /* arms thicken with damage and durability */
-        for (const side of [-1, 1]) {
-          const ax = cx + side * (shoulder + armW * .1) - (side < 0 ? armW : 0);
-          b(ax, chestY + H * .03, armW, chestH * .78, SKIN2);
-          b(ax + armW * .2, chestY + H * .05, armW * .5, chestH * .5, SKIN);
-          /* a visible bicep once damage is up */
-          if (dmg > .25) b(ax + armW * .1, chestY + H * .10, armW * .8, chestH * (.16 + dmg * .12), SKINH);
+        /* straps over the shoulders, framing a scoop neck */
+        for (const s of [-1, 1]) {
+          b(cx + s * halfSh * .66 - (s < 0 ? halfSh * .24 : 0), shY - H * .012,
+            halfSh * .24, vTop - shY + H * .02, VEST);
         }
-        /* speed reads as motion off the shoulders */
-        if (spd > .3) {
-          for (let i = 0; i < Math.round(spd * 5); i++) {
-            const sy = chestY + H * .06 + i * H * .05;
-            b(cx - shoulder - W * (.04 + i * .012), sy, W * (.03 + spd * .03), H * .008, "rgba(226,232,240,.3)");
-            b(cx + shoulder + W * .01, sy, W * (.03 + spd * .03), H * .008, "rgba(226,232,240,.3)");
-          }
+        b(cx - halfSh * .42, vTop - H * .012, halfSh * .84, H * .02, VEST3);
+        /* chest above the vest line, bulkier with damage */
+        for (const s of [-1, 1]) {
+          b(cx + s * halfSh * .10 - (s < 0 ? halfSh * .40 : 0), shY + H * .025,
+            halfSh * .40, (vTop - shY) * .62, SKINH);
         }
-        return { cx, waist, bottom: chestY + H * .05 + chestH };
+        b(cx - W * .004, shY + H * .025, W * .008, (vTop - shY) * .7, SKIN3);
+        /* speed shows as a cut waist and a visible rib line */
+        if (spd > .35) {
+          b(cx - halfWa * .78, waistY - H * .035, halfWa * 1.56, H * .006, SKIN3);
+        }
+        /* ── shorts, with a waistband ── */
+        b(cx - halfWa * 1.10, waistY, halfWa * 2.20, H * .022, WRAP);
+        b(cx - halfWa * 1.14, waistY + H * .020, halfWa * 2.28, hipY - waistY, SHORT);
+        b(cx - halfWa * 1.02, waistY + H * .030, halfWa * 1.1, (hipY - waistY) * .8, SHORT2);
+
+        /* ── arms, joined at the shoulder, wrapped at the wrist ── */
+        const armTop = shY - H * .005, armBot = waistY + H * .03;
+        for (const s of [-1, 1]) {
+          const ax = cx + s * halfSh - (s < 0 ? armW : 0);
+          b(ax, armTop, armW, armBot - armTop, SKIN2);
+          b(ax + armW * .18, armTop + H * .02, armW * .5, (armBot - armTop) * .76, SKIN);
+          /* deltoid cap and bicep swell */
+          b(ax - armW * .06, armTop, armW * 1.12, H * .05 * (1 + dmg * .5), SKIN2);
+          if (dmg > .18) b(ax + armW * .08, armTop + H * .055, armW * .8,
+                           (armBot - armTop) * (.22 + dmg * .16), SKINH);
+          /* hand wraps */
+          b(ax - armW * .06, armBot - H * .045, armW * 1.12, H * .048, WRAP);
+          for (let i = 0; i < 3; i++)
+            b(ax - armW * .06, armBot - H * .040 + i * H * .014, armW * 1.12, H * .005, "#b9c2cc");
+        }
+
+        /* ── head and face ── */
+        const hx = cx - headW / 2, hy = headTop;
+        b(cx - headW * .22, neckY - H * .022, headW * .44, H * .05, SKIN2);        /* neck */
+        b(hx, hy + headH * .18, headW, headH * .70, SKIN2);                        /* skull */
+        b(hx + headW * .08, hy + headH * .24, headW * .84, headH * .58, SKIN);
+        b(hx + headW * .14, hy + headH * .74, headW * .72, headH * .18, SKIN2);    /* jaw */
+        b(hx + headW * .04, hy + headH * .06, headW * .92, headH * .22, "#1d1711"); /* hair */
+        b(hx, hy + headH * .22, headW * .10, headH * .26, "#1d1711");
+        b(hx + headW * .90, hy + headH * .22, headW * .10, headH * .26, "#1d1711");
+        b(hx + headW * .22, hy + headH * .10, headW * .34, headH * .06, "#2e2619");
+        /* brow, eyes, nose, mouth - a face, not two dots */
+        b(hx + headW * .14, hy + headH * .34, headW * .72, headH * .07, SKIN3);
+        for (const s of [0, 1]) {
+          const ex = hx + headW * (s ? .56 : .18);
+          b(ex, hy + headH * .43, headW * .26, headH * .11, "#f3ead8");
+          b(ex + headW * .09, hy + headH * .44, headW * .10, headH * .09, "#241a12");
+          b(ex + headW * .10, hy + headH * .45, headW * .04, headH * .035, "#4b7f9c");
+          b(ex, hy + headH * .41, headW * .26, headH * .025, "#1d1711");
+        }
+        b(cx - headW * .06, hy + headH * .52, headW * .12, headH * .14, SKIN2);    /* nose */
+        b(cx - headW * .08, hy + headH * .64, headW * .16, headH * .035, SKIN3);
+        b(cx - headW * .18, hy + headH * .74, headW * .36, headH * .05, "#7d3f31"); /* mouth */
+        b(cx - headW * .14, hy + headH * .755, headW * .28, headH * .02, "#5d2a20");
+        return { cx, waist: halfWa, bottom: hipY };
       }
+
       function drawFullFigure(ctx, W, H, spd, dur, dmg, ctrl) {
         const b = artBlock(ctx);
         const t = drawBust(ctx, W, H, spd, dur, dmg, true);
-        const legW = W * (.055 + dur * .03);
+        const legW = W * (.062 + dur * .030);
         const hipY = t.bottom;
-        const stance = W * (.045 + ctrl * .05);         /* a wider, surer base */
-        b(t.cx - t.waist, hipY, t.waist * 2, H * .05, SKIN2);
+        const stance = W * (.050 + ctrl * .055);
+        const bootTop = hipY + H * .255;
         for (const side of [-1, 1]) {
           const lx = t.cx + side * stance - legW / 2;
-          b(lx, hipY + H * .04, legW, H * .26, SKIN2);
-          b(lx + legW * .2, hipY + H * .06, legW * .5, H * .17, SKIN);
-          b(lx - legW * .1, hipY + H * .29, legW * 1.2, H * .035, "#2a3240");
+          b(lx, hipY, legW, H * .27, SKIN2);                       /* leg */
+          b(lx + legW * .2, hipY + H * .02, legW * .5, H * .20, SKIN);
+          if (dur > .3) b(lx + legW * .08, hipY + H * .03, legW * .84, H * .09 * dur, SKINH);
+          b(lx - legW * .12, bootTop, legW * 1.24, H * .055, "#1b2430");   /* boot */
+          b(lx - legW * .06, bootTop + H * .008, legW * 1.12, H * .016, "#2b3744");
+          for (let i = 0; i < 2; i++)
+            b(lx - legW * .06, bootTop + H * .022 + i * H * .013, legW * 1.12, H * .005, "#e4e8ee");
         }
-        /* balance line: tighter and brighter as control rises */
-        const bw = W * (.30 - ctrl * .10);
-        ctx.fillStyle = `rgba(232,194,114,${(.18 + ctrl * .5).toFixed(2)})`;
-        ctx.fillRect(Math.round(t.cx - bw / 2), Math.round(hipY + H * .335), Math.round(bw), 2);
+        /* balance line: tighter and brighter the more control he has */
+        const bw = W * (.34 - ctrl * .12);
+        ctx.fillStyle = "rgba(232,194,114," + (.18 + ctrl * .5).toFixed(2) + ")";
+        ctx.fillRect(Math.round(t.cx - bw / 2), Math.round(bootTop + H * .07), Math.round(bw), 2);
         for (let i = 0; i < 3; i++) {
           const o = bw / 2 - i * (bw / 6);
-          b(t.cx - o, hipY + H * .345, 2, H * .012, "rgba(232,194,114,.45)");
-          b(t.cx + o, hipY + H * .345, 2, H * .012, "rgba(232,194,114,.45)");
+          b(t.cx - o, bootTop + H * .078, 2, H * .012, "rgba(232,194,114,.45)");
+          b(t.cx + o, bootTop + H * .078, 2, H * .012, "rgba(232,194,114,.45)");
         }
       }
       function drawGloveArt(ctx, W, H, chance, power) {
