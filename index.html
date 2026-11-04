@@ -3414,6 +3414,22 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         ret:     { share: .5,  xpShare: .75,  label: "Retirement" },
       };
       const xpNeed = (lv) => 200 + lv * 140;
+      /* The four numbers on the lobby card. Gold and Exp are read by the
+         payout, so what the card shows is what the bout actually pays.
+         Luck and Strength are displayed but nothing consumes them yet. */
+      const PMULT = () => {
+        const lv = (P && P.lv) || 1;
+        return {
+          gold: 1 + (lv - 1) * 0.01,
+          luck: 1 + (lv - 1) * 0.01,
+          exp: 1 + (lv - 1) * 0.02,
+          str: 1.05 + (lv - 1) * 0.01,
+        };
+      };
+      const fx = (v) => {
+        const n = Math.round(v * 1000) / 1000;
+        return (Number.isInteger(n) ? n.toFixed(1) : String(n)) + "x";
+      };
       let P = null;
       function loadProfile() {
         const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0 };
@@ -3430,12 +3446,11 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const base = REWARDS[kind];
         if (!base || !P) return null;
         const d = activeDiff || DIFFS[0];
-        const gm = activeGymMult || 1;
-        const mult = (1 + P.lv * 0.01) * gm;
+        const gm = activeGymMult || 1, PM = PMULT();
         const r = Object.assign({}, base, {
-          gold: Math.round(d.gold * base.share * mult),
+          gold: Math.round(d.gold * base.share * PM.gold * gm),
           gems: Math.round(d.gems * gm * base.share),
-          xp: Math.round((d.xp || 120) * gm * base.xpShare),
+          xp: Math.round((d.xp || 120) * gm * PM.exp * base.xpShare),
           diff: d.name,
         });
         P.gold += r.gold; P.gems += r.gems; P.xp += r.xp; P.bouts++;
@@ -3975,7 +3990,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         document.querySelectorAll(".lobby,.maint-wrap").forEach((n) => n.remove());
         if (!P) loadProfile();
 
-        const need = xpNeed(P.lv), pctXP = Math.min(100, (P.xp / need) * 100);
+        const need = xpNeed(P.lv), pctXP = Math.min(100, (P.xp / need) * 100), PM = PMULT();
         const el = document.createElement("div");
         el.className = "lobby";
         el.innerHTML = `
@@ -4009,9 +4024,10 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
               <div class="lb-av"><canvas id="lb-avatar" width="34" height="34" aria-hidden="true"></canvas><b>LV. ${P.lv}</b></div>
               <button class="lb-switch" data-lobby="gym">Switch gym</button>
               <div class="lb-mults">
-                <div class="lb-mult"><u>GOLD</u><s>${(1 + P.lv * .01).toFixed(2)}x</s></div>
-                <div class="lb-mult"><u>SAFE</u><s>${P.stops}</s></div>
-                <div class="lb-mult"><u>BOUTS</u><s>${P.bouts}</s></div>
+                <div class="lb-mult" title="Coins earned from a bout"><u>GOLD</u><s>${fx(PM.gold)}</s></div>
+                <div class="lb-mult" title="Rare drop chance — not applied yet"><u>LUCK</u><s>${fx(PM.luck)}</s></div>
+                <div class="lb-mult" title="Experience earned from a bout"><u>EXP</u><s>${fx(PM.exp)}</s></div>
+                <div class="lb-mult" title="Your fighter's punching power — not applied yet"><u>STRENGTH</u><s>${fx(PM.str)}</s></div>
               </div>
             </div>
 
@@ -4416,11 +4432,11 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             `${escapeUI(g.n)}<span class="mz-mult ${band}">&times;${gm.toFixed(2)}</span>`;
           $("#mz-diff").innerHTML =
             `<span style="color:${d.col}">${d.name.toUpperCase()} (${d.grade})</span><small>${escapeUI(d.blurb)}</small>`;
-          const mult = (1 + P.lv * 0.01) * gm;
+          const PM = PMULT(), mult = PM.gold * gm;
           $("#mz-rewards").innerHTML =
             `<div class="mz-rw">${COIN}<b>${Math.round(d.gold * mult).toLocaleString()}</b><s>Coins</s></div>
              <div class="mz-rw gem">${GEM}<b>${Math.max(1, Math.round(d.gems * gm))}</b><s>Gem${Math.max(1, Math.round(d.gems * gm)) === 1 ? "" : "s"}</s></div>
-             <div class="mz-rw exp" data-x="${Math.round(d.xp * gm)}"><i class="exp"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px"><path d="M12 1.5 14.6 9 22 11.6 14.6 14.2 12 22 9.4 14.2 2 11.6 9.4 9z" fill="#8f6fd0" stroke="#d5c2f6" stroke-width="1.1" stroke-linejoin="round"/></svg></i><b>${Math.round(d.xp * gm).toLocaleString()}</b><s>Exp</s></div>`;
+             <div class="mz-rw exp"><i class="exp"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px"><path d="M12 1.5 14.6 9 22 11.6 14.6 14.2 12 22 9.4 14.2 2 11.6 9.4 9z" fill="#8f6fd0" stroke="#d5c2f6" stroke-width="1.1" stroke-linejoin="round"/></svg></i><b>${Math.round(d.xp * gm * PM.exp).toLocaleString()}</b><s>Exp</s></div>`;
           const riskEl = $("#mz-risk");
           if (riskEl) riskEl.textContent = g.risk;
           $("#mz-note").textContent = locked
