@@ -2863,6 +2863,14 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .sk-gate{margin-top:11px;padding:9px;text-align:center;border:1px solid #4a5565;
   background:#171b22;color:#9aa5b1;font:700 9.5px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase}
 .sk-gate b{color:#ffeec4}
+/* An element given the hidden attribute must actually be hidden. Every
+   one of these sets its own display, which beats [hidden]'s display:none
+   on specificity. This cost the street fight a full-screen 86% scrim
+   sitting over the whole mode from the first frame. */
+.sf-over[hidden],.gu-body[hidden],.sk-body[hidden],.gym-hud[hidden],
+.gym-stations[hidden],.gym-prompt[hidden],.plaza-faces[hidden],
+.mz-wrap[hidden],.modesel[hidden],.msetup[hidden],.market[hidden],
+.gearup[hidden],.sfight[hidden],.tr-view[hidden]{display:none!important}
 /* ══ STREET FIGHT ═════════════════════════════════════════════ */
 .sfight{position:fixed;inset:0;z-index:68;background:#0a0710;display:flex;flex-direction:column}
 .sfight #sf-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}

@@ -116,6 +116,31 @@
     if (typeof refreshGymHud !== "function") throw new Error("no HUD refresh");
   });
 
+  /* Nothing may sit over a mode when it opens. A scrim with its own
+     display beats the hidden attribute, and that put an 86% black sheet
+     over the whole street fight from the first frame. Check what the
+     player's eye actually lands on, not what the code intended. */
+  await tryIt("no scrim over an open mode", async () => {
+    openStreetFight();
+    await wait(260);
+    const cv = document.querySelector("#sf-canvas");
+    if (!cv) throw new Error("no canvas");
+    const r = cv.getBoundingClientRect();
+    const top = document.elementsFromPoint(
+      Math.round(r.left + r.width / 2), Math.round(r.top + r.height * .35))[0];
+    if (top !== cv) throw new Error("covered by ." + (top.className || top.tagName));
+    for (const n of document.querySelectorAll(".sfight *")) {
+      const cs = getComputedStyle(n);
+      if (cs.display === "none" || cs.position !== "absolute") continue;
+      const b = n.getBoundingClientRect();
+      const bg = cs.backgroundColor.match(/[\d.]+/g);
+      const covers = b.width > r.width * .9 && b.height > r.height * .9;
+      if (covers && bg && bg.length === 4 && parseFloat(bg[3]) > .4)
+        throw new Error("full-screen scrim visible: ." + n.className);
+    }
+    closeStreetFight();
+  });
+
   setLobbyView("ring");
   return { pass: fails.length === 0, failures: fails, checks: checks.length + " run" };
 })()
