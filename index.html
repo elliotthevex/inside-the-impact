@@ -2361,7 +2361,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
   font-size:16px;line-height:1;box-shadow:3px 3px 0 #02060b;
 }
 #gear-btn:hover{border-color:var(--lb-gold);color:var(--lb-gold)}
-body:has(.market) #gear-btn,body:has(#boot) #gear-btn,body:has(.lobby) #gear-btn,
+body:has(.gearup) #gear-btn,body:has(.market) #gear-btn,body:has(#boot) #gear-btn,body:has(.lobby) #gear-btn,
 body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .mz-rw.exp{border-color:#8f6fd0}
 .st-group{
@@ -2622,6 +2622,79 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
   .trade-body{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-height:620px){.plaza-trade{bottom:clamp(80px,13vh,116px)}}
+/* ══ GEAR UP ══════════════════════════════════════════════════ */
+.gearup{position:fixed;inset:0;z-index:62;display:flex;flex-direction:column;background:rgba(4,6,10,.93)}
+.gu-head{display:flex;align-items:center;gap:12px;flex:none;
+  padding:clamp(10px,2.2vh,20px) clamp(12px,2vw,26px) clamp(8px,1.4vh,13px)}
+.gu-title{flex:1;min-width:0;font:400 clamp(18px,3.4vw,34px)/1 var(--serif);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--lb-gold);text-shadow:0 0 20px rgba(232,194,114,.3)}
+.gu-close{flex:none;width:40px;height:40px;cursor:pointer;border:0;background:transparent;
+  color:#cdbb92;font:300 30px/1 var(--mono);transition:.12s}
+.gu-close:hover{color:#fff6e2;transform:scale(1.1)}
+.gu-body{flex:1;min-height:0;display:grid;gap:clamp(8px,1.6vw,20px);
+  grid-template-columns:minmax(150px,.85fr) minmax(0,1.3fr) minmax(190px,1fr);
+  padding:clamp(10px,2.2vh,24px) clamp(10px,2vw,26px)}
+.gu-left{display:flex;flex-direction:column;min-height:0;gap:clamp(8px,1.6vh,16px)}
+.gu-rail{display:flex;flex-direction:column;gap:clamp(4px,.8vh,8px)}
+.gu-railbtn{padding:clamp(5px,1vh,10px) 11px;cursor:pointer;text-align:left;
+  border:2px solid var(--lb-gold);background:linear-gradient(180deg,#131821,#0b0f16);
+  color:#f0e4c6;font:400 clamp(10px,1.3vw,15px)/1.15 var(--serif);letter-spacing:.05em;
+  text-transform:uppercase;transition:.12s}
+.gu-railbtn:hover{background:linear-gradient(180deg,#1d2430,#11161e)}
+.gu-railbtn.on{box-shadow:0 0 0 1px var(--lb-gold),0 0 14px rgba(232,194,114,.3);color:#fff6e2}
+.gu-railbtn.soon{border-color:#4b5565;color:#8d97a3}
+.gu-picker{margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(4px,.7vw,7px)}
+.gu-pick{position:relative;aspect-ratio:1;display:grid;place-items:center;cursor:pointer;padding:0;
+  border:2px solid #4b5565;background:#0d1219;color:#8d97a3;transition:.12s}
+.gu-pick svg{width:52%;height:52%}
+.gu-pick:hover{border-color:#8d7338;color:#c3a86a}
+.gu-pick.on{border-color:var(--lb-gold);color:var(--lb-gold);background:rgba(232,194,114,.1)}
+.gu-pick u{position:absolute;left:0;right:0;bottom:0;text-decoration:none;
+  font:700 7.5px/1.5 var(--mono);letter-spacing:.04em;background:rgba(5,7,11,.85)}
+.gu-art{position:relative;min-height:0;display:grid;place-items:center;
+  border:2px solid #2a3340;background:radial-gradient(ellipse at 50% 45%,#141c28,#070a10 72%)}
+.gu-art canvas{max-width:100%;max-height:100%;image-rendering:pixelated;display:block}
+.gu-panel{border:2px solid var(--lb-gold);background:#05070b;min-height:0;overflow-y:auto;
+  padding:clamp(11px,2vw,20px);box-shadow:0 10px 32px rgba(0,0,0,.6);
+  display:flex;flex-direction:column}
+.gu-panel h3{margin:0 0 clamp(8px,1.4vh,13px);text-align:center;
+  font:400 clamp(16px,2.4vw,27px)/1 var(--serif);letter-spacing:.07em;
+  text-transform:uppercase;color:var(--lb-gold)}
+.gu-step{display:flex;align-items:center;justify-content:center;gap:clamp(5px,1vw,11px);
+  padding:clamp(5px,1vh,9px) 0;border-top:1px solid #1e2631}
+.gu-step span{width:22px;height:22px;flex:none;display:grid;place-items:center;color:#9aa5b1}
+.gu-step span svg{width:100%;height:100%}
+.gu-step b{font:700 clamp(12px,1.7vw,18px)/1 var(--mono);font-variant-numeric:tabular-nums}
+.gu-step i{color:#e8c272;font-style:normal;font-size:12px}
+.gu-step.val b{color:#d7dee6}
+.gu-step.val b.up{color:#8ad17e}
+.gu-desc{margin:clamp(8px,1.4vh,13px) 0;text-align:center;
+  font:400 clamp(11px,1.4vw,14px)/1.55 var(--serif);color:#c3ccd6}
+.gu-chance{margin-top:auto;padding:7px 9px;border:1px solid #2b3744;
+  font:400 10px/1.5 Arial,sans-serif;color:#9aa5b1;text-align:center}
+.gu-chance b{color:#8ad17e;font:700 11px/1 var(--mono)}
+.gu-chance.risky{border-color:#8a3a30;color:#d9a79f}
+.gu-chance.risky b{color:#ff8a7a}
+.gu-buy{margin-top:9px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:clamp(7px,1.3vh,11px) 8px;cursor:pointer;border:1px solid #c79f49;
+  background:linear-gradient(180deg,#f0d593,#c79f49);color:#140e04;
+  font:700 clamp(11px,1.5vw,14px)/1 var(--mono);letter-spacing:.05em;font-variant-numeric:tabular-nums}
+.gu-buy:hover{background:#fff0c8}
+.gu-buy svg{width:15px;height:15px}
+.gu-buy.poor{opacity:.45;cursor:not-allowed}
+.gu-maxed{margin-top:9px;padding:9px;text-align:center;border:1px solid #4a5565;background:#171b22;
+  color:#9aa5b1;font:700 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase}
+@media(max-width:860px){
+  .gu-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(120px,1fr) auto}
+  .gu-left{grid-column:1;grid-row:1}
+  .gu-art{grid-column:2;grid-row:1}
+  .gu-panel{grid-column:1/-1;grid-row:2;max-height:44vh}
+  .gu-panel .gu-chance{margin-top:8px}
+}
+@media(max-width:520px){
+  .gu-railbtn{padding:4px 8px;font-size:10px}
+  .gu-title{font-size:16px}
+}
 @media(max-width:620px){
   .mk-grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}
   .mk-title{font-size:16px}
@@ -3675,7 +3748,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       };
       let P = null;
       function loadProfile() {
-        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {} };
+        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {}, up: null };
         try {
           const raw = localStorage.getItem(PROFILE_KEY);
           P = raw ? Object.assign(base, JSON.parse(raw)) : base;
@@ -4198,7 +4271,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 
       function lobbyGo(id) {
         if (id === "play") return openModeSelect();
-        if (id === "gear") return;
+        if (id === "gear") return openGear();
         if (id === "market") return openMarket();
         if (id === "gym") return setLobbyView("gym");
         if (id === "rankings") return setLobbyView("plaza");
@@ -4250,7 +4323,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           <div class="lb-top">
             <div class="lb-brand"><b>◆</b><span style="font:700 10px/1.3 var(--mono);letter-spacing:.1em;color:#8e99a7">INSIDE THE<br>IMPACT</span></div>
             <div class="lb-tabs" role="tablist">
-              ${LOBBY_TABS.map((t) => `<button class="lb-tab ${t.id === "gear" ? "active" : t.live ? "" : "locked"}" data-lobby="${t.id}" role="tab" aria-selected="${t.id === "gear"}">${t.label}</button>`).join("")}
+              ${LOBBY_TABS.map((t) => `<button class="lb-tab ${t.id === "gear" ? "active" : t.live ? "" : "locked"}" data-lobby="${t.id}" role="tab" aria-selected="${t.id === "gear"}">${t.id === "gear" ? t.label + " [" + GRADES[Math.round(upAverage())] + "]" : t.label}</button>`).join("")}
             </div>
             <div class="lb-cur">
               <div><span id="lb-gold">${P.gold.toLocaleString()}</span>${COIN_SVG}</div>
@@ -4901,7 +4974,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       }
       function hotkeysBlocked() {
         if (document.querySelector(".st-key.binding")) return true;
-        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market")) return true;
+        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup")) return true;
         return !!document.querySelector("dialog[open]");
       }
       window.addEventListener("keydown", (e) => {
@@ -5479,6 +5552,388 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         ctx.fillStyle = "rgba(8,11,18,.12)";
         const st = Math.max(2, Math.round(H * .017));
         for (let y = 0; y < H; y += st) ctx.fillRect(0, y, W, 1);
+      }
+
+      /* ── UPGRADES ────────────────────────────────────────────────
+         Eight tracks on one grade ladder. Everything starts at E+.
+         The art in the middle is drawn from the current levels, so a
+         rank is something you can see rather than only read. */
+      const GRADES = ["E-", "E", "E+", "D-", "D", "D+", "C-", "C", "C+",
+                      "B-", "B", "B+", "A-", "A", "A+", "S-", "S", "S+"];
+      const GRADE_START = 2;                       /* E+ */
+      const GRADE_MAX = GRADES.length - 1;
+      const gradeCol = (i) =>
+        i < 3 ? "#97a2ae" : i < 6 ? "#6fcf5e" : i < 9 ? "#56c8d6"
+        : i < 12 ? "#7f9ff0" : i < 15 ? "#e8c272" : "#e8453a";
+      /* cost climbs with the rank you are leaving */
+      const upCost = (i) => Math.round(240 * Math.pow(1.42, i));
+      /* only the S ranks can fail, and each one is worse than the last */
+      const successPct = (target) =>
+        target <= 14 ? 100 : target === 15 ? 70 : target === 16 ? 50 : 30;
+
+      const UP_TRACKS = [
+        { id: "spd",   name: "Speed",           art: "bust",  unit: "spd",
+          val: (i) => 120 + i * 9,
+          desc: "Hand and foot speed. Lands first and leaves before the counter." },
+        { id: "dur",   name: "Durability",      art: "bust",  unit: "dur",
+          val: (i) => 140 + i * 11,
+          desc: "How much he can take before it starts to tell. It does not make him safe." },
+        { id: "dmg",   name: "Damage",          art: "bust",  unit: "pwr",
+          val: (i) => 160 + i * 14,
+          desc: "Raw punching power behind every shot that lands clean." },
+        { id: "cc",    name: "Critical Chance", art: "glove", unit: "%",
+          val: (i) => (4 + i * 0.9).toFixed(1),
+          desc: "How often a punch catches flush instead of partly on the guard." },
+        { id: "cd",    name: "Critical Damage", art: "glove", unit: "x",
+          val: (i) => (1.40 + i * 0.06).toFixed(2),
+          desc: "What a flush punch is worth when it does catch him clean." },
+        { id: "sta",   name: "Stamina",         art: "lungs", unit: "sta",
+          val: (i) => 100 + i * 10,
+          desc: "Engine. Decides whether the twelfth round looks like the first." },
+        { id: "reach", name: "Reach",           art: "arm",   unit: "cm",
+          val: (i) => (176.0 + i * 0.8).toFixed(1),
+          desc: "Span from knuckle to knuckle. Grows slowly — a grade is a centimetre, not a foot." },
+        { id: "ctrl",  name: "Body Control",    art: "full",  unit: "ctl",
+          val: (i) => 110 + i * 8,
+          desc: "Balance, footing and the ability to move his head off the line on the way out." },
+      ];
+      const upLevel = (id) => (P && P.up && P.up[id] != null) ? P.up[id] : GRADE_START;
+      function upAverage() {
+        const sum = UP_TRACKS.reduce((a, t) => a + upLevel(t.id), 0);
+        return sum / UP_TRACKS.length;
+      }
+
+      /* ── parametric art ──────────────────────────────────────── */
+      const SKIN = "#e0a478", SKIN2 = "#bd7e56", SKIN3 = "#8f5737", SKINH = "#ffd2a8";
+      function artBlock(ctx) {
+        return (X, Y, W, H, c) => {
+          ctx.fillStyle = c;
+          ctx.fillRect(Math.round(X), Math.round(Y), Math.max(1, Math.round(W)), Math.max(1, Math.round(H)));
+        };
+      }
+      /* n: 0..1 normalised rank for each of the three build stats */
+      function drawBust(ctx, W, H, spd, dur, dmg, full) {
+        const b = artBlock(ctx);
+        const cx = W * .5;
+        const headY = full ? H * .07 : H * .11;
+        const hw = W * .085;                                  /* head half width */
+        const shoulder = W * (.17 + dmg * .075 + dur * .03);  /* half shoulder span */
+        const waist = W * (.125 + dur * .045 - spd * .035);   /* half waist */
+        const chestH = full ? H * .25 : H * .40;
+        const chestY = headY + (full ? H * .13 : H * .20);
+        const armW = W * (.045 + dmg * .035 + dur * .012);
+        /* head */
+        b(cx - hw, headY, hw * 2, H * (full ? .10 : .155), SKIN2);
+        b(cx - hw * .75, headY + H * .012, hw * 1.5, H * (full ? .075 : .12), SKIN);
+        b(cx - hw, headY - H * .012, hw * 2, H * .035, "#17120d");
+        b(cx - hw * .5, headY + H * (full ? .035 : .055), hw * .3, H * .012, "#1b1109");
+        b(cx + hw * .2, headY + H * (full ? .035 : .055), hw * .3, H * .012, "#1b1109");
+        /* neck thickens with durability */
+        const neckW = W * (.05 + dur * .028);
+        b(cx - neckW, chestY - H * .035, neckW * 2, H * .045, SKIN2);
+        /* trapezius / shoulders */
+        b(cx - shoulder, chestY, shoulder * 2, H * .055, SKIN2);
+        b(cx - shoulder * .92, chestY + H * .008, shoulder * 1.84, H * .038, SKIN);
+        /* torso tapering to the waist */
+        const steps = 9;
+        for (let i = 0; i < steps; i++) {
+          const k = i / (steps - 1);
+          const wHere = shoulder + (waist - shoulder) * k;
+          const y = chestY + H * .05 + k * chestH;
+          b(cx - wHere, y, wHere * 2, chestH / steps + 2, i < 4 ? SKIN : SKIN2);
+        }
+        /* pectorals scale with damage, abdominals sharpen with speed */
+        b(cx - shoulder * .72, chestY + H * .07, shoulder * .66, H * (.07 + dmg * .035), SKINH);
+        b(cx + shoulder * .06, chestY + H * .07, shoulder * .66, H * (.07 + dmg * .035), SKINH);
+        b(cx - W * .003, chestY + H * .07, W * .006, H * (.10 + dmg * .04), SKIN3);
+        const absRows = Math.round(2 + spd * 2);
+        for (let r = 0; r < absRows; r++) {
+          const ay = chestY + H * (.20 + dmg * .04) + r * H * .045;
+          if (ay > chestY + H * .05 + chestH - H * .02) break;
+          b(cx - waist * .62, ay, waist * 1.24, H * .006, SKIN3);
+        }
+        /* arms thicken with damage and durability */
+        for (const side of [-1, 1]) {
+          const ax = cx + side * (shoulder + armW * .1) - (side < 0 ? armW : 0);
+          b(ax, chestY + H * .03, armW, chestH * .78, SKIN2);
+          b(ax + armW * .2, chestY + H * .05, armW * .5, chestH * .5, SKIN);
+          /* a visible bicep once damage is up */
+          if (dmg > .25) b(ax + armW * .1, chestY + H * .10, armW * .8, chestH * (.16 + dmg * .12), SKINH);
+        }
+        /* speed reads as motion off the shoulders */
+        if (spd > .3) {
+          for (let i = 0; i < Math.round(spd * 5); i++) {
+            const sy = chestY + H * .06 + i * H * .05;
+            b(cx - shoulder - W * (.04 + i * .012), sy, W * (.03 + spd * .03), H * .008, "rgba(226,232,240,.3)");
+            b(cx + shoulder + W * .01, sy, W * (.03 + spd * .03), H * .008, "rgba(226,232,240,.3)");
+          }
+        }
+        return { cx, waist, bottom: chestY + H * .05 + chestH };
+      }
+      function drawFullFigure(ctx, W, H, spd, dur, dmg, ctrl) {
+        const b = artBlock(ctx);
+        const t = drawBust(ctx, W, H, spd, dur, dmg, true);
+        const legW = W * (.055 + dur * .03);
+        const hipY = t.bottom;
+        const stance = W * (.045 + ctrl * .05);         /* a wider, surer base */
+        b(t.cx - t.waist, hipY, t.waist * 2, H * .05, SKIN2);
+        for (const side of [-1, 1]) {
+          const lx = t.cx + side * stance - legW / 2;
+          b(lx, hipY + H * .04, legW, H * .26, SKIN2);
+          b(lx + legW * .2, hipY + H * .06, legW * .5, H * .17, SKIN);
+          b(lx - legW * .1, hipY + H * .29, legW * 1.2, H * .035, "#2a3240");
+        }
+        /* balance line: tighter and brighter as control rises */
+        const bw = W * (.30 - ctrl * .10);
+        ctx.fillStyle = `rgba(232,194,114,${(.18 + ctrl * .5).toFixed(2)})`;
+        ctx.fillRect(Math.round(t.cx - bw / 2), Math.round(hipY + H * .335), Math.round(bw), 2);
+        for (let i = 0; i < 3; i++) {
+          const o = bw / 2 - i * (bw / 6);
+          b(t.cx - o, hipY + H * .345, 2, H * .012, "rgba(232,194,114,.45)");
+          b(t.cx + o, hipY + H * .345, 2, H * .012, "rgba(232,194,114,.45)");
+        }
+      }
+      function drawGloveArt(ctx, W, H, chance, power) {
+        const b = artBlock(ctx);
+        const cx = W * .52, cy = H * .5;
+        const gw = W * (.30 + power * .14), gh = H * (.42 + power * .16);
+        const GL = "#cc3728", GL2 = "#941d14", GL3 = "#5f0f0a", GLH = "#ef6e59", LAC = "#f2e3c4";
+        /* wrist wrap */
+        b(cx - gw * .22, cy + gh * .34, gw * .5, gh * .34, "#2b3440");
+        b(cx - gw * .18, cy + gh * .38, gw * .42, gh * .24, "#3a4654");
+        /* cuff and body */
+        b(cx - gw * .55, cy + gh * .18, gw * 1.1, gh * .3, GL3);
+        b(cx - gw * .5, cy - gh * .5, gw, gh * .78, GL2);
+        b(cx - gw * .42, cy - gh * .42, gw * .84, gh * .6, GL);
+        b(cx - gw * .34, cy - gh * .36, gw * .38, gh * .26, GLH);
+        /* thumb */
+        b(cx - gw * .62, cy - gh * .04, gw * .24, gh * .3, GL2);
+        b(cx - gw * .58, cy, gw * .16, gh * .22, GL);
+        /* laces */
+        b(cx + gw * .1, cy - gh * .34, gw * .07, gh * .5, LAC);
+        for (let i = 0; i < 4; i++) b(cx + gw * .02, cy - gh * .3 + i * gh * .13, gw * .23, gh * .035, LAC);
+        /* critical chance shows as a brighter, studded knuckle line */
+        const studs = Math.round(2 + chance * 6);
+        for (let i = 0; i < studs; i++) {
+          const sx = cx - gw * .38 + i * (gw * .76 / Math.max(1, studs - 1));
+          b(sx, cy - gh * .50, gw * .05, gh * .07, "#ffe9a8");
+        }
+        /* critical damage shows as impact rings coming off the knuckles */
+        if (power > .15) {
+          ctx.strokeStyle = `rgba(255,226,168,${(.25 + power * .5).toFixed(2)})`;
+          ctx.lineWidth = Math.max(1, H * .008);
+          for (let i = 0; i < Math.round(1 + power * 3); i++) {
+            ctx.beginPath();
+            ctx.arc(cx, cy - gh * .1, gw * (.62 + i * .17), -1.1, 1.1);
+            ctx.stroke();
+          }
+        }
+      }
+      function drawLungs(ctx, W, H, lvl) {
+        const b = artBlock(ctx);
+        const cx = W * .5, cy = H * .48;
+        const s = 1 + lvl * .26;                        /* capacity */
+        const lw = W * .19 * s, lh = H * .34 * s;
+        const hue = ["#9f5a62", "#b9666f", "#cf737c", "#e3838c"][Math.min(3, Math.floor(lvl * 4))];
+        /* trachea and bronchi */
+        b(cx - W * .022, cy - lh * .86, W * .044, lh * .42, "#c9a9ad");
+        for (let i = 0; i < 4; i++) b(cx - W * .03, cy - lh * .8 + i * lh * .1, W * .06, lh * .035, "#a98a8e");
+        b(cx - lw * .5, cy - lh * .5, lw, lh * .1, "#c9a9ad");
+        for (const side of [-1, 1]) {
+          const lx = cx + side * W * .035;
+          const x0 = side < 0 ? lx - lw : lx;
+          b(x0, cy - lh * .5, lw, lh, hue);
+          b(x0 + lw * .12, cy - lh * .42, lw * .6, lh * .7, "#eb98a0");
+          /* lobe lines */
+          for (let i = 1; i < 3; i++) b(x0, cy - lh * .5 + i * lh * .33, lw, lh * .03, "#8e4f56");
+          /* the deeper the capacity the more alveolar texture shows */
+          for (let i = 0; i < Math.round(4 + lvl * 10); i++) {
+            const px = x0 + rnd(i * 3.1 + side) * lw * .8 + lw * .1;
+            const py = cy - lh * .4 + rnd(i * 5.3 + side) * lh * .75;
+            b(px, py, Math.max(1, W * .008), Math.max(1, W * .008), "rgba(255,210,214,.5)");
+          }
+        }
+        /* capacity scale under the lungs */
+        const bw = W * .36;
+        b(cx - bw / 2, cy + lh * .62, bw, H * .018, "#2a3240");
+        b(cx - bw / 2, cy + lh * .62, bw * (.18 + lvl * .82), H * .018, "#6fcf5e");
+      }
+      function drawArmArt(ctx, W, H, lvl) {
+        const b = artBlock(ctx);
+        const cy = H * .46;
+        /* shoulder anchored left; the arm itself lengthens with reach */
+        const sx = W * .13;
+        const len = W * (.44 + lvl * .30);
+        const th = H * (.12 + lvl * .035);
+        b(sx - W * .06, cy - th * .9, W * .13, th * 1.8, SKIN2);      /* shoulder */
+        b(sx - W * .04, cy - th * .7, W * .09, th * 1.4, SKIN);
+        b(sx, cy - th / 2, len * .52, th, SKIN2);                      /* upper arm */
+        b(sx, cy - th * .34, len * .5, th * .62, SKIN);
+        if (lvl > .2) b(sx + len * .08, cy - th * .62, len * .22, th * (.5 + lvl * .4), SKINH);
+        const ex = sx + len * .52;
+        b(ex - W * .012, cy - th * .62, W * .034, th * 1.24, SKIN3);  /* elbow */
+        b(ex, cy - th * .42, len * .48, th * .84, SKIN2);              /* forearm */
+        b(ex, cy - th * .28, len * .46, th * .5, SKIN);
+        /* wrap and fist at the end */
+        const fx = sx + len;
+        b(fx - W * .02, cy - th * .5, W * .05, th, "#2b3440");
+        b(fx + W * .02, cy - th * .66, W * .10, th * 1.32, "#cc3728");
+        b(fx + W * .035, cy - th * .5, W * .07, th, "#ef6e59");
+        /* measuring rule beneath, so the centimetres are legible */
+        const ry = cy + H * .26;
+        b(sx - W * .06, ry, len + W * .18, H * .012, "#3a4454");
+        for (let i = 0; i <= 10; i++) {
+          const tx = sx - W * .06 + (len + W * .18) * (i / 10);
+          b(tx, ry - H * .018, Math.max(1, W * .004), H * .018, i % 5 ? "#6b7786" : "#e8c272");
+        }
+      }
+
+      /* ── GEAR UP SCREEN ──────────────────────────────────────── */
+      const GEAR_RAIL = [
+        { id: "upgrades", label: "Upgrades", live: true },
+        { id: "skills",   label: "Skills" },
+        { id: "perks",    label: "Perks" },
+        { id: "artifacts",label: "Artifacts" },
+        { id: "prestige", label: "Prestige" },
+        { id: "loadouts", label: "Loadouts" },
+        { id: "craft",    label: "Craft" },
+      ];
+      const UP_ICONS = {
+        spd:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 8h10M3 12h7M3 16h11"/><path d="M14 5l6 7-6 7"/></svg>`,
+        dur:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 2.6 20.5 6v6.4c0 5-3.6 8-8.5 9.5-4.9-1.5-8.5-4.5-8.5-9.5V6z"/></svg>`,
+        dmg:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M13 2 4.5 13H11l-1 9 9.5-11.5H13z"/></svg>`,
+        cc:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="4.2"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg>`,
+        cd:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 2.4 14.7 9 21.6 9.6 16.4 14 18 20.8 12 17.2 6 20.8 7.6 14 2.4 9.6 9.3 9z"/></svg>`,
+        sta:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3v7"/><path d="M12 10c0-3-7-2-7 3.5S8 21 10 21s2-4 2-7"/><path d="M12 10c0-3 7-2 7 3.5S16 21 14 21s-2-4-2-7"/></svg>`,
+        reach: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M2 12h16"/><path d="M14 7l5 5-5 5"/><path d="M2 7v10"/></svg>`,
+        ctrl:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="5" r="2.6"/><path d="M12 8v7M7 11h10M9 21l3-6 3 6"/></svg>`,
+      };
+      let gearRail = "upgrades", gearSel = "spd";
+
+      function closeGear() { document.querySelectorAll(".gearup").forEach((n) => n.remove()); }
+      function openGear() {
+        if (!P) loadProfile();
+        if (!P.up) { P.up = {}; UP_TRACKS.forEach((t) => { P.up[t.id] = GRADE_START; }); saveProfile(); }
+        closeGear();
+        const el = document.createElement("div");
+        el.className = "gearup";
+        el.setAttribute("role", "dialog");
+        el.setAttribute("aria-label", "Gear up");
+        el.innerHTML = `
+          <div class="gu-head">
+            <div class="gu-title" id="gu-title">Gear Up</div>
+            <div class="mk-purse"><div><span id="gu-gold"></span>${COIN_SVG}</div></div>
+            <button class="gu-close" type="button" aria-label="Close">&times;</button>
+          </div>
+          <div class="mk-rule"></div>
+          <div class="gu-body">
+            <div class="gu-left">
+              <div class="gu-rail" id="gu-rail"></div>
+              <div class="gu-picker" id="gu-picker"></div>
+            </div>
+            <div class="gu-art"><canvas id="gu-canvas" aria-hidden="true"></canvas></div>
+            <div class="gu-panel" id="gu-panel"></div>
+          </div>`;
+        document.body.appendChild(el);
+
+        const cv = $("#gu-canvas"), cx2 = cv.getContext("2d");
+        function paintArt() {
+          const r = cv.parentElement.getBoundingClientRect();
+          const w = Math.max(120, Math.min(360, Math.round((r.width || 320) / 2.4)));
+          const h = Math.max(120, Math.round(w * ((r.height || 360) / Math.max(1, r.width || 320))));
+          cv.width = w; cv.height = h;
+          cx2.imageSmoothingEnabled = false;
+          cx2.clearRect(0, 0, w, h);
+          const t = UP_TRACKS.find((x) => x.id === gearSel) || UP_TRACKS[0];
+          const nrm = (id) => (upLevel(id) - GRADE_START) / (GRADE_MAX - GRADE_START);
+          if (t.art === "bust") {
+            /* the bust always shows the real build, with this track leading */
+            drawBust(cx2, w, h, nrm("spd"), nrm("dur"), nrm("dmg"), false);
+          } else if (t.art === "full") {
+            drawFullFigure(cx2, w, h, nrm("spd"), nrm("dur"), nrm("dmg"), nrm("ctrl"));
+          } else if (t.art === "glove") {
+            drawGloveArt(cx2, w, h, nrm("cc"), nrm("cd"));
+          } else if (t.art === "lungs") {
+            drawLungs(cx2, w, h, nrm("sta"));
+          } else {
+            drawArmArt(cx2, w, h, nrm("reach"));
+          }
+        }
+        function renderRail() {
+          $("#gu-rail").innerHTML = GEAR_RAIL.map((g) => {
+            const tag = g.id === "upgrades"
+              ? ` [${GRADES[Math.round(upAverage())]} Grade]` : "";
+            return `<button class="gu-railbtn ${g.id === gearRail ? "on" : ""} ${g.live ? "" : "soon"}" data-rail="${g.id}" type="button">${g.label}${tag}</button>`;
+          }).join("");
+          $("#gu-rail").querySelectorAll("[data-rail]").forEach((bn) =>
+            bn.addEventListener("click", () => {
+              const g = GEAR_RAIL.find((x) => x.id === bn.dataset.rail);
+              if (!g.live) return maintenance(g.id);
+              gearRail = g.id; renderAll();
+            }));
+        }
+        function renderPicker() {
+          $("#gu-picker").innerHTML = UP_TRACKS.map((t) => {
+            const i = upLevel(t.id);
+            return `<button class="gu-pick ${t.id === gearSel ? "on" : ""}" data-pick="${t.id}" type="button" title="${t.name}" aria-label="${t.name}">
+              ${UP_ICONS[t.id]}<u style="color:${gradeCol(i)}">${GRADES[i]}</u></button>`;
+          }).join("");
+          $("#gu-picker").querySelectorAll("[data-pick]").forEach((bn) =>
+            bn.addEventListener("click", () => { gearSel = bn.dataset.pick; renderAll(); }));
+        }
+        function renderPanel() {
+          const t = UP_TRACKS.find((x) => x.id === gearSel) || UP_TRACKS[0];
+          const i = upLevel(t.id), maxed = i >= GRADE_MAX;
+          const nx = Math.min(GRADE_MAX, i + 1);
+          const cost = upCost(i), pct = successPct(nx), poor = P.gold < cost;
+          $("#gu-panel").innerHTML = `
+            <h3>${t.name}</h3>
+            <div class="gu-step">
+              <span class="gu-anvil">${UP_ICONS[t.id]}</span>
+              <b style="color:${gradeCol(i)}">[${GRADES[i]}]</b>
+              <i>&#9654;</i>
+              <b style="color:${maxed ? "#8d97a3" : gradeCol(nx)}">[${maxed ? "MAX" : GRADES[nx]}]</b>
+            </div>
+            <div class="gu-step val">
+              <span>${t.unit === "cm" ? "&#8596;" : "&#9733;"}</span>
+              <b>${t.val(i)}${t.unit === "%" || t.unit === "x" ? t.unit : " " + t.unit}</b>
+              <i>&#9654;</i>
+              <b class="${maxed ? "" : "up"}">${maxed ? "&mdash;" : t.val(nx) + (t.unit === "%" || t.unit === "x" ? t.unit : " " + t.unit)}</b>
+            </div>
+            <p class="gu-desc">${escapeUI(t.desc)}</p>
+            ${maxed ? "" : `<div class="gu-chance ${pct < 100 ? "risky" : ""}">
+              Success chance <b>${pct}%</b>${pct < 100 ? " &middot; a failed attempt still costs the gold and leaves the rank where it is" : ""}
+            </div>`}
+            ${maxed
+              ? `<div class="gu-maxed">Maxed</div>`
+              : `<button class="gu-buy ${poor ? "poor" : ""}" id="gu-buy" type="button">${COIN_SVG}${cost.toLocaleString()}</button>`}`;
+          const buy = $("#gu-buy");
+          if (buy) buy.addEventListener("click", () => doUpgrade(t));
+        }
+        function renderAll() {
+          $("#gu-gold").textContent = P.gold.toLocaleString();
+          $("#gu-title").textContent = gearRail === "upgrades" ? "Upgrades" : "Gear Up";
+          renderRail(); renderPicker(); renderPanel(); paintArt();
+        }
+        function doUpgrade(t) {
+          const i = upLevel(t.id);
+          if (i >= GRADE_MAX) return;
+          const cost = upCost(i), nx = i + 1, pct = successPct(nx);
+          if (P.gold < cost) return gateToast("Not enough gold.");
+          P.gold -= cost;
+          const ok = Math.random() * 100 < pct;
+          if (ok) P.up[t.id] = nx;
+          saveProfile();
+          renderAll();
+          refreshLobbyCard();
+          gateToast(ok ? `${t.name} is now ${GRADES[nx]}.` : `${t.name} held at ${GRADES[i]}. The gold is gone.`);
+        }
+        el.querySelector(".gu-close").addEventListener("click", closeGear);
+        document.addEventListener("keydown", function esc(e) {
+          if (e.key === "Escape") { closeGear(); document.removeEventListener("keydown", esc); }
+        });
+        if (window.ResizeObserver) new ResizeObserver(() => paintArt()).observe(cv.parentElement);
+        renderAll();
       }
 
       /* ── MARKET ──────────────────────────────────────────────────
