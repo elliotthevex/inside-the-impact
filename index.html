@@ -2517,6 +2517,104 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .gym-st span svg{width:13px;height:13px}
 .gym-st i{font-style:normal}
 @media(max-height:620px){.gym-stations{top:clamp(66px,13vh,108px)}.gym-st{padding:6px}}
+/* ══ GYM FLOOR ════════════════════════════════════════════════ */
+.gym-hud{
+  position:absolute;left:50%;top:clamp(74px,14vh,118px);transform:translateX(-50%);z-index:6;
+  display:flex;gap:clamp(7px,1.4vw,14px);width:min(520px,calc(100% - 32px));
+}
+.gym-stat{
+  flex:1;padding:clamp(5px,1vh,9px) 10px;
+  border:2px solid var(--lb-gold);background:rgba(8,11,17,.86);
+  box-shadow:0 4px 14px rgba(0,0,0,.6);
+}
+.gym-stat .r{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.gym-stat u{text-decoration:none;font:700 9px/1.4 var(--mono);letter-spacing:.16em;
+  text-transform:uppercase;color:#9aa5b1}
+.gym-stat b{font:700 12px/1 var(--mono);color:#ffeec4;font-variant-numeric:tabular-nums}
+.gym-stat .t{height:4px;margin-top:5px;background:#1b2430;overflow:hidden}
+.gym-stat .t i{display:block;height:100%}
+.gym-stat s{display:block;margin-top:3px;text-decoration:none;
+  font:400 8.5px/1.4 Arial,sans-serif;color:#79838f}
+.gym-prompt{
+  position:absolute;left:50%;bottom:clamp(92px,16vh,140px);transform:translateX(-50%);z-index:6;
+  padding:clamp(6px,1.1vh,10px) clamp(12px,2.4vw,22px);text-align:center;white-space:nowrap;
+  border:2px solid var(--lb-gold);background:rgba(8,11,17,.9);
+  font:400 clamp(12px,1.7vw,17px)/1 var(--serif);letter-spacing:.06em;color:#ffeec4;
+  box-shadow:0 5px 18px rgba(0,0,0,.65);
+}
+.gym-prompt b{
+  display:inline-block;margin-right:8px;padding:2px 7px;
+  background:var(--lb-gold);color:#140e04;font:700 11px/1.3 var(--mono);
+}
+.gym-prompt i{margin-left:9px;font-style:normal;font-size:.72em;color:#8d97a3;letter-spacing:.12em;text-transform:uppercase}
+.gym-help{
+  position:absolute;left:50%;bottom:clamp(64px,11vh,98px);transform:translateX(-50%);z-index:5;
+  font:400 9.5px/1.4 Arial,sans-serif;color:#6b7684;letter-spacing:.04em;white-space:nowrap;
+}
+
+/* ── the set itself ── */
+.trainer{position:fixed;inset:0;z-index:74;display:grid;place-items:center;
+  background:rgba(4,6,10,.9);padding:14px}
+.tr-box{width:min(520px,100%);max-height:100%;overflow-y:auto;
+  border:2px solid var(--lb-gold);background:#0a0e14;
+  box-shadow:0 14px 42px rgba(0,0,0,.78);padding:clamp(12px,2.4vw,22px)}
+.tr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.tr-head span{font:700 8.5px/1.6 var(--mono);letter-spacing:.2em;text-transform:uppercase}
+.tr-head h3{margin:2px 0 0;font:400 clamp(18px,3vw,30px)/1 var(--serif);letter-spacing:.07em;
+  text-transform:uppercase;color:var(--lb-gold)}
+.tr-close{flex:none;width:34px;height:34px;cursor:pointer;border:0;background:transparent;
+  color:#cdbb92;font:300 26px/1 var(--mono)}
+.tr-close:hover{color:#fff6e2}
+.tr-note{margin:10px 0 12px;font:400 clamp(11px,1.4vw,14px)/1.5 var(--serif);color:#9aa5b1;font-style:italic}
+.tr-diffs{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px}
+.tr-diff{padding:10px 8px;cursor:pointer;text-align:center;
+  border:2px solid var(--lb-gold);background:linear-gradient(180deg,#131821,#0b0f16);transition:.12s}
+.tr-diff:hover{background:rgba(232,194,114,.2);transform:translateY(-2px)}
+.tr-diff b{display:block;font:400 clamp(20px,3vw,30px)/1 var(--serif);color:#ffeec4}
+.tr-diff u{display:block;text-decoration:none;font:700 8.5px/1.6 var(--mono);
+  letter-spacing:.16em;text-transform:uppercase;color:#9aa5b1}
+.tr-diff s{display:block;margin-top:5px;text-decoration:none;
+  font:400 9.5px/1.4 Arial,sans-serif;color:#8ad17e}
+.tr-prog{margin-top:14px;padding-top:11px;border-top:1px solid #1e2631}
+.tr-prow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  font:700 10px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:#9aa5b1}
+.tr-prow b{color:#ffeec4}
+.tr-prow.small{font-size:8.5px;margin-top:4px}
+.tr-bar{height:7px;margin:6px 0;background:#1b2430;overflow:hidden}
+.tr-bar i{display:block;height:100%;transition:width .25s}
+.tr-run{text-align:center;padding-top:6px}
+.tr-set{font:400 clamp(22px,4vw,36px)/1 var(--serif);color:#ffeec4;letter-spacing:.08em}
+.tr-bigbar{position:relative;height:clamp(22px,4vh,32px);margin:12px 0;
+  border:2px solid var(--lb-gold);background:#0d1219;overflow:hidden}
+.tr-bigbar i{display:block;height:100%;width:0}
+.tr-bigbar span{position:absolute;inset:0;display:grid;place-items:center;
+  font:700 11px/1 var(--mono);color:#fff6e2;text-shadow:0 1px 3px #000}
+.tr-smash{
+  width:100%;padding:clamp(16px,4vh,34px) 10px;cursor:pointer;
+  border:3px solid var(--lb-gold);background:linear-gradient(180deg,#f0d593,#c79f49);color:#140e04;
+  font:400 clamp(26px,5vw,44px)/1 var(--serif);letter-spacing:.14em;
+}
+.tr-smash small{display:block;margin-top:6px;font:400 10px/1.3 Arial,sans-serif;letter-spacing:.04em;opacity:.7}
+.tr-smash.pop{transform:scale(.97)}
+.tr-foot{display:flex;justify-content:space-between;margin-top:9px;
+  font:700 11px/1 var(--mono);color:#9aa5b1;font-variant-numeric:tabular-nums}
+.tr-end{text-align:center;padding-top:8px}
+.tr-end h4{margin:0 0 6px;font:400 clamp(18px,3vw,28px)/1 var(--serif);letter-spacing:.08em;text-transform:uppercase}
+.tr-end.win h4{color:#8ad17e}
+.tr-end.fail h4{color:#e8886a}
+.tr-end p{margin:0 0 10px;font:400 12px/1.5 var(--serif);color:#d7dee6}
+.tr-end p b{color:#ffeec4}
+.tr-again{display:flex;gap:8px;margin-top:12px}
+.tr-btn{flex:1;padding:9px;cursor:pointer;border:2px solid var(--lb-gold);
+  background:var(--lb-gold);color:#140e04;
+  font:700 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.tr-btn.ghost{background:transparent;color:#ffeec4}
+.tr-btn:hover{background:#fff0c8;color:#140e04}
+@media(max-height:620px){
+  .gym-hud{top:clamp(62px,11vh,96px)}
+  .gym-prompt{bottom:clamp(78px,13vh,112px)}
+  .gym-help{display:none}
+}
 /* ══ PLAZA · BOARDS · TRADE ═══════════════════════════════════ */
 .plaza-faces{
   position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;
@@ -3732,7 +3830,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           gold: 1 + (lv - 1) * 0.01,
           luck: 1 + (lv - 1) * 0.01,
           exp: 1 + (lv - 1) * 0.02,
-          str: 1.05 + (lv - 1) * 0.01 + ((P && P.train) || 0) * 0.01,
+          sta: 1 + (typeof gymBonus === "function" ? gymBonus("stamina") : 0),
+          str: 1.05 + (lv - 1) * 0.01 + (typeof gymBonus === 'function' ? gymBonus('strength') : 0),
         };
         /* a running boost multiplies its own number */
         if (typeof BOOST_DEF === "object" && P && P.boosts) {
@@ -3748,7 +3847,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       };
       let P = null;
       function loadProfile() {
-        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {}, up: null };
+        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {}, up: null, gymStat: { strength: 0, stamina: 0 } };
         try {
           const raw = localStorage.getItem(PROFILE_KEY);
           P = raw ? Object.assign(base, JSON.parse(raw)) : base;
@@ -4276,6 +4375,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         if (id === "gym") return setLobbyView("gym");
         if (id === "rankings") return setLobbyView("plaza");
         if (id === "switchview") return cycleLobbyView();
+        if (id === "gymview") return setLobbyView("gym");
         if (id === "guide") return instructions();
         if (id === "settings") return openSettings();
         maintenance(id);
@@ -4317,7 +4417,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         el.className = "lobby";
         el.innerHTML = `
           <canvas class="lb-art" id="lobby-art" role="img"
-            aria-label="${lobbyView === 'gym' ? 'Pixel art of a weights room: squat rack, bench and dumbbell racks' : lobbyView === 'plaza' ? 'Pixel art of a town square at dusk with a gilded statue of a boxer on a plinth' : 'Pixel art: a boxer taking a straight right flush on the cheek, head twisting off the impact'}"></canvas>
+            aria-label="${lobbyView === 'gym' ? 'A gym floor you walk around with WASD: treadmill, bench, squat rack and dumbbells' : lobbyView === 'plaza' ? 'Pixel art of a town square at dusk with a gilded statue of a boxer on a plinth' : 'Pixel art: a boxer taking a straight right flush on the cheek, head twisting off the impact'}"></canvas>
           <div class="lb-shade"></div>
 
           <div class="lb-top">
@@ -4356,20 +4456,22 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
                   </button>`).join("")}
               </div>
             </div>
-            <button class="plaza-trade" data-trade="1" type="button">Trade Central</button>
+            <button class="plaza-trade" data-lobby="gymview" type="button">Trade Central &rarr; gym floor</button>
             ` : lobbyView === "gym" ? `
             <div class="lb-tagline">
               <b>Training Arena</b>
-              <i>Strength is built here. Judgement is built in the corner.</i>
+              <i>Weights for strength, the treadmill for stamina. Judgement is built in the corner.</i>
             </div>
-            <div class="gym-stations">
-              ${STATIONS.map((st) => `
-                <button class="gym-st" data-train="${st.id}" type="button" title="${escapeUI(st.blurb)}">
-                  <b>${st.name}</b>
-                  <small>+${st.gain.toFixed(2)}x strength</small>
-                  <span>${COIN_SVG}<i data-cost>${trainCost().toLocaleString()}</i></span>
-                </button>`).join("")}
-            </div>` : `
+            <div class="gym-hud">
+              ${Object.keys(GYM_STATS).map((k) => `
+                <div class="gym-stat">
+                  <div class="r"><u>${GYM_STATS[k].name}</u><b>Lv ${gymLevel(k)} &middot; +${gymBonus(k).toFixed(1)}x</b></div>
+                  <div class="t"><i style="width:${gymInto(k)}%;background:${GYM_STATS[k].col}"></i></div>
+                  <s>${gymInto(k)} / ${GYM_PER_LEVEL} to the next level</s>
+                </div>`).join("")}
+            </div>
+            <div class="gym-prompt" id="gym-prompt" hidden></div>
+            <div class="gym-help">WASD to walk &middot; E to occupy a machine</div>` : `
             <div class="lb-tagline">
               <b>Corner · Season One</b>
               <i>A safety stop pays more than a win. That is the whole game.</i>
@@ -4430,7 +4532,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const reduced = document.body.dataset.reduceMotion === "1"
           || document.body.dataset.lowDetail === "1"
           || matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const paint = () => (lobbyView === "gym" ? drawGymArena : lobbyView === "plaza" ? drawPlaza : drawPunchScene)(actx, AW, AH, lobbyT);
+        const paint = () => (lobbyView === "gym" ? drawGymRoom : lobbyView === "plaza" ? drawPlaza : drawPunchScene)(actx, AW, AH, lobbyT);
         if (reduced) { lobbyT = .49; paint(); }
         else {
           /* Wall-clock driven: the punch takes the same 5.3s whether the
@@ -5139,147 +5241,361 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         renderTab();
       }
 
-      /* ── TRAINING ARENA ──────────────────────────────────────────
-         The lobby has two views. The ring is where he gets punched;
-         the gym is where he gets strong. Switch Gym / Switch Lobby
-         flips between them without leaving the lobby chrome. */
-      let lobbyView = "ring";
-      const STATIONS = [
-        { id: "bench",  name: "Bench Press",   gain: .01, blurb: "Flat bench, free weight. Builds the pressing strength behind a cross." },
-        { id: "squat",  name: "Squat Rack",    gain: .01, blurb: "Everything a punch is worth starts at the floor." },
-        { id: "dumb",   name: "Dumbbells",     gain: .01, blurb: "Curls and raises. Slow, boring, and the reason the last round still has a jab in it." },
-        { id: "core",   name: "Medicine Ball", gain: .01, blurb: "Core work and body conditioning, so a shot downstairs does less." },
-      ];
-      const trainCost = () => 100 + ((P && P.train) || 0) * 25;
+      /* ── THE GYM FLOOR ───────────────────────────────────────────
+         A room you walk around with WASD. Stand on a machine, press E,
+         pick how hard you want it, then earn it. Weights build
+         strength; the treadmill builds stamina. Every level on either
+         is worth +0.1x on your card. */
+      const GYM_STATS = {
+        strength: { name: "Strength", col: "#e8453a", key: "str" },
+        stamina:  { name: "Stamina",  col: "#5fa8e8", key: "sta" },
+      };
+      const GYM_PER_LEVEL = 100;
+      const gymPoints = (k) => (P && P.gymStat && P.gymStat[k]) || 0;
+      const gymLevel = (k) => Math.floor(gymPoints(k) / GYM_PER_LEVEL);
+      const gymInto = (k) => gymPoints(k) % GYM_PER_LEVEL;
+      const gymBonus = (k) => gymLevel(k) * 0.1;
 
-      function drawGymArena(ctx, W, H, t) {
-        const b = (X, Y, Wd, Ht, c) => {
-          ctx.fillStyle = c;
-          ctx.fillRect(Math.round(X), Math.round(Y), Math.max(1, Math.round(Wd)), Math.max(1, Math.round(Ht)));
-        };
-        const rep = Math.sin(t * Math.PI * 2);               /* one rep per cycle */
-        const floor = H * .66;
-        /* room */
-        b(-4, -4, W + 8, H + 8, "#0b0f16");
-        b(-4, -4, W + 8, floor, "#161d28");
-        /* mirrored back wall */
-        b(W * .30, H * .14, W * .42, floor - H * .18, "#1e2733");
-        b(W * .31, H * .15, W * .40, floor - H * .20, "#26323f");
-        for (let i = 0; i < 4; i++) b(W * .31 + i * W * .10, H * .15, 1, floor - H * .20, "#33414f");
-        /* breeze block */
-        for (let y = 0; y < floor; y += H * .055) {
-          for (let x = ((y / (H * .055)) % 2 ? -W * .04 : 0); x < W; x += W * .09) {
-            if (x > W * .28 && x < W * .72 && y > H * .13) continue;
-            b(x, y, W * .085, H * .048, (x * 7 + y * 11) % 3 ? "#1a2230" : "#202a38");
+      const GYM_MACHINES = [
+        { id: "treadmill", name: "Treadmill", stat: "stamina", kind: "tread",
+          x: .18, y: .58, w: .15, h: .20, unit: "st/s",
+          diffs: [10, 15, 20, 25] },
+        { id: "bench", name: "Bench Press", stat: "strength", kind: "bench",
+          x: .42, y: .70, w: .18, h: .16, unit: "kg",
+          diffs: [40, 70, 100, 140] },
+        { id: "squat", name: "Squat Rack", stat: "strength", kind: "squat",
+          x: .68, y: .56, w: .16, h: .22, unit: "kg",
+          diffs: [60, 100, 150, 200] },
+        { id: "dumbbell", name: "Dumbbell Rack", stat: "strength", kind: "rack",
+          x: .88, y: .74, w: .14, h: .14, unit: "kg",
+          diffs: [20, 35, 50, 70] },
+        /* not a machine: the trading floor is a door you walk to */
+        { id: "trade", name: "Trade Central", stat: null, kind: "trade",
+          x: .50, y: .53, w: .20, h: .24 },
+      ];
+      /* how many clicks a setting asks for, and what it pays */
+      const mgTarget = (m, d) => Math.max(8, Math.round(m.kind === "tread" ? d * 1.8 : d / 2.6));
+      const mgReward = (m, d) => Math.max(6, Math.round(m.kind === "tread" ? d * 1.6 : d / 2.4));
+
+      const gymKeys = new Set();
+      let gymPlayer = { x: .5, y: .78, face: 1, step: 0 };
+      let gymNear = null, gymLast = 0, gymBusy = false;
+
+      function gymBounds() { return { x0: .06, x1: .94, y0: .50, y1: .92 }; }
+      function gymStep(dt) {
+        if (gymBusy) return;
+        const sp = 0.42 * dt;                     /* screens per second */
+        let dx = 0, dy = 0;
+        if (gymKeys.has("a") || gymKeys.has("arrowleft")) dx -= 1;
+        if (gymKeys.has("d") || gymKeys.has("arrowright")) dx += 1;
+        if (gymKeys.has("w") || gymKeys.has("arrowup")) dy -= 1;
+        if (gymKeys.has("s") || gymKeys.has("arrowdown")) dy += 1;
+        if (dx || dy) {
+          const n = Math.hypot(dx, dy) || 1;
+          gymPlayer.x += (dx / n) * sp;
+          gymPlayer.y += (dy / n) * sp * .72;
+          gymPlayer.step += dt * 9;
+          if (dx) gymPlayer.face = dx > 0 ? 1 : -1;
+        } else gymPlayer.step = 0;
+        const b = gymBounds();
+        gymPlayer.x = Math.max(b.x0, Math.min(b.x1, gymPlayer.x));
+        gymPlayer.y = Math.max(b.y0, Math.min(b.y1, gymPlayer.y));
+        /* nearest machine within reach */
+        gymNear = null;
+        let best = .11;
+        for (const m of GYM_MACHINES) {
+          const d = Math.hypot(m.x - gymPlayer.x, (m.y - gymPlayer.y) * 1.5);
+          if (d < best) { best = d; gymNear = m; }
+        }
+        const p = $("#gym-prompt");
+        if (p) {
+          p.hidden = !gymNear;
+          if (gymNear) p.innerHTML = gymNear.stat
+            ? `<b>E</b> Occupy &middot; ${gymNear.name}<i>${GYM_STATS[gymNear.stat].name}</i>`
+            : `<b>E</b> Enter &middot; ${gymNear.name}<i>Trading floor</i>`;
+        }
+      }
+
+      function drawGymRoom(ctx, W, H, t) {
+        const now = performance.now();
+        const dt = gymLast ? Math.min(.05, (now - gymLast) / 1000) : 0;
+        gymLast = now;
+        gymStep(dt);
+        const b = artBlock(ctx);
+        const floorY = H * .44;
+        /* walls and high windows */
+        b(-4, -4, W + 8, H + 8, "#0c1118");
+        b(-4, -4, W + 8, floorY, "#1b222e");
+        for (let y = 0; y < floorY; y += H * .05) {
+          for (let x = ((y / (H * .05)) % 2 ? -W * .04 : 0); x < W; x += W * .085) {
+            b(x, y, W * .08, H * .044, (x * 7 + y * 11) % 3 ? "#202836" : "#26303f");
           }
+        }
+        for (let i = 0; i < 4; i++) {
+          const wx = W * (.08 + i * .25);
+          b(wx, H * .07, W * .15, H * .26, "#2c3a4c");
+          b(wx + W * .008, H * .08, W * .134, H * .24, "#3b4e66");
+          b(wx + W * .072, H * .07, W * .006, H * .26, "#243040");
+          b(wx, H * .19, W * .15, H * .008, "#243040");
         }
         /* strip lights */
         for (let i = 0; i < 3; i++) {
           const lx = W * (.2 + i * .3);
-          b(lx - W * .07, H * .035, W * .14, H * .022, "#ffeab4");
-          const g = ctx.createRadialGradient(lx, H * .05, 2, lx, H * .05, H * .5);
-          g.addColorStop(0, "rgba(255,226,168,.16)"); g.addColorStop(1, "rgba(255,226,168,0)");
-          ctx.fillStyle = g; ctx.fillRect(lx - H * .5, 0, H, H);
+          b(lx - W * .08, H * .02, W * .16, H * .018, "#ffeab4");
+          const g = ctx.createRadialGradient(lx, H * .04, 2, lx, H * .04, H * .6);
+          g.addColorStop(0, "rgba(255,226,168,.15)"); g.addColorStop(1, "rgba(255,226,168,0)");
+          ctx.fillStyle = g; ctx.fillRect(lx - H * .6, 0, H * 1.2, H);
         }
-        /* rubber floor */
-        b(-4, floor, W + 8, H, "#141a22");
-        b(-4, floor, W + 8, H * .012, "#222c38");
-        for (let x = 0; x < W; x += W * .07) b(x, floor + H * .02, 1, H - floor, "rgba(0,0,0,.25)");
-
-        /* ── squat rack, left ── */
-        const rx = W * .055, ry = floor - H * .42;
-        b(rx, ry, W * .022, H * .40, "#9a2a22");
-        b(rx + W * .14, ry, W * .022, H * .40, "#9a2a22");
-        b(rx - W * .02, floor - H * .015, W * .20, H * .02, "#6d1b15");
-        b(rx - W * .03, ry + H * .06, W * .23, H * .016, "#c9ced6");     /* bar */
-        for (const px of [rx - W * .025, rx + W * .185]) {
-          b(px, ry + H * .02, W * .022, H * .085, "#2b3340");
-          b(px + W * .004, ry + H * .03, W * .014, H * .065, "#3d4756");
+        /* rubber floor, receding */
+        b(-4, floorY, W + 8, H, "#171d26");
+        b(-4, floorY, W + 8, H * .012, "#2b3542");
+        for (let i = 0; i < 16; i++) {
+          const k = i / 15, y = floorY + Math.pow(k, 1.7) * (H - floorY);
+          b(-4, y, W + 8, 1, "rgba(0,0,0,.22)");
         }
-        /* ── cable machine, mid-left ── */
-        const cx2 = W * .29;
-        b(cx2, floor - H * .46, W * .035, H * .46, "#242d3a");
-        b(cx2 + W * .006, floor - H * .44, W * .022, H * .42, "#2f3a48");
-        b(cx2 - W * .012, floor - H * .47, W * .06, H * .022, "#374253");
-        b(cx2 + W * .014, floor - H * .45, 1, H * .18, "#8d97a3");
-        b(cx2 + W * .004, floor - H * .27, W * .022, H * .012, "#c9ced6");
-        for (let i = 0; i < 5; i++) b(cx2 + W * .004, floor - H * .25 + i * H * .028, W * .022, H * .022, i < 2 ? "#3d4756" : "#2b3340");
+        /* training mats under the weights */
+        b(W * .36, H * .62, W * .30, H * .30, "#231b22");
+        b(W * .80, H * .66, W * .18, H * .26, "#1d2430");
 
-        /* ── bench, centre, with a figure pressing ── */
-        const bx = W * .40, by = floor - H * .16;
-        const BW = W * .26;
-        b(bx, by, BW, H * .048, "#2a3240");
-        b(bx + BW * .06, by + H * .007, BW * .88, H * .030, "#3a4454");
-        b(bx + BW * .09, by + H * .048, BW * .10, H * .115, "#20262f");
-        b(bx + BW * .80, by + H * .048, BW * .10, H * .115, "#20262f");
-        /* lifter on his back, pressing */
-        const lift = rep * H * .026;
-        b(bx + BW * .18, by - H * .036, BW * .62, H * .038, SK2);          /* torso */
-        b(bx + BW * .24, by - H * .030, BW * .50, H * .026, SK);
-        b(bx + BW * .04, by - H * .050, BW * .17, H * .050, SK2);          /* head */
-        b(bx + BW * .06, by - H * .044, BW * .13, H * .036, SK);
-        b(bx + BW * .04, by - H * .058, BW * .17, H * .020, HR);
-        b(bx + BW * .26, by - H * .088 - lift, BW * .07, H * .056, SK2);   /* arms */
-        b(bx + BW * .62, by - H * .088 - lift, BW * .07, H * .056, SK2);
-        b(bx + BW * .10, by - H * .100 - lift, BW * .84, H * .020, "#c9ced6");   /* bar */
-        for (const px of [bx + BW * .02, bx + BW * .86]) {
-          b(px, by - H * .134 - lift, BW * .11, H * .090, "#2b3340");
-          b(px + BW * .022, by - H * .120 - lift, BW * .066, H * .062, "#3d4756");
+        /* machines, back to front */
+        const order = GYM_MACHINES.slice().sort((p, q) => p.y - q.y);
+        for (const m of order) drawMachine(ctx, W, H, m, m === gymNear);
+        /* player, drawn in the right depth order */
+        drawGymPlayer(ctx, W, H);
+        /* grade */
+        const v = ctx.createRadialGradient(W / 2, H * .55, Math.min(W, H) * .34, W / 2, H * .55, H);
+        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.5)");
+        ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+      }
+
+      function drawMachine(ctx, W, H, m, near) {
+        const b = artBlock(ctx);
+        const x = m.x * W, y = m.y * H, w = m.w * W, h = m.h * H;
+        if (near) {
+          ctx.strokeStyle = "rgba(232,194,114,.85)";
+          ctx.lineWidth = Math.max(1, H * .007);
+          ctx.strokeRect(Math.round(x - w / 2) + .5, Math.round(y - h * .78) + .5, Math.round(w), Math.round(h));
         }
-        b(bx + BW * .30, by + H * .010, BW * .40, H * .026, "#1c2029");    /* legs under */
-
-        /* ── treadmill, far right behind the racks ── */
-        const tx = W * .86;
-        b(tx, floor - H * .22, W * .13, H * .055, "#232c38");
-        b(tx + W * .004, floor - H * .212, W * .122, H * .030, "#111720");
-        b(tx + W * .10, floor - H * .40, W * .016, H * .19, "#2a3340");
-        b(tx + W * .055, floor - H * .40, W * .07, H * .055, "#2f3a48");
-        /* ── dumbbell rack, right ── */
-        const dx = W * .70;
-        b(dx, floor - H * .17, W * .25, H * .025, "#2a3240");
-        b(dx, floor - H * .09, W * .25, H * .025, "#2a3240");
-        b(dx, floor - H * .19, W * .016, H * .19, "#20262f");
-        b(dx + W * .235, floor - H * .19, W * .016, H * .19, "#20262f");
-        for (let i = 0; i < 6; i++) {
-          const ox = dx + W * .025 + i * W * .038;
-          for (const oy of [floor - H * .195, floor - H * .115]) {
-            b(ox, oy, W * .026, H * .012, "#c9ced6");
-            b(ox - W * .004, oy - H * .006, W * .010, H * .024, "#38424f");
-            b(ox + W * .020, oy - H * .006, W * .010, H * .024, "#38424f");
+        if (m.kind === "tread") {
+          b(x - w * .42, y - h * .10, w * .84, h * .34, "#232c38");
+          b(x - w * .34, y - h * .04, w * .68, h * .22, "#0f141c");
+          b(x - w * .40, y - h * .78, w * .10, h * .70, "#2a3340");
+          b(x + w * .30, y - h * .78, w * .10, h * .70, "#2a3340");
+          b(x - w * .40, y - h * .86, w * .80, h * .16, "#2f3a48");
+          b(x - w * .30, y - h * .80, w * .60, h * .07, "#5fa8e8");
+        } else if (m.kind === "bench") {
+          b(x - w * .46, y - h * .34, w * .92, h * .16, "#2a3240");
+          b(x - w * .38, y - h * .30, w * .76, h * .09, "#3a4454");
+          b(x - w * .30, y - h * .18, w * .10, h * .20, "#20262f");
+          b(x + w * .20, y - h * .18, w * .10, h * .20, "#20262f");
+          b(x - w * .52, y - h * .62, w * .09, h * .34, "#9a2a22");
+          b(x + w * .43, y - h * .62, w * .09, h * .34, "#9a2a22");
+          b(x - w * .56, y - h * .58, w * 1.12, h * .07, "#c9ced6");
+          b(x - w * .66, y - h * .66, w * .11, h * .24, "#2b3340");
+          b(x + w * .55, y - h * .66, w * .11, h * .24, "#2b3340");
+        } else if (m.kind === "squat") {
+          b(x - w * .40, y - h * .92, w * .11, h * .92, "#9a2a22");
+          b(x + w * .29, y - h * .92, w * .11, h * .92, "#9a2a22");
+          b(x - w * .48, y - h * .04, w * .96, h * .08, "#6d1b15");
+          b(x - w * .52, y - h * .70, w * 1.04, h * .06, "#c9ced6");
+          b(x - w * .62, y - h * .80, w * .12, h * .26, "#2b3340");
+          b(x + w * .50, y - h * .80, w * .12, h * .26, "#2b3340");
+        } else if (m.kind === "trade") {
+          /* lit counter under a signed archway */
+          b(x - w * .52, y - h * .96, w * .10, h * .96, "#4a3523");
+          b(x + w * .42, y - h * .96, w * .10, h * .96, "#4a3523");
+          b(x - w * .60, y - h * 1.08, w * 1.20, h * .18, "#5b4129");
+          b(x - w * .48, y - h * 1.04, w * .96, h * .10, "#2a1f14");
+          b(x - w * .40, y - h * 1.02, w * .80, h * .055, "#e8c272");
+          b(x - w * .44, y - h * .40, w * .88, h * .26, "#2d2535");
+          b(x - w * .40, y - h * .36, w * .80, h * .14, "#3c3345");
+          b(x - w * .36, y - h * .33, w * .72, h * .045, "#6fcf5e");
+          for (let i = 0; i < 3; i++) b(x - w * .30 + i * w * .22, y - h * .56, w * .12, h * .16, "#241a12");
+        } else {
+          b(x - w * .5, y - h * .34, w, h * .10, "#2a3240");
+          b(x - w * .5, y - h * .74, w, h * .10, "#2a3240");
+          b(x - w * .5, y - h * .80, w * .07, h * .80, "#20262f");
+          b(x + w * .43, y - h * .80, w * .07, h * .80, "#20262f");
+          for (let i = 0; i < 4; i++) {
+            const ox = x - w * .38 + i * w * .25;
+            for (const oy of [y - h * .80, y - h * .40]) {
+              b(ox, oy, w * .16, h * .07, "#c9ced6");
+              b(ox - w * .03, oy - h * .035, w * .06, h * .14, "#38424f");
+              b(ox + w * .13, oy - h * .035, w * .06, h * .14, "#38424f");
+            }
           }
         }
-        /* plates leaning against the wall, and a kettlebell */
-        b(W * .03, floor - H * .09, W * .05, H * .09, "#262f3b");
-        b(W * .035, floor - H * .08, W * .04, H * .07, "#333d4a");
-        b(W * .33, floor - H * .05, W * .035, H * .05, "#2b3340");
-        b(W * .338, floor - H * .062, W * .018, H * .016, "#3d4756");
-        /* chalk dust */
-        for (let i = 0; i < 26; i++) {
-          const px = rnd(i * 5.1) * W, py = floor - rnd(i * 2.7) * H * .3;
-          b(px, py, 1 + (i % 2), 1, i % 3 ? "rgba(226,232,240,.16)" : "rgba(226,232,240,.3)");
-        }
-        /* grade */
-        const v = ctx.createRadialGradient(W / 2, H * .5, Math.min(W, H) * .3, W / 2, H * .5, H * .95);
-        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.62)");
-        ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = "rgba(8,11,18,.13)";
-        const st = Math.max(2, Math.round(H * .017));
-        for (let y = 0; y < H; y += st) ctx.fillRect(0, y, W, 1);
+        /* floor marker so the walkable target reads at a glance */
+        ctx.fillStyle = near ? "rgba(232,194,114,.22)" : "rgba(120,140,170,.10)";
+        ctx.beginPath();
+        ctx.ellipse(x, y + h * .05, w * .5, h * .12, 0, 0, 6.3);
+        ctx.fill();
       }
 
-      function trainAt(id) {
-        const st = STATIONS.find((x) => x.id === id);
-        if (!st || !P) return;
-        const cost = trainCost();
-        if (P.gold < cost) return gateToast(`Need ${cost.toLocaleString()} gold to train.`);
-        P.gold -= cost;
-        P.train = (P.train || 0) + 1;
-        saveProfile();
-        refreshLobbyCard();
-        const host = document.querySelector(".gym-stations");
-        if (host) host.querySelectorAll("[data-cost]").forEach((n) => { n.textContent = trainCost().toLocaleString(); });
-        gateToast(`+${st.gain.toFixed(2)}x strength · ${st.name}`);
+      function drawGymPlayer(ctx, W, H) {
+        const b = artBlock(ctx);
+        const x = gymPlayer.x * W, y = gymPlayer.y * H;
+        const s = H * .085;                               /* body unit */
+        const bob = Math.sin(gymPlayer.step) * s * .08;
+        const swing = Math.sin(gymPlayer.step) * s * .22;
+        /* shadow */
+        ctx.fillStyle = "rgba(0,0,0,.45)";
+        ctx.beginPath(); ctx.ellipse(x, y + s * .06, s * .42, s * .14, 0, 0, 6.3); ctx.fill();
+        /* legs */
+        b(x - s * .26, y - s * .42 + bob, s * .22, s * .46 + swing * .3, "#2a3444");
+        b(x + s * .04, y - s * .42 + bob, s * .22, s * .46 - swing * .3, "#2a3444");
+        /* torso */
+        b(x - s * .36, y - s * .96 + bob, s * .72, s * .58, "#8a2820");
+        b(x - s * .28, y - s * .90 + bob, s * .56, s * .44, "#b03a2c");
+        /* arms */
+        b(x - s * .50, y - s * .92 + bob + swing * .4, s * .16, s * .46, SKIN2);
+        b(x + s * .34, y - s * .92 + bob - swing * .4, s * .16, s * .46, SKIN2);
+        /* head */
+        b(x - s * .26, y - s * 1.40 + bob, s * .52, s * .46, SKIN2);
+        b(x - s * .20, y - s * 1.34 + bob, s * .40, s * .34, SKIN);
+        b(x - s * .26, y - s * 1.46 + bob, s * .52, s * .16, "#17120d");
+        const ex = gymPlayer.face > 0 ? s * .02 : -s * .18;
+        b(x + ex, y - s * 1.22 + bob, s * .10, s * .08, "#1b1109");
+        b(x + ex + s * .16 * gymPlayer.face, y - s * 1.22 + bob, s * .10, s * .08, "#1b1109");
       }
+
+      /* ── the minigame ────────────────────────────────────────── */
+      function closeTrainer() {
+        document.querySelectorAll(".trainer").forEach((n) => n.remove());
+        gymBusy = false;
+      }
+      function openTrainer(m) {
+        if (gymBusy) return;
+        gymBusy = true;
+        gymKeys.clear();
+        const st = GYM_STATS[m.stat];
+        const el = document.createElement("div");
+        el.className = "trainer";
+        el.setAttribute("role", "dialog");
+        el.setAttribute("aria-label", m.name);
+        el.innerHTML = `
+          <div class="tr-box">
+            <div class="tr-head">
+              <div><span style="color:${st.col}">${st.name}</span><h3>${m.name}</h3></div>
+              <button class="tr-close" type="button" aria-label="Leave">&times;</button>
+            </div>
+            <div class="tr-stage" id="tr-stage"></div>
+          </div>`;
+        document.body.appendChild(el);
+        el.querySelector(".tr-close").addEventListener("click", closeTrainer);
+
+        const stage = $("#tr-stage");
+        function pick() {
+          stage.innerHTML = `
+            <p class="tr-note">Pick your setting. Harder means more clicks in the same ten seconds — and a bigger payout.</p>
+            <div class="tr-diffs">
+              ${m.diffs.map((d, i) => `
+                <button class="tr-diff" data-d="${d}" type="button">
+                  <b>${d}</b><u>${m.unit}</u>
+                  <s>${mgTarget(m, d)} clicks &middot; +${mgReward(m, d)} ${st.name.toLowerCase()}</s>
+                </button>`).join("")}
+            </div>
+            <div class="tr-prog">
+              <div class="tr-prow"><span>${st.name} level</span><b>${gymLevel(m.stat)}</b></div>
+              <div class="tr-bar"><i style="width:${gymInto(m.stat)}%;background:${st.col}"></i></div>
+              <div class="tr-prow small"><span>${gymInto(m.stat)} / ${GYM_PER_LEVEL} to next level</span><b>+${gymBonus(m.stat).toFixed(1)}x now</b></div>
+            </div>`;
+          stage.querySelectorAll("[data-d]").forEach((bn) =>
+            bn.addEventListener("click", () => run(Number(bn.dataset.d))));
+        }
+        function run(d) {
+          const target = mgTarget(m, d), reward = mgReward(m, d);
+          let clicks = 0, prog = 0, left = 10.0, done = false;
+          stage.innerHTML = `
+            <div class="tr-run">
+              <div class="tr-set">${d} ${m.unit}</div>
+              <div class="tr-bigbar"><i id="tr-fill" style="background:${st.col}"></i>
+                <span id="tr-pct">0%</span></div>
+              <button class="tr-smash" id="tr-smash" type="button">GO<small>click / tap / press space</small></button>
+              <div class="tr-foot"><span id="tr-clicks">0 / ${target}</span><span id="tr-time">10.0s</span></div>
+            </div>`;
+          const fill = $("#tr-fill"), pct = $("#tr-pct"),
+                cl = $("#tr-clicks"), tm = $("#tr-time"), smash = $("#tr-smash");
+          const hit = () => {
+            if (done) return;
+            clicks++;
+            prog = Math.min(100, (clicks / target) * 100);
+            fill.style.width = prog + "%";
+            pct.textContent = Math.round(prog) + "%";
+            cl.textContent = clicks + " / " + target;
+            smash.classList.remove("pop"); void smash.offsetWidth; smash.classList.add("pop");
+            if (prog >= 100) finish(true);
+          };
+          smash.addEventListener("click", hit);
+          const keyHit = (e) => {
+            if (e.code === "Space" || e.key === " ") { e.preventDefault(); hit(); }
+          };
+          window.addEventListener("keydown", keyHit);
+          const tick = setInterval(() => {
+            if (done) return;
+            left -= .1;
+            /* the belt keeps moving: a little progress drains away */
+            prog = Math.max(0, prog - (m.kind === "tread" ? .55 : .35));
+            clicks = Math.round((prog / 100) * target);
+            fill.style.width = prog + "%";
+            pct.textContent = Math.round(prog) + "%";
+            cl.textContent = clicks + " / " + target;
+            tm.textContent = Math.max(0, left).toFixed(1) + "s";
+            if (left <= 0) finish(false);
+          }, 100);
+          function finish(won) {
+            if (done) return;
+            done = true;
+            clearInterval(tick);
+            window.removeEventListener("keydown", keyHit);
+            const gained = won ? reward : Math.round(reward * (prog / 100) * .4);
+            P.gymStat = P.gymStat || { strength: 0, stamina: 0 };
+            const before = gymLevel(m.stat);
+            P.gymStat[m.stat] = (P.gymStat[m.stat] || 0) + gained;
+            const after = gymLevel(m.stat);
+            saveProfile();
+            refreshLobbyCard();
+            stage.innerHTML = `
+              <div class="tr-end ${won ? "win" : "fail"}">
+                <h4>${won ? "Set complete" : "Out of time"}</h4>
+                <p>+${gained} ${st.name.toLowerCase()}${after > before
+                  ? ` &middot; <b>level ${after}</b>, now +${gymBonus(m.stat).toFixed(1)}x` : ""}</p>
+                <div class="tr-bar"><i style="width:${gymInto(m.stat)}%;background:${st.col}"></i></div>
+                <div class="tr-again">
+                  <button class="tr-btn" id="tr-retry" type="button">Another set</button>
+                  <button class="tr-btn ghost" id="tr-leave" type="button">Leave</button>
+                </div>
+              </div>`;
+            $("#tr-retry").addEventListener("click", pick);
+            $("#tr-leave").addEventListener("click", closeTrainer);
+          }
+        }
+        pick();
+      }
+
+      /* ── gym input ───────────────────────────────────────────── */
+      function gymActive() {
+        return lobbyView === "gym" && !!document.querySelector(".lobby")
+          && !document.querySelector(".trainer,.settings,.market,.gearup,.msetup,.modesel,#gymload,.boardwrap,.tradewrap");
+      }
+      window.addEventListener("keydown", (e) => {
+        if (!gymActive()) return;
+        const t = e.target;
+        if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || "") || t.isContentEditable)) return;
+        const k = e.key.toLowerCase();
+        if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(k)) {
+          gymKeys.add(k);
+          e.preventDefault();
+        } else if (k === "e" && gymNear) {
+          e.preventDefault();
+          if (gymNear.kind === "trade") openTrade(); else openTrainer(gymNear);
+        }
+      });
+      window.addEventListener("keyup", (e) => {
+        gymKeys.delete(e.key.toLowerCase());
+      });
+      window.addEventListener("blur", () => gymKeys.clear());
+
       const VIEW_ORDER = ["ring", "gym", "plaza"];
       const VIEW_NEXT = { ring: "Switch gym", gym: "Switch plaza", plaza: "Switch lobby" };
       function setLobbyView(v) {
