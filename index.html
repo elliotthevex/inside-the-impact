@@ -2364,6 +2364,33 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
 body:has(#boot) #gear-btn,body:has(.lobby) #gear-btn,
 body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .mz-rw.exp{border-color:#8f6fd0}
+.st-group{
+  margin:clamp(8px,1.4vh,14px) 0 1px;padding-bottom:4px;
+  border-bottom:1px solid rgba(232,194,114,.3);
+  font:700 clamp(8.5px,1.1vw,10.5px)/1.3 var(--mono);letter-spacing:.2em;
+  text-transform:uppercase;color:var(--lb-gold);
+}
+.st-group:first-child{margin-top:0}
+.st-right{display:flex;flex-direction:column;min-height:0}
+.st-right .st-panel{flex:1}
+.mz-risk{
+  margin:2px 0 0;text-align:center;
+  font:400 clamp(10px,1.3vw,13px)/1.45 var(--serif);color:#9aa5b1;font-style:italic;
+}
+.mz-mult{
+  display:inline-block;margin-left:8px;padding:2px 7px;vertical-align:middle;
+  border:1px solid var(--lb-gold);color:var(--lb-gold);
+  font:700 10px/1.4 var(--mono);letter-spacing:.08em;
+}
+.mz-mult.hot{border-color:#e8453a;color:#ff7a6b}
+.mz-mult.low{border-color:#6fcf5e;color:#8ad17e}
+.mz-map .tag{
+  position:absolute;right:0;top:0;z-index:2;padding:2px 6px;
+  background:rgba(5,7,11,.9);border-left:1px solid var(--lb-gold);border-bottom:1px solid var(--lb-gold);
+  font:700 8.5px/1.4 var(--mono);letter-spacing:.06em;color:var(--lb-gold);
+}
+.mz-map .tag.hot{color:#ff7a6b;border-color:#e8453a}
+.mz-map .tag.low{color:#8ad17e;border-color:#6fcf5e}
 .mz-rw i.exp{display:grid;place-items:center}
 
 /* ══ MODE SELECT (after PLAY) ═════════════════════════════════ */
@@ -3403,11 +3430,12 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const base = REWARDS[kind];
         if (!base || !P) return null;
         const d = activeDiff || DIFFS[0];
-        const mult = 1 + P.lv * 0.01;
+        const gm = activeGymMult || 1;
+        const mult = (1 + P.lv * 0.01) * gm;
         const r = Object.assign({}, base, {
           gold: Math.round(d.gold * base.share * mult),
-          gems: Math.round(d.gems * base.share),
-          xp: Math.round((d.xp || 120) * base.xpShare),
+          gems: Math.round(d.gems * gm * base.share),
+          xp: Math.round((d.xp || 120) * gm * base.xpShare),
           diff: d.name,
         });
         P.gold += r.gold; P.gems += r.gems; P.xp += r.xp; P.bouts++;
@@ -3685,15 +3713,27 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
          Four rooms drawn procedurally. Each one is somewhere a fight
          like this actually happens: a basement, a boiler room, a
          parking level, a bag room over a shuttered shop. */
+      /* Each room pays differently, and the multiplier tracks how little
+         medical cover is in the building. The rooms that pay best are the
+         ones with nobody there to stop the fight — which is the trade this
+         whole game is about. */
       const GYMS = [
-        { n: "Sub-Level Nine · Ironworks", k: 0 },
-        { n: "The Boiler Room", k: 1 },
-        { n: "Parking Level C · Chalk Circle", k: 2 },
-        { n: "Kowloon Bag Room", k: 3 },
-        { n: "Pier 14 · Cold Storage", k: 1 },
-        { n: "The Cellar, Yongsan", k: 0 },
-        { n: "Furnace Street Athletic Club", k: 3 },
-        { n: "Loading Bay Seven", k: 2 },
+        { n: "Sub-Level Nine · Ironworks", k: 0, mult: 1.00,
+          risk: "A ring, a timekeeper and a first-aid kit. The baseline." },
+        { n: "The Boiler Room", k: 1, mult: 1.25,
+          risk: "Hot, loud and unlicensed. The crowd is close enough to lean on the ropes." },
+        { n: "Parking Level C · Chalk Circle", k: 2, mult: 1.55,
+          risk: "No ring and no ropes. A circle on the concrete, and nowhere to fall safely." },
+        { n: "Kowloon Bag Room", k: 3, mult: 0.85,
+          risk: "A training room borrowed for the night. Small purse, sensible people." },
+        { n: "Pier 14 · Cold Storage", k: 1, mult: 1.40,
+          risk: "Freezing, so he will not feel the damage until afterwards." },
+        { n: "The Cellar, Yongsan", k: 0, mult: 0.95,
+          risk: "Regulars, a house doctor on call, and a promoter who likes repeat business." },
+        { n: "Furnace Street Athletic Club", k: 3, mult: 0.75,
+          risk: "Sanctioned, with a ringside physician who will stop it over your head." },
+        { n: "Loading Bay Seven", k: 2, mult: 1.80,
+          risk: "No commission, no doctor, no limit on the rounds. It pays what it pays for a reason." },
       ];
       const QUOTES = [
         "Everyone has a plan until they get punched in the mouth.",
@@ -4295,7 +4335,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           gold: 9000,  gems: 25, xp: 1800, lv: 8,
           blurb: "Twelve rounds, a champion, and every reason in the world not to stop it." },
       ];
-      let selGym = 0, selDiff = 1;
+      let selGym = 0, selDiff = 1, activeGymMult = 1;
       /* set when a bout starts; scales the payout the simulation hands back */
       let activeDiff = DIFFS[1];
 
@@ -4323,6 +4363,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           <div class="mz-wrap">
             <div class="mz-panel">
               <div class="mz-gym" id="mz-gym"></div>
+              <div class="mz-risk" id="mz-risk"></div>
               <div class="mz-rule"></div>
               <div class="mz-h">Difficulty</div>
               <div class="mz-diffrow">
@@ -4351,7 +4392,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           const btn = document.createElement("button");
           btn.type = "button";
           btn.className = "mz-map" + (i === selGym ? " sel" : "");
-          btn.innerHTML = `<b>${escapeUI(g.n)}</b><canvas width="132" height="62" aria-hidden="true"></canvas>`;
+          const bd = g.mult >= 1.3 ? "hot" : g.mult < 1 ? "low" : "";
+          btn.innerHTML = `<b>${escapeUI(g.n)}</b><span class="tag ${bd}">&times;${g.mult.toFixed(2)}</span><canvas width="132" height="62" aria-hidden="true"></canvas>`;
           const c = btn.querySelector("canvas").getContext("2d");
           c.imageSmoothingEnabled = false;
           drawGym(c, 132, 62, g.k, i * 7 + 3);
@@ -4368,14 +4410,19 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const GEM = `<i>${GEM_SVG.replace('class="lb-gem"', 'style="width:22px;height:22px"')}</i>`;
         function paint() {
           const d = DIFFS[selDiff], locked = P.lv < d.lv;
-          $("#mz-gym").textContent = GYMS[selGym].n;
+          const g = GYMS[selGym], gm = g.mult;
+          const band = gm >= 1.3 ? "hot" : gm < 1 ? "low" : "";
+          $("#mz-gym").innerHTML =
+            `${escapeUI(g.n)}<span class="mz-mult ${band}">&times;${gm.toFixed(2)}</span>`;
           $("#mz-diff").innerHTML =
             `<span style="color:${d.col}">${d.name.toUpperCase()} (${d.grade})</span><small>${escapeUI(d.blurb)}</small>`;
-          const mult = 1 + P.lv * 0.01;
+          const mult = (1 + P.lv * 0.01) * gm;
           $("#mz-rewards").innerHTML =
             `<div class="mz-rw">${COIN}<b>${Math.round(d.gold * mult).toLocaleString()}</b><s>Coins</s></div>
-             <div class="mz-rw gem">${GEM}<b>${d.gems}</b><s>Gem${d.gems === 1 ? "" : "s"}</s></div>
-             <div class="mz-rw exp"><i class="exp"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px"><path d="M12 1.5 14.6 9 22 11.6 14.6 14.2 12 22 9.4 14.2 2 11.6 9.4 9z" fill="#8f6fd0" stroke="#d5c2f6" stroke-width="1.1" stroke-linejoin="round"/></svg></i><b>${d.xp.toLocaleString()}</b><s>Exp</s></div>`;
+             <div class="mz-rw gem">${GEM}<b>${Math.max(1, Math.round(d.gems * gm))}</b><s>Gem${Math.max(1, Math.round(d.gems * gm)) === 1 ? "" : "s"}</s></div>
+             <div class="mz-rw exp" data-x="${Math.round(d.xp * gm)}"><i class="exp"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px"><path d="M12 1.5 14.6 9 22 11.6 14.6 14.2 12 22 9.4 14.2 2 11.6 9.4 9z" fill="#8f6fd0" stroke="#d5c2f6" stroke-width="1.1" stroke-linejoin="round"/></svg></i><b>${Math.round(d.xp * gm).toLocaleString()}</b><s>Exp</s></div>`;
+          const riskEl = $("#mz-risk");
+          if (riskEl) riskEl.textContent = g.risk;
           $("#mz-note").textContent = locked
             ? `Locked until level ${d.lv}. You are level ${P.lv}.`
             : "Paid out when the bout ends — a stoppage to protect the fighter pays the full amount.";
@@ -4389,6 +4436,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           const d = DIFFS[selDiff];
           if (P.lv < d.lv) return gateToast(`You are not Level ${d.lv}+!`);
           activeDiff = d;
+          activeGymMult = GYMS[selGym].mult;
           closeMissionSetup();
           enterMatch(GYMS[selGym]);
         });
@@ -4443,10 +4491,41 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             desc: "Changes the volume of the music within the game." },
         ]},
         { id: "controls", label: "Controls", rows: [
-          { id: "k_fwd",  name: "Forward",  type: "key", def: "W", live: false, desc: "Move your fighter forward." },
-          { id: "k_back", name: "Backward", type: "key", def: "S", live: false, desc: "Move your fighter backward." },
-          { id: "k_left", name: "Left",     type: "key", def: "A", live: false, desc: "Circle to the left." },
-          { id: "k_right",name: "Right",    type: "key", def: "D", live: false, desc: "Circle to the right." },
+          { type: "header", name: "Movement" },
+          { id: "k_fwd",   name: "Forward",   type: "key", def: "W", live: false, desc: "Step your fighter toward the opponent." },
+          { id: "k_back",  name: "Backward",  type: "key", def: "S", live: false, desc: "Step your fighter away and out of range." },
+          { id: "k_left",  name: "Left",      type: "key", def: "A", live: false, desc: "Circle to the left." },
+          { id: "k_right", name: "Right",     type: "key", def: "D", live: false, desc: "Circle to the right." },
+          { id: "k_stepin",name: "Step In",   type: "key", def: "Shift", live: false, desc: "Close the distance quickly to get inside his reach." },
+          { id: "k_pivot", name: "Pivot",     type: "key", def: "Alt", live: false, desc: "Turn off the lead foot to change the angle." },
+
+          { type: "header", name: "Offence" },
+          { id: "k_jab",   name: "Jab",       type: "key", def: "J", live: false, desc: "The range finder. Cheap, fast, and how most rounds are won." },
+          { id: "k_cross", name: "Cross",     type: "key", def: "K", live: false, desc: "The straight power hand behind the jab." },
+          { id: "k_lhook", name: "Left Hook", type: "key", def: "Q", live: false, desc: "A short arcing shot to the side of the head or body." },
+          { id: "k_rhook", name: "Right Hook",type: "key", def: "E", live: false, desc: "The same shot from the back hand, slower and heavier." },
+          { id: "k_upper", name: "Uppercut",  type: "key", def: "R", live: false, desc: "Comes up the middle. The shot that snaps a head back." },
+          { id: "k_body",  name: "Body Shot", type: "key", def: "Control", live: false, desc: "Hold to aim your next punch at the body instead of the head." },
+
+          { type: "header", name: "Defence" },
+          { id: "k_block", name: "Block",     type: "key", def: "F", live: false, desc: "Raise the guard. Takes the force on the gloves and arms." },
+          { id: "k_slipl", name: "Slip Left", type: "key", def: "Z", live: false, desc: "Move your head off the centre line to the left." },
+          { id: "k_slipr", name: "Slip Right",type: "key", def: "C", live: false, desc: "Move your head off the centre line to the right." },
+          { id: "k_roll",  name: "Roll",      type: "key", def: "X", live: false, desc: "Duck under a hook and come up on the other side." },
+          { id: "k_clinch",name: "Clinch",    type: "key", def: "G", live: false, desc: "Tie him up to buy a few seconds of recovery." },
+
+          { type: "header", name: "The Corner" },
+          { id: "c_stop",    name: "Stop The Bout", type: "key", def: "T", live: true,
+            desc: "Throw the towel. Between rounds this pulls your fighter out, and it is never recorded as an ordinary loss." },
+          { id: "c_medstop", name: "Medical Stop",  type: "key", def: "M", live: true,
+            desc: "Call for the doctor and end the bout on medical grounds." },
+          { id: "c_next",    name: "Send Him Out",  type: "key", def: "", live: true,
+            desc: "Starts the next round. Unbound on purpose: sending your fighter back out should be a decision you make, not a key you hold down. Bind it if you would rather have it." },
+
+          { type: "header", name: "Interface" },
+          { id: "u_guide",    name: "Coach Guide", type: "key", def: "H", live: true, desc: "Open the coach briefing." },
+          { id: "u_settings", name: "Settings",    type: "key", def: "O", live: true, desc: "Open this settings screen." },
+          { id: "u_board",    name: "Scoreboard",  type: "key", def: "Tab", live: false, desc: "Hold to show the round-by-round scorecard." },
         ]},
         { id: "trading", label: "Trading", rows: [
           { id: "tradehist", name: "History", type: "toggle", def: false, live: false,
@@ -4457,7 +4536,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       let ST = null, stTab = "display", stSel = null;
       function stDefaults() {
         const o = {};
-        SETTINGS.forEach((g) => g.rows.forEach((r) => { o[r.id] = r.def; }));
+        SETTINGS.forEach((g) => g.rows.forEach((r) => { if (r.id) o[r.id] = r.def; }));
         return o;
       }
       function loadSettings() {
@@ -4499,6 +4578,43 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           }
         }
       }
+      /* ── HOTKEYS ─────────────────────────────────────────────────
+         The bindings that do something drive the real buttons rather
+         than the fight logic, so the simulation stays the one place
+         a bout can be stopped. */
+      const CTRL_ACTIONS = {
+        c_stop:     () => clickLive("button[onclick*=\"fin('towel')\"]"),
+        c_medstop:  () => clickLive("button[onclick*=\"fin('medstop')\"]"),
+        c_next:     () => clickLive('button[onclick^="F.r++"]'),
+        u_guide:    () => { instructions(); return true; },
+        u_settings: () => { openSettings(); return true; },
+      };
+      function clickLive(sel) {
+        const b = document.querySelector(sel);
+        if (!b || b.disabled || b.offsetParent === null) return false;
+        b.click();
+        return true;
+      }
+      function hotkeysBlocked() {
+        if (document.querySelector(".st-key.binding")) return true;
+        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel")) return true;
+        return !!document.querySelector("dialog[open]");
+      }
+      window.addEventListener("keydown", (e) => {
+        if (!ST || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+        const t = e.target;
+        if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || "")) return;
+        if (t && t.isContentEditable) return;
+        if (hotkeysBlocked()) return;
+        const k = e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key;
+        for (const id in CTRL_ACTIONS) {
+          if (ST[id] && ST[id] === k) {
+            if (CTRL_ACTIONS[id]()) e.preventDefault();
+            return;
+          }
+        }
+      });
+
       function closeSettings() {
         document.querySelectorAll(".settings").forEach((n) => n.remove());
       }
@@ -4521,7 +4637,10 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           <div class="st-rule"></div>
           <div class="st-body">
             <div class="st-rows" id="st-rows"></div>
-            <div class="st-panel" id="st-panel"></div>
+            <div class="st-right">
+              <div class="st-panel" id="st-panel"></div>
+              <button class="st-reset" id="st-reset" type="button" hidden>Reset</button>
+            </div>
           </div>`;
         document.body.appendChild(el);
 
@@ -4539,6 +4658,13 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           el.querySelectorAll(".st-tab").forEach((t) => t.classList.toggle("on", t.dataset.tab === grp.id));
           rowsHost.innerHTML = "";
           grp.rows.forEach((r) => {
+            if (r.type === "header") {
+              const h = document.createElement("div");
+              h.className = "st-group";
+              h.textContent = r.name;
+              rowsHost.appendChild(h);
+              return;
+            }
             const row = document.createElement("div");
             row.className = "st-row";
             row.dataset.row = r.id;
@@ -4549,7 +4675,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             } else if (r.type === "range") {
               ctrl = `<input class="st-range" type="range" min="0" max="100" step="5" value="${Number(ST[r.id])}" aria-label="${r.name}">`;
             } else if (r.type === "key") {
-              ctrl = `<button class="st-key" type="button">${escapeUI(String(ST[r.id]))}</button>`;
+              ctrl = `<button class="st-key" type="button">${escapeUI(String(ST[r.id] || "\u2014"))}</button>`;
             } else if (r.type === "choice") {
               ctrl = r.choices.map(([v, lbl]) =>
                 `<button class="st-sw ${ST[r.id] === v ? "on" : ""}" data-c="${v}" type="button">${lbl}</button>`).join("");
@@ -4586,23 +4712,48 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
                 kb.textContent = "Press…";
                 const grab = (ev) => {
                   ev.preventDefault();
+                  ev.stopPropagation();
                   const k = ev.key === " " ? "Space" : ev.key.length === 1 ? ev.key.toUpperCase() : ev.key;
-                  if (k !== "Escape") ST[r.id] = k;
+                  let stole = null;
+                  if (k === "Escape") {
+                    /* escape clears the binding instead of setting it */
+                    ST[r.id] = "";
+                  } else {
+                    /* one key, one action: whoever held it loses it */
+                    grp.rows.forEach((o) => {
+                      if (o.id && o.id !== r.id && o.type === "key" && ST[o.id] === k) {
+                        ST[o.id] = ""; stole = o.name;
+                      }
+                    });
+                    ST[r.id] = k;
+                  }
                   saveSettings();
                   window.removeEventListener("keydown", grab, true);
                   renderTab(); describe(r);
+                  if (stole) {
+                    panel.insertAdjacentHTML("beforeend",
+                      `<p style="margin-top:12px;color:#e8c272;font-size:.9em">${escapeUI(k)} was on ${escapeUI(stole)}, so that is unbound now.</p>`);
+                  }
                 };
                 window.addEventListener("keydown", grab, true);
               });
             }
             rowsHost.appendChild(row);
           });
-          const keep = grp.rows.find((r) => r.id === stSel) || grp.rows[0];
+          const reset = $("#st-reset");
+          if (reset) reset.hidden = grp.id !== "controls";
+          const keep = grp.rows.find((r) => r.id === stSel && r.type !== "header")
+            || grp.rows.find((r) => r.type !== "header");
           if (keep) describe(keep);
         }
         el.querySelectorAll(".st-tab").forEach((t) =>
           t.addEventListener("click", () => { stTab = t.dataset.tab; stSel = null; renderTab(); }));
         el.querySelector(".st-close").addEventListener("click", closeSettings);
+        $("#st-reset").addEventListener("click", () => {
+          SETTINGS.find((g) => g.id === "controls").rows
+            .forEach((r) => { if (r.id) ST[r.id] = r.def; });
+          saveSettings(); renderTab();
+        });
         document.addEventListener("keydown", function esc(e) {
           if (e.key === "Escape" && !document.querySelector(".st-key.binding")) {
             closeSettings(); document.removeEventListener("keydown", esc);
