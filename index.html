@@ -2499,9 +2499,9 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .lb-mult.boosted u{background:rgba(138,209,126,.2);color:#b5e8aa}
 .lb-mult.boosted s{color:#8ad17e}
 .gym-stations{
-  position:absolute;left:50%;bottom:clamp(96px,16vh,150px);transform:translateX(-50%);z-index:6;
+  position:absolute;left:50%;top:clamp(84px,17vh,150px);transform:translateX(-50%);z-index:6;
   display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(6px,1vw,11px);
-  width:min(620px,calc(100% - 28px));
+  width:min(600px,calc(100% - 32px));
 }
 .gym-st{
   flex:1 1 128px;max-width:160px;padding:clamp(7px,1.3vh,12px) 8px;cursor:pointer;text-align:center;
@@ -2516,7 +2516,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
   font:700 10.5px/1 var(--mono);color:#f1e6cc;font-variant-numeric:tabular-nums}
 .gym-st span svg{width:13px;height:13px}
 .gym-st i{font-style:normal}
-@media(max-height:620px){.gym-stations{bottom:clamp(84px,13vh,120px)}.gym-st{padding:6px}}
+@media(max-height:620px){.gym-stations{top:clamp(66px,13vh,108px)}.gym-st{padding:6px}}
 @media(max-width:620px){
   .mk-grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}
   .mk-title{font-size:16px}
@@ -4982,7 +4982,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         for (let x = 0; x < W; x += W * .07) b(x, floor + H * .02, 1, H - floor, "rgba(0,0,0,.25)");
 
         /* ── squat rack, left ── */
-        const rx = W * .12, ry = floor - H * .40;
+        const rx = W * .055, ry = floor - H * .42;
         b(rx, ry, W * .022, H * .40, "#9a2a22");
         b(rx + W * .14, ry, W * .022, H * .40, "#9a2a22");
         b(rx - W * .02, floor - H * .015, W * .20, H * .02, "#6d1b15");
@@ -4991,26 +4991,44 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           b(px, ry + H * .02, W * .022, H * .085, "#2b3340");
           b(px + W * .004, ry + H * .03, W * .014, H * .065, "#3d4756");
         }
+        /* ── cable machine, mid-left ── */
+        const cx2 = W * .29;
+        b(cx2, floor - H * .46, W * .035, H * .46, "#242d3a");
+        b(cx2 + W * .006, floor - H * .44, W * .022, H * .42, "#2f3a48");
+        b(cx2 - W * .012, floor - H * .47, W * .06, H * .022, "#374253");
+        b(cx2 + W * .014, floor - H * .45, 1, H * .18, "#8d97a3");
+        b(cx2 + W * .004, floor - H * .27, W * .022, H * .012, "#c9ced6");
+        for (let i = 0; i < 5; i++) b(cx2 + W * .004, floor - H * .25 + i * H * .028, W * .022, H * .022, i < 2 ? "#3d4756" : "#2b3340");
+
         /* ── bench, centre, with a figure pressing ── */
-        const bx = W * .42, by = floor - H * .10;
-        b(bx, by, W * .17, H * .030, "#2a3240");
-        b(bx + W * .01, by + H * .004, W * .15, H * .018, "#3a4454");
-        b(bx + W * .015, by + H * .03, W * .018, H * .07, "#20262f");
-        b(bx + W * .135, by + H * .03, W * .018, H * .07, "#20262f");
-        /* lifter */
-        const lift = rep * H * .018;
-        b(bx + W * .03, by - H * .022, W * .11, H * .024, SK2);          /* torso */
-        b(bx + W * .04, by - H * .018, W * .09, H * .016, SK);
-        b(bx + W * .015, by - H * .030, W * .03, H * .030, SK2);         /* head */
-        b(bx + W * .018, by - H * .026, W * .022, H * .022, SK);
-        b(bx + W * .015, by - H * .034, W * .03, H * .012, HR);
-        b(bx + W * .045, by - H * .052 - lift, W * .012, H * .034, SK2); /* arms */
-        b(bx + W * .105, by - H * .052 - lift, W * .012, H * .034, SK2);
-        b(bx + W * .02, by - H * .060 - lift, W * .16, H * .013, "#c9ced6");  /* bar */
-        for (const px of [bx + W * .005, bx + W * .155]) {
-          b(px, by - H * .082 - lift, W * .022, H * .060, "#2b3340");
-          b(px + W * .004, by - H * .072 - lift, W * .014, H * .042, "#3d4756");
+        const bx = W * .40, by = floor - H * .16;
+        const BW = W * .26;
+        b(bx, by, BW, H * .048, "#2a3240");
+        b(bx + BW * .06, by + H * .007, BW * .88, H * .030, "#3a4454");
+        b(bx + BW * .09, by + H * .048, BW * .10, H * .115, "#20262f");
+        b(bx + BW * .80, by + H * .048, BW * .10, H * .115, "#20262f");
+        /* lifter on his back, pressing */
+        const lift = rep * H * .026;
+        b(bx + BW * .18, by - H * .036, BW * .62, H * .038, SK2);          /* torso */
+        b(bx + BW * .24, by - H * .030, BW * .50, H * .026, SK);
+        b(bx + BW * .04, by - H * .050, BW * .17, H * .050, SK2);          /* head */
+        b(bx + BW * .06, by - H * .044, BW * .13, H * .036, SK);
+        b(bx + BW * .04, by - H * .058, BW * .17, H * .020, HR);
+        b(bx + BW * .26, by - H * .088 - lift, BW * .07, H * .056, SK2);   /* arms */
+        b(bx + BW * .62, by - H * .088 - lift, BW * .07, H * .056, SK2);
+        b(bx + BW * .10, by - H * .100 - lift, BW * .84, H * .020, "#c9ced6");   /* bar */
+        for (const px of [bx + BW * .02, bx + BW * .86]) {
+          b(px, by - H * .134 - lift, BW * .11, H * .090, "#2b3340");
+          b(px + BW * .022, by - H * .120 - lift, BW * .066, H * .062, "#3d4756");
         }
+        b(bx + BW * .30, by + H * .010, BW * .40, H * .026, "#1c2029");    /* legs under */
+
+        /* ── treadmill, far right behind the racks ── */
+        const tx = W * .86;
+        b(tx, floor - H * .22, W * .13, H * .055, "#232c38");
+        b(tx + W * .004, floor - H * .212, W * .122, H * .030, "#111720");
+        b(tx + W * .10, floor - H * .40, W * .016, H * .19, "#2a3340");
+        b(tx + W * .055, floor - H * .40, W * .07, H * .055, "#2f3a48");
         /* ── dumbbell rack, right ── */
         const dx = W * .70;
         b(dx, floor - H * .17, W * .25, H * .025, "#2a3240");
