@@ -2575,6 +2575,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .board-list li s{text-decoration:none;font:700 11px/1 var(--mono);color:#f1e6cc;font-variant-numeric:tabular-nums}
 .board-list li.me{border-color:var(--lb-gold);background:rgba(232,194,114,.12)}
 .board-list li.me span,.board-list li.me b{color:#ffeec4}
+.board-list li.sep{border-color:transparent;background:transparent;padding:0 9px}
+.board-list li.sep span{color:#5d6875;text-align:center;letter-spacing:.3em}
 .board-mine{margin-top:10px;padding:7px 9px;border:1px solid var(--lb-gold);
   font:700 10.5px/1.4 var(--mono);letter-spacing:.06em;color:#ffeec4}
 .board-note,.trade-note{margin:10px 0 0;font:400 10px/1.55 Arial,sans-serif;color:#79838f}
@@ -5254,7 +5256,15 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       function openBoard(id) {
         const b = BOARDS.find((x) => x.id === id) || BOARDS[0];
         const rows = boardRows(b);
+        rows.forEach((r, i) => { r.pos = i + 1; });
         const mineAt = rows.findIndex((r) => r.me) + 1;
+        /* a board that cannot show you your own row is useless, so if you
+           rank below the visible slice it is pinned on under a break */
+        const shown = rows.slice(0, 12);
+        if (!shown.some((r) => r.me)) {
+          shown.push({ sep: true });
+          shown.push(rows[mineAt - 1]);
+        }
         document.querySelectorAll(".boardwrap").forEach((n) => n.remove());
         const el = document.createElement("div");
         el.className = "boardwrap";
@@ -5271,11 +5281,12 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             </div>
             <p class="board-blurb">${escapeUI(b.blurb)}</p>
             <ol class="board-list">
-              ${rows.slice(0, 12).map((r, i) => `
-                <li class="${r.me ? "me" : ""}">
-                  <b>${i + 1}</b><span>${escapeUI(r.n)}</span>
-                  <s>${r.v.toLocaleString()} ${b.unit}</s>
-                </li>`).join("")}
+              ${shown.map((r) => r.sep
+                ? `<li class="sep"><b></b><span>&hellip;</span><s></s></li>`
+                : `<li class="${r.me ? "me" : ""}">
+                     <b>${r.pos}</b><span>${escapeUI(r.n)}</span>
+                     <s>${r.v.toLocaleString()} ${b.unit}</s>
+                   </li>`).join("")}
             </ol>
             <div class="board-mine">Your position: <b>#${mineAt}</b> &middot; ${b.mine().toLocaleString()} ${b.unit}</div>
             <p class="board-note">Offline board. These names are fictional and the standings are generated on your own device — nothing is submitted anywhere.</p>
