@@ -2361,7 +2361,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
   font-size:16px;line-height:1;box-shadow:3px 3px 0 #02060b;
 }
 #gear-btn:hover{border-color:var(--lb-gold);color:var(--lb-gold)}
-body:has(#boot) #gear-btn,body:has(.lobby) #gear-btn,
+body:has(.market) #gear-btn,body:has(#boot) #gear-btn,body:has(.lobby) #gear-btn,
 body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .mz-rw.exp{border-color:#8f6fd0}
 .st-group{
@@ -2391,6 +2391,118 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 }
 .mz-map .tag.hot{color:#ff7a6b;border-color:#e8453a}
 .mz-map .tag.low{color:#8ad17e;border-color:#6fcf5e}
+/* ══ MARKET ═══════════════════════════════════════════════════ */
+.market{
+  position:fixed;inset:0;z-index:62;display:flex;flex-direction:column;
+  background:rgba(4,6,10,.93);
+}
+.mk-head{
+  display:flex;align-items:center;gap:12px;flex:none;
+  padding:clamp(10px,2.2vh,20px) clamp(12px,2vw,26px) clamp(8px,1.4vh,13px);
+}
+.mk-title{
+  flex:1;min-width:0;
+  font:400 clamp(18px,3.4vw,34px)/1 var(--serif);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--lb-gold);text-shadow:0 0 20px rgba(232,194,114,.3);
+}
+.mk-purse{display:flex;align-items:center;gap:14px;flex:none}
+.mk-purse div{display:flex;align-items:center;gap:6px}
+.mk-purse span{font:700 clamp(11px,1.5vw,15px)/1 var(--mono);color:#f1e6cc;font-variant-numeric:tabular-nums}
+.mk-purse svg{width:17px;height:17px}
+.mk-close{
+  flex:none;width:40px;height:40px;cursor:pointer;border:0;background:transparent;
+  color:#cdbb92;font:300 30px/1 var(--mono);transition:.12s;
+}
+.mk-close:hover{color:#fff6e2;transform:scale(1.1)}
+.mk-rule{flex:none;height:2px;margin:0 clamp(6px,1.4vw,16px);
+  background:linear-gradient(90deg,transparent,var(--lb-gold) 6%,var(--lb-gold) 94%,transparent)}
+.mk-body{
+  flex:1;min-height:0;display:grid;gap:clamp(8px,1.4vw,16px);
+  grid-template-columns:minmax(0,1fr) auto;
+  padding:clamp(10px,2.4vh,26px) clamp(10px,2vw,26px);
+}
+.mk-scroll{overflow-y:auto;padding-right:8px}
+.mk-scroll::-webkit-scrollbar{width:6px}
+.mk-scroll::-webkit-scrollbar-thumb{background:var(--lb-gold)}
+.mk-sec{
+  display:flex;align-items:center;gap:clamp(10px,2vw,22px);
+  margin:clamp(10px,1.8vh,18px) 0 clamp(8px,1.4vh,14px);
+}
+.mk-sec:first-child{margin-top:0}
+.mk-sec::before,.mk-sec::after{content:"";flex:1;height:1px;background:rgba(232,194,114,.55)}
+.mk-sec b{
+  font:400 clamp(15px,2.4vw,27px)/1 var(--serif);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--lb-gold);font-weight:400;
+}
+.mk-note{
+  margin:0 0 clamp(8px,1.4vh,14px);text-align:center;
+  font:400 clamp(11px,1.4vw,14px)/1.5 var(--serif);color:#9aa5b1;font-style:italic;
+}
+.mk-grid{display:grid;gap:clamp(7px,1.2vw,13px);grid-template-columns:repeat(auto-fill,minmax(148px,1fr))}
+.mk-card{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  border:2px solid var(--lb-gold);background:linear-gradient(180deg,#10141c,#080b11);
+  padding:clamp(8px,1.4vh,14px) 9px clamp(7px,1.2vh,11px);
+  box-shadow:0 6px 18px rgba(0,0,0,.5);
+}
+.mk-card.gemcard{border-color:#6c86d8}
+.mk-card.best{border-color:#f0d593;box-shadow:0 6px 22px rgba(232,194,114,.22)}
+.mk-art{height:clamp(44px,7vh,70px);display:grid;place-items:center;margin-bottom:6px}
+.mk-art svg{height:100%;width:auto;display:block}
+.mk-name{
+  font:700 clamp(9.5px,1.2vw,12px)/1.3 var(--mono);letter-spacing:.06em;
+  text-transform:uppercase;color:#ffeec4;
+}
+.mk-meta{margin-top:3px;font:400 clamp(9px,1.1vw,11px)/1.4 Arial,sans-serif;color:#8d97a3}
+.mk-buy{
+  margin-top:auto;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:clamp(5px,.9vh,8px) 6px;cursor:pointer;
+  border:1px solid #c79f49;background:linear-gradient(180deg,#f0d593,#c79f49);color:#140e04;
+  font:700 clamp(10px,1.3vw,13px)/1 var(--mono);letter-spacing:.05em;
+  font-variant-numeric:tabular-nums;transition:.12s;
+}
+.mk-buy:hover{background:#fff0c8}
+.mk-buy svg{width:14px;height:14px}
+.mk-buy.gem{border-color:#5a74c8;background:linear-gradient(180deg,#8fa6ee,#5a74c8);color:#070b16}
+.mk-buy.gem:hover{background:#b4c4f7}
+.mk-buy.poor{opacity:.45;cursor:not-allowed}
+.mk-buy.owned{background:#2a3242;border-color:#4a5565;color:#9aa5b1;cursor:default}
+.mk-locked{
+  margin-top:auto;width:100%;padding:clamp(5px,.9vh,8px) 5px;
+  border:1px dashed #6c86d8;color:#9fb2ea;background:rgba(40,54,98,.3);
+  font:700 8.5px/1.4 var(--mono);letter-spacing:.07em;text-transform:uppercase;
+}
+.mk-rail{display:flex;flex-direction:column;gap:clamp(5px,.9vh,9px);flex:none}
+.mk-railbtn{
+  position:relative;width:clamp(40px,4.2vw,52px);height:clamp(40px,4.2vw,52px);
+  display:grid;place-items:center;cursor:pointer;
+  border:2px solid #4b5565;background:#0d1219;color:#7a8694;transition:.12s;
+}
+.mk-railbtn svg{width:58%;height:58%}
+.mk-railbtn:hover{border-color:#8d7338;color:#c3a86a}
+.mk-railbtn.on{border-color:var(--lb-gold);color:var(--lb-gold);background:rgba(232,194,114,.1)}
+.mk-railbtn b{
+  position:absolute;right:calc(100% + 8px);top:50%;transform:translateY(-50%);
+  padding:4px 9px;white-space:nowrap;opacity:0;pointer-events:none;transition:.12s;
+  border:1px solid var(--lb-gold);background:rgba(8,11,17,.96);color:var(--lb-gold);
+  font:700 9px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+}
+.mk-railbtn:hover b{opacity:1}
+.mk-active{
+  display:flex;flex-wrap:wrap;gap:7px;justify-content:center;
+  margin:0 0 clamp(8px,1.4vh,14px);
+}
+.mk-active i{
+  padding:3px 9px;font:700 9px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid #8ad17e;color:#8ad17e;background:rgba(40,80,46,.25);font-style:normal;
+}
+.lb-mult.boosted u{background:rgba(138,209,126,.2);color:#b5e8aa}
+.lb-mult.boosted s{color:#8ad17e}
+@media(max-width:620px){
+  .mk-grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}
+  .mk-title{font-size:16px}
+  .mk-purse{gap:8px}
+}
 .mz-rw i.exp{display:grid;place-items:center}
 
 /* ══ MODE SELECT (after PLAY) ═════════════════════════════════ */
@@ -3419,12 +3531,19 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
          Luck and Strength are displayed but nothing consumes them yet. */
       const PMULT = () => {
         const lv = (P && P.lv) || 1;
-        return {
+        const m = {
           gold: 1 + (lv - 1) * 0.01,
           luck: 1 + (lv - 1) * 0.01,
           exp: 1 + (lv - 1) * 0.02,
           str: 1.05 + (lv - 1) * 0.01,
         };
+        /* a running boost multiplies its own number */
+        if (typeof BOOST_DEF === "object" && P && P.boosts) {
+          for (const k in BOOST_DEF) {
+            if (P.boosts[k] > Date.now()) m[k] *= BOOST_DEF[k].mult;
+          }
+        }
+        return m;
       };
       const fx = (v) => {
         const n = Math.round(v * 1000) / 1000;
@@ -3432,7 +3551,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       };
       let P = null;
       function loadProfile() {
-        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0 };
+        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, boosts: {} };
         try {
           const raw = localStorage.getItem(PROFILE_KEY);
           P = raw ? Object.assign(base, JSON.parse(raw)) : base;
@@ -3932,7 +4051,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         { id: "quests", label: "Quests" },
         { id: "equipment", label: "Equipment" },
         { id: "inventory", label: "Inventory" },
-        { id: "market", label: "Market" },
+        { id: "market", label: "Market", live: true },
         { id: "rankings", label: "Rankings" },
         { id: "gym", label: "Gym" },
         { id: "battlepass", label: "Battlepass" },
@@ -3954,6 +4073,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       function lobbyGo(id) {
         if (id === "play") return openModeSelect();
         if (id === "gear") return;
+        if (id === "market") return openMarket();
         if (id === "guide") return instructions();
         if (id === "settings") return openSettings();
         maintenance(id);
@@ -4001,7 +4121,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           <div class="lb-top">
             <div class="lb-brand"><b>◆</b><span style="font:700 10px/1.3 var(--mono);letter-spacing:.1em;color:#8e99a7">INSIDE THE<br>IMPACT</span></div>
             <div class="lb-tabs" role="tablist">
-              ${LOBBY_TABS.map((t) => `<button class="lb-tab ${t.live ? "active" : "locked"}" data-lobby="${t.id}" role="tab" aria-selected="${!!t.live}">${t.label}</button>`).join("")}
+              ${LOBBY_TABS.map((t) => `<button class="lb-tab ${t.id === "gear" ? "active" : t.live ? "" : "locked"}" data-lobby="${t.id}" role="tab" aria-selected="${t.id === "gear"}">${t.label}</button>`).join("")}
             </div>
             <div class="lb-cur">
               <div><span id="lb-gold">${P.gold.toLocaleString()}</span>${COIN_SVG}</div>
@@ -4024,10 +4144,10 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
               <div class="lb-av"><canvas id="lb-avatar" width="34" height="34" aria-hidden="true"></canvas><b>LV. ${P.lv}</b></div>
               <button class="lb-switch" data-lobby="gym">Switch gym</button>
               <div class="lb-mults">
-                <div class="lb-mult" title="Coins earned from a bout"><u>GOLD</u><s>${fx(PM.gold)}</s></div>
-                <div class="lb-mult" title="Rare drop chance — not applied yet"><u>LUCK</u><s>${fx(PM.luck)}</s></div>
-                <div class="lb-mult" title="Experience earned from a bout"><u>EXP</u><s>${fx(PM.exp)}</s></div>
-                <div class="lb-mult" title="Your fighter's punching power — not applied yet"><u>STRENGTH</u><s>${fx(PM.str)}</s></div>
+                <div class="lb-mult ${boostActive("gold") ? "boosted" : ""}" data-m="gold" title="Coins earned from a bout"><u>GOLD</u><s>${fx(PM.gold)}</s></div>
+                <div class="lb-mult ${boostActive("luck") ? "boosted" : ""}" data-m="luck" title="Rare drop chance — not applied yet"><u>LUCK</u><s>${fx(PM.luck)}</s></div>
+                <div class="lb-mult ${boostActive("exp") ? "boosted" : ""}" data-m="exp" title="Experience earned from a bout"><u>EXP</u><s>${fx(PM.exp)}</s></div>
+                <div class="lb-mult ${boostActive("str") ? "boosted" : ""}" data-m="str" title="Your fighter's punching power — not applied yet"><u>STRENGTH</u><s>${fx(PM.str)}</s></div>
               </div>
             </div>
 
@@ -4613,7 +4733,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       }
       function hotkeysBlocked() {
         if (document.querySelector(".st-key.binding")) return true;
-        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel")) return true;
+        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market")) return true;
         return !!document.querySelector("dialog[open]");
       }
       window.addEventListener("keydown", (e) => {
@@ -4776,6 +4896,213 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           }
         });
         renderTab();
+      }
+
+      /* ── MARKET ──────────────────────────────────────────────────
+         Three shelves for now. Boosts cost gems, gold costs gems, and
+         gems are bought outside the game — there is no payment flow in
+         here and nothing collects card details. */
+      const DISCORD_NOTE = "Gems are sold through our Discord. Nothing is charged in the game.";
+      const POTION = (c1, c2) => `<svg viewBox="0 0 48 64" aria-hidden="true">
+        <path d="M19 6h10v11l9 16a13 13 0 0 1-11 25H21A13 13 0 0 1 10 33l9-16z" fill="#0d1119" stroke="${c2}" stroke-width="2.4" stroke-linejoin="round"/>
+        <path d="M13 38h22a12 12 0 0 1-11 18 12 12 0 0 1-11-18z" fill="${c1}"/>
+        <ellipse cx="24" cy="38" rx="11" ry="3" fill="${c2}"/>
+        <circle cx="19" cy="46" r="2.4" fill="#ffffff" fill-opacity=".45"/>
+        <circle cx="28" cy="50" r="1.6" fill="#ffffff" fill-opacity=".35"/>
+        <rect x="16" y="2" width="16" height="6" rx="1.5" fill="${c2}"/>
+      </svg>`;
+      const GEMPILE = (n) => {
+        let out = `<svg viewBox="0 0 64 48" aria-hidden="true">`;
+        const spots = n === 1 ? [[32, 24, 15]] : n === 2 ? [[24, 27, 13], [42, 20, 10]]
+          : [[20, 30, 12], [36, 24, 14], [50, 31, 10]];
+        spots.forEach(([x, y, r]) => {
+          out += `<path d="M${x} ${y - r} ${x + r} ${y} ${x} ${y + r} ${x - r} ${y}z" fill="#d8402f" stroke="#6d120c" stroke-width="1.6" stroke-linejoin="round"/>
+                  <path d="M${x} ${y - r} ${x + r * .45} ${y} ${x} ${y + r} ${x - r * .45} ${y}z" fill="#f2695a"/>`;
+        });
+        return out + `</svg>`;
+      };
+      const GOLDPILE = (n) => {
+        let out = `<svg viewBox="0 0 64 48" aria-hidden="true">`;
+        const spots = n === 1 ? [[32, 26, 14]] : n === 2 ? [[24, 28, 13], [43, 22, 11]]
+          : [[19, 31, 12], [34, 25, 14], [49, 32, 11]];
+        spots.forEach(([x, y, r]) => {
+          out += `<circle cx="${x}" cy="${y}" r="${r}" fill="#e0a93c" stroke="#8a5f14" stroke-width="1.8"/>
+                  <circle cx="${x}" cy="${y}" r="${r * .6}" fill="#f7d070"/>`;
+        });
+        return out + `</svg>`;
+      };
+      /* a boost multiplies one of the lobby numbers while it is running */
+      const BOOST_DEF = {
+        gold: { mult: 2,   label: "Gold",     col: ["#e0a93c", "#8a5f14"] },
+        exp:  { mult: 2,   label: "Exp",      col: ["#8f6fd0", "#4c3480"] },
+        luck: { mult: 2,   label: "Luck",     col: ["#4fb87a", "#246343"] },
+        str:  { mult: 1.5, label: "Strength", col: ["#d8402f", "#6d120c"] },
+      };
+      const BOOST_SKU = [
+        { k: "gold", h: 1, gems: 150 }, { k: "gold", h: 3, gems: 350 },
+        { k: "exp",  h: 1, gems: 150 }, { k: "exp",  h: 3, gems: 350 },
+        { k: "luck", h: 1, gems: 200 }, { k: "luck", h: 3, gems: 450 },
+        { k: "str",  h: 1, gems: 250 }, { k: "str",  h: 3, gems: 550 },
+      ];
+      const GEM_SKU = [
+        { n: 500,   art: 1 }, { n: 2500,  art: 2 }, { n: 10000, art: 3 },
+        { n: 25000, art: 3, tag: "Popular" }, { n: 50000, art: 3, tag: "Best deal" },
+      ];
+      const GOLD_SKU = [
+        { n: 25000,  gems: 60 },
+        { n: 125000, gems: 250, tag: "Popular" },
+        { n: 550000, gems: 950, tag: "Best deal" },
+      ];
+      const MK_TABS = [
+        { id: "boosts", label: "Boosts",
+          icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M10 2.5h4v5l4.2 7.6A6.6 6.6 0 0 1 12.5 25h-1A6.6 6.6 0 0 1 5.8 15.1L10 7.5z"/><path d="M6.6 14.5h10.8" /></svg>` },
+        { id: "gems", label: "Gems",
+          icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.6 21.4 9 12 21.4 2.6 9z"/><path d="M2.6 9h18.8M12 2.6 15.4 9 12 21.4 8.6 9z"/></svg>` },
+        { id: "gold", label: "Gold",
+          icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="6.6" rx="8.4" ry="3.6"/><path d="M3.6 6.6v4.2c0 2 3.8 3.6 8.4 3.6s8.4-1.6 8.4-3.6V6.6"/><path d="M3.6 10.8V15c0 2 3.8 3.6 8.4 3.6s8.4-1.6 8.4-3.6v-4.2"/></svg>` },
+      ];
+      let mkTab = "boosts";
+
+      const boostLeft = (k) => {
+        const t = P && P.boosts && P.boosts[k];
+        return t && t > Date.now() ? t - Date.now() : 0;
+      };
+      const boostActive = (k) => boostLeft(k) > 0;
+      function fmtLeft(ms) {
+        const m = Math.ceil(ms / 60000);
+        return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;
+      }
+      function closeMarket() { document.querySelectorAll(".market").forEach((n) => n.remove()); }
+
+      function openMarket(tab) {
+        if (!P) loadProfile();
+        closeMarket();
+        mkTab = tab || mkTab || "boosts";
+        const el = document.createElement("div");
+        el.className = "market";
+        el.setAttribute("role", "dialog");
+        el.setAttribute("aria-label", "Market");
+        el.innerHTML = `
+          <div class="mk-head">
+            <div class="mk-title" id="mk-title"></div>
+            <div class="mk-purse">
+              <div><span id="mk-gold"></span>${COIN_SVG}</div>
+              <div><span id="mk-gems"></span>${GEM_SVG}</div>
+            </div>
+            <button class="mk-close" type="button" aria-label="Close market">&times;</button>
+          </div>
+          <div class="mk-rule"></div>
+          <div class="mk-body">
+            <div class="mk-scroll" id="mk-scroll"></div>
+            <div class="mk-rail" role="tablist">
+              ${MK_TABS.map((t) => `<button class="mk-railbtn" data-mk="${t.id}" role="tab" aria-label="${t.label}">${t.icon}<b>${t.label}</b></button>`).join("")}
+            </div>
+          </div>`;
+        document.body.appendChild(el);
+
+        const purse = () => {
+          $("#mk-gold").textContent = P.gold.toLocaleString();
+          $("#mk-gems").textContent = P.gems.toLocaleString();
+        };
+        function render() {
+          const host = $("#mk-scroll");
+          $("#mk-title").textContent = "Market";
+          el.querySelectorAll(".mk-railbtn").forEach((b) => b.classList.toggle("on", b.dataset.mk === mkTab));
+          purse();
+          let html = "";
+          if (mkTab === "boosts") {
+            const running = Object.keys(BOOST_DEF).filter(boostActive);
+            html += `<div class="mk-sec"><b>Boosts</b></div>`;
+            if (running.length) {
+              html += `<div class="mk-active">${running.map((k) =>
+                `<i>${BOOST_DEF[k].label} &times;${BOOST_DEF[k].mult} &middot; ${fmtLeft(boostLeft(k))} left</i>`).join("")}</div>`;
+            }
+            html += `<p class="mk-note">Gold and Exp boosts change what a bout pays. Luck and Strength show on your card but nothing reads them yet.</p>`;
+            html += `<div class="mk-grid">` + BOOST_SKU.map((sku, i) => {
+              const d = BOOST_DEF[sku.k], poor = P.gems < sku.gems;
+              return `<div class="mk-card">
+                <div class="mk-art">${POTION(d.col[0], d.col[1])}</div>
+                <div class="mk-name">${d.mult}&times; ${d.label} Boost</div>
+                <div class="mk-meta">${sku.h} hour${sku.h === 1 ? "" : "s"}${boostActive(sku.k) ? " · stacks on time" : ""}</div>
+                <button class="mk-buy gem ${poor ? "poor" : ""}" data-boost="${i}" type="button">${GEM_SVG}${sku.gems.toLocaleString()}</button>
+              </div>`;
+            }).join("") + `</div>`;
+          } else if (mkTab === "gems") {
+            html += `<div class="mk-sec"><b>Gems</b></div>`;
+            html += `<p class="mk-note">${escapeUI(DISCORD_NOTE)}</p>`;
+            html += `<div class="mk-grid">` + GEM_SKU.map((sku) =>
+              `<div class="mk-card gemcard${sku.tag ? " best" : ""}">
+                <div class="mk-art">${GEMPILE(sku.art)}</div>
+                <div class="mk-name">${sku.n.toLocaleString()} Gems</div>
+                <div class="mk-meta">${sku.tag || "&nbsp;"}</div>
+                <div class="mk-locked">Purchasable through Discord</div>
+              </div>`).join("") + `</div>`;
+          } else {
+            html += `<div class="mk-sec"><b>Gold</b></div>`;
+            html += `<p class="mk-note">Gold is bought with gems. Everything here can also be earned by fighting.</p>`;
+            html += `<div class="mk-grid">` + GOLD_SKU.map((sku, i) => {
+              const poor = P.gems < sku.gems;
+              return `<div class="mk-card${sku.tag ? " best" : ""}">
+                <div class="mk-art">${GOLDPILE(i + 1)}</div>
+                <div class="mk-name">${sku.n.toLocaleString()} Gold</div>
+                <div class="mk-meta">${sku.tag || "&nbsp;"}</div>
+                <button class="mk-buy gem ${poor ? "poor" : ""}" data-gold="${i}" type="button">${GEM_SVG}${sku.gems.toLocaleString()}</button>
+              </div>`;
+            }).join("") + `</div>`;
+          }
+          host.innerHTML = html;
+
+          host.querySelectorAll("[data-boost]").forEach((b) =>
+            b.addEventListener("click", () => {
+              const sku = BOOST_SKU[Number(b.dataset.boost)], d = BOOST_DEF[sku.k];
+              if (P.gems < sku.gems) return gateToast("Not enough gems.");
+              P.gems -= sku.gems;
+              P.boosts = P.boosts || {};
+              const from = Math.max(Date.now(), P.boosts[sku.k] || 0);
+              P.boosts[sku.k] = from + sku.h * 3600000;
+              saveProfile();
+              render();
+              gateToast(`${d.mult}× ${d.label} boost active.`);
+              if (document.querySelector(".lobby")) refreshLobbyCard();
+            }));
+          host.querySelectorAll("[data-gold]").forEach((b) =>
+            b.addEventListener("click", () => {
+              const sku = GOLD_SKU[Number(b.dataset.gold)];
+              if (P.gems < sku.gems) return gateToast("Not enough gems.");
+              P.gems -= sku.gems; P.gold += sku.n;
+              saveProfile(); render();
+              gateToast(`${sku.n.toLocaleString()} gold added.`);
+              if (document.querySelector(".lobby")) refreshLobbyCard();
+            }));
+        }
+        el.querySelectorAll(".mk-railbtn").forEach((b) =>
+          b.addEventListener("click", () => { mkTab = b.dataset.mk; render(); }));
+        el.querySelector(".mk-close").addEventListener("click", () => {
+          closeMarket();
+          if (document.querySelector(".lobby")) refreshLobbyCard();
+        });
+        document.addEventListener("keydown", function esc(e) {
+          if (e.key === "Escape") { closeMarket(); document.removeEventListener("keydown", esc); }
+        });
+        render();
+      }
+      /* redraw the lobby's numbers without rebuilding the whole screen */
+      function refreshLobbyCard() {
+        if (!document.querySelector(".lobby")) return;
+        const PM = PMULT();
+        const set = (sel, v, k) => {
+          const n = document.querySelector(sel);
+          if (!n) return;
+          n.querySelector("s").textContent = fx(v);
+          n.classList.toggle("boosted", boostActive(k));
+        };
+        set('.lb-mult[data-m="gold"]', PM.gold, "gold");
+        set('.lb-mult[data-m="luck"]', PM.luck, "luck");
+        set('.lb-mult[data-m="exp"]', PM.exp, "exp");
+        set('.lb-mult[data-m="str"]', PM.str, "str");
+        const g = $("#lb-gold"), m = $("#lb-gems");
+        if (g) g.textContent = P.gold.toLocaleString();
+        if (m) m.textContent = P.gems.toLocaleString();
       }
 
       /* ── REWARD HOOK ─────────────────────────────────────────────
