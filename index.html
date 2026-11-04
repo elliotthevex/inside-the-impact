@@ -2517,6 +2517,109 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .gym-st span svg{width:13px;height:13px}
 .gym-st i{font-style:normal}
 @media(max-height:620px){.gym-stations{top:clamp(66px,13vh,108px)}.gym-st{padding:6px}}
+/* ══ PLAZA · BOARDS · TRADE ═══════════════════════════════════ */
+.plaza-faces{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;
+  width:min(860px,calc(100% - 28px));display:flex;justify-content:space-between;
+  gap:clamp(8px,2vw,24px);pointer-events:none;
+}
+.plaza-col{display:flex;flex-direction:column;gap:clamp(7px,1.4vh,14px);pointer-events:auto}
+.plaza-face{
+  width:clamp(104px,15vw,172px);padding:clamp(6px,1.1vh,11px) 9px;cursor:pointer;text-align:left;
+  border:2px solid var(--lb-gold);background:rgba(8,11,17,.86);
+  box-shadow:0 5px 16px rgba(0,0,0,.6);transition:.12s;
+}
+.plaza-face:hover{background:rgba(232,194,114,.2);transform:translateY(-2px)}
+.plaza-face u{display:block;text-decoration:none;font:700 8px/1.5 var(--mono);letter-spacing:.18em;
+  text-transform:uppercase;color:#9aa5b1}
+.plaza-face b{display:block;margin-top:2px;font:400 clamp(12px,1.7vw,17px)/1.1 var(--serif);
+  letter-spacing:.06em;text-transform:uppercase;color:#ffeec4}
+.plaza-trade{
+  position:absolute;left:50%;bottom:clamp(92px,16vh,140px);transform:translateX(-50%);z-index:6;
+  padding:clamp(7px,1.3vh,12px) clamp(16px,3vw,32px);cursor:pointer;
+  border:2px solid var(--lb-gold);background:rgba(232,194,114,.14);
+  color:#ffeec4;font:400 clamp(13px,1.9vw,20px)/1 var(--serif);letter-spacing:.16em;
+  text-transform:uppercase;box-shadow:0 6px 20px rgba(0,0,0,.6);transition:.12s;
+}
+.plaza-trade:hover{background:rgba(232,194,114,.3)}
+
+.boardwrap,.tradewrap{
+  position:fixed;inset:0;z-index:72;display:grid;place-items:center;
+  background:rgba(4,6,10,.88);padding:14px;
+}
+.board,.trade{
+  width:min(560px,100%);max-height:100%;overflow-y:auto;
+  border:2px solid var(--lb-gold);background:#0a0e14;
+  box-shadow:0 14px 40px rgba(0,0,0,.75);padding:clamp(12px,2.4vw,22px);
+}
+.trade{width:min(860px,100%)}
+.board-head,.trade-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.board-head span{font:700 8.5px/1.6 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:#9aa5b1}
+.board-head h3,.trade-head h3{
+  margin:2px 0 0;font:400 clamp(18px,3vw,30px)/1 var(--serif);letter-spacing:.08em;
+  text-transform:uppercase;color:var(--lb-gold);
+}
+.board-close,.trade-close{
+  flex:none;width:34px;height:34px;cursor:pointer;border:0;background:transparent;
+  color:#cdbb92;font:300 26px/1 var(--mono);
+}
+.board-close:hover,.trade-close:hover{color:#fff6e2}
+.board-blurb{margin:8px 0 12px;font:400 clamp(11px,1.4vw,14px)/1.5 var(--serif);color:#9aa5b1;font-style:italic}
+.board-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+.board-list li{
+  display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:10px;
+  padding:5px 9px;border:1px solid #232c38;background:#0d1219;
+}
+.board-list li b{font:700 10px/1 var(--mono);color:#8d97a3;font-variant-numeric:tabular-nums}
+.board-list li span{font:700 11px/1.3 var(--mono);color:#d7dee6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-list li s{text-decoration:none;font:700 11px/1 var(--mono);color:#f1e6cc;font-variant-numeric:tabular-nums}
+.board-list li.me{border-color:var(--lb-gold);background:rgba(232,194,114,.12)}
+.board-list li.me span,.board-list li.me b{color:#ffeec4}
+.board-mine{margin-top:10px;padding:7px 9px;border:1px solid var(--lb-gold);
+  font:700 10.5px/1.4 var(--mono);letter-spacing:.06em;color:#ffeec4}
+.board-note,.trade-note{margin:10px 0 0;font:400 10px/1.55 Arial,sans-serif;color:#79838f}
+.trade-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
+.trade-col{display:flex;flex-direction:column;min-height:0}
+.trade-h{margin-bottom:6px;font:700 8.5px/1.6 var(--mono);letter-spacing:.2em;
+  text-transform:uppercase;color:var(--lb-gold)}
+.trade-list{display:flex;flex-direction:column;gap:5px;max-height:min(42vh,280px);overflow-y:auto}
+.trade-offer{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px;
+  padding:7px 9px;border:1px solid #232c38;background:#0d1219;
+}
+.trade-offer b{grid-column:1;font:700 10.5px/1.3 var(--mono);color:#ffeec4}
+.trade-offer span{grid-column:1;font:400 10.5px/1.4 Arial,sans-serif;color:#aab6c3}
+.trade-offer i{color:#79838f;font-style:normal;text-transform:uppercase;font-size:8.5px;letter-spacing:.12em;margin-right:4px}
+.trade-offer button{
+  grid-column:2;grid-row:1/4;padding:6px 12px;border:1px solid #3c4452;background:#171b22;
+  color:#7f8794;font:700 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;cursor:not-allowed;
+}
+.trade-chat{
+  flex:1;min-height:min(30vh,190px);max-height:min(42vh,280px);overflow-y:auto;
+  border:1px solid #232c38;background:#0d1219;padding:8px;
+  display:flex;flex-direction:column;gap:4px;
+}
+.tc-line{display:flex;gap:7px;font:400 11px/1.45 Arial,sans-serif;color:#c3ccd6}
+.tc-line b{flex:none;color:#8d97a3;font:700 10px/1.6 var(--mono)}
+.tc-line.me b{color:var(--lb-gold)}
+.tc-line.me span{color:#ffeec4}
+.trade-say{display:flex;gap:6px;margin-top:7px}
+.trade-say input{
+  flex:1;min-width:0;padding:7px 9px;border:1px solid #3c4452;background:#0d1219;color:#e4e9ee;
+  font:400 11.5px/1.3 Arial,sans-serif;
+}
+.trade-say input:focus{outline:none;border-color:var(--lb-gold)}
+.trade-say button{
+  padding:7px 14px;cursor:pointer;border:1px solid #c79f49;
+  background:linear-gradient(180deg,#f0d593,#c79f49);color:#140e04;
+  font:700 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+}
+@media(max-width:700px){
+  .plaza-faces{flex-direction:row;align-items:flex-start}
+  .plaza-face{width:clamp(88px,26vw,140px)}
+  .trade-body{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-height:620px){.plaza-trade{bottom:clamp(80px,13vh,116px)}}
 @media(max-width:620px){
   .mk-grid{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}
   .mk-title{font-size:16px}
@@ -4071,8 +4174,9 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         { id: "equipment", label: "Equipment" },
         { id: "inventory", label: "Inventory" },
         { id: "market", label: "Market", live: true },
-        { id: "rankings", label: "Rankings" },
+        { id: "rankings", label: "Rankings", live: true },
         { id: "gym", label: "Gym", live: true },
+        { id: "regiment", label: "Regiment" },
         { id: "battlepass", label: "Battlepass" },
       ];
       const MAINT_COPY = {
@@ -4083,6 +4187,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         rankings: "Leaderboards for wins — and for fighters retired healthy. Not built yet.",
         gym: "Build out your own gym and take on students. Not built yet.",
         battlepass: "A season of corner challenges. Not built yet.",
+        regiment: "Form a gym with other coaches and share a standings table. Not built yet.",
         friends: "Coach against a friend — one of you in each corner, same fighter, different calls. Not built yet.",
         customization: "Pick your fighter's look, stance and corner team. Not built yet.",
         codes: "Redeem codes for cosmetics. Not built yet.",
@@ -4094,7 +4199,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         if (id === "gear") return;
         if (id === "market") return openMarket();
         if (id === "gym") return setLobbyView("gym");
-        if (id === "switchview") return setLobbyView(lobbyView === "gym" ? "ring" : "gym");
+        if (id === "rankings") return setLobbyView("plaza");
+        if (id === "switchview") return cycleLobbyView();
         if (id === "guide") return instructions();
         if (id === "settings") return openSettings();
         maintenance(id);
@@ -4136,7 +4242,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         el.className = "lobby";
         el.innerHTML = `
           <canvas class="lb-art" id="lobby-art" role="img"
-            aria-label="${lobbyView === 'gym' ? 'Pixel art of a weights room: squat rack, bench and dumbbell racks' : 'Pixel art: a boxer taking a straight right flush on the cheek, head twisting off the impact'}"></canvas>
+            aria-label="${lobbyView === 'gym' ? 'Pixel art of a weights room: squat rack, bench and dumbbell racks' : lobbyView === 'plaza' ? 'Pixel art of a town square at dusk with a gilded statue of a boxer on a plinth' : 'Pixel art: a boxer taking a straight right flush on the cheek, head twisting off the impact'}"></canvas>
           <div class="lb-shade"></div>
 
           <div class="lb-top">
@@ -4156,7 +4262,27 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           </div>
 
           <div class="lb-stage">
-            ${lobbyView === "gym" ? `
+            ${lobbyView === "plaza" ? `
+            <div class="lb-tagline">
+              <b>The Square</b>
+              <i>Four faces, four boards, and a floor where people deal.</i>
+            </div>
+            <div class="plaza-faces">
+              <div class="plaza-col">
+                ${BOARDS.slice(0, 2).map((bd) => `
+                  <button class="plaza-face" data-board="${bd.id}" type="button">
+                    <u>${bd.face} face</u><b>${bd.name}</b>
+                  </button>`).join("")}
+              </div>
+              <div class="plaza-col">
+                ${BOARDS.slice(2).map((bd) => `
+                  <button class="plaza-face" data-board="${bd.id}" type="button">
+                    <u>${bd.face} face</u><b>${bd.name}</b>
+                  </button>`).join("")}
+              </div>
+            </div>
+            <button class="plaza-trade" data-trade="1" type="button">Trade Central</button>
+            ` : lobbyView === "gym" ? `
             <div class="lb-tagline">
               <b>Training Arena</b>
               <i>Strength is built here. Judgement is built in the corner.</i>
@@ -4176,7 +4302,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 
             <div class="lb-profile">
               <div class="lb-av"><canvas id="lb-avatar" width="34" height="34" aria-hidden="true"></canvas><b>LV. ${P.lv}</b></div>
-              <button class="lb-switch" data-lobby="switchview">${lobbyView === "gym" ? "Switch lobby" : "Switch gym"}</button>
+              <button class="lb-switch" data-lobby="switchview">${VIEW_NEXT[lobbyView]}</button>
               <div class="lb-mults">
                 <div class="lb-mult ${boostActive("gold") ? "boosted" : ""}" data-m="gold" title="Coins earned from a bout"><u>GOLD</u><s>${fx(PM.gold)}</s></div>
                 <div class="lb-mult ${boostActive("luck") ? "boosted" : ""}" data-m="luck" title="Rare drop chance — not applied yet"><u>LUCK</u><s>${fx(PM.luck)}</s></div>
@@ -4199,6 +4325,10 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           btn.addEventListener("click", () => lobbyGo(btn.dataset.lobby)));
         el.querySelectorAll("[data-train]").forEach((btn) =>
           btn.addEventListener("click", () => trainAt(btn.dataset.train)));
+        el.querySelectorAll("[data-board]").forEach((btn) =>
+          btn.addEventListener("click", () => openBoard(btn.dataset.board)));
+        el.querySelectorAll("[data-trade]").forEach((btn) =>
+          btn.addEventListener("click", openTrade));
         document.body.appendChild(el);
 
         const av = $("#lb-avatar");
@@ -4225,7 +4355,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const reduced = document.body.dataset.reduceMotion === "1"
           || document.body.dataset.lowDetail === "1"
           || matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const paint = () => (lobbyView === "gym" ? drawGymArena : drawPunchScene)(actx, AW, AH, lobbyT);
+        const paint = () => (lobbyView === "gym" ? drawGymArena : lobbyView === "plaza" ? drawPlaza : drawPunchScene)(actx, AW, AH, lobbyT);
         if (reduced) { lobbyT = .49; paint(); }
         else {
           /* Wall-clock driven: the punch takes the same 5.3s whether the
@@ -5075,9 +5205,269 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         if (host) host.querySelectorAll("[data-cost]").forEach((n) => { n.textContent = trainCost().toLocaleString(); });
         gateToast(`+${st.gain.toFixed(2)}x strength · ${st.name}`);
       }
+      const VIEW_ORDER = ["ring", "gym", "plaza"];
+      const VIEW_NEXT = { ring: "Switch gym", gym: "Switch plaza", plaza: "Switch lobby" };
       function setLobbyView(v) {
         lobbyView = v;
         intro();
+      }
+      function cycleLobbyView() {
+        const i = VIEW_ORDER.indexOf(lobbyView);
+        setLobbyView(VIEW_ORDER[(i + 1) % VIEW_ORDER.length]);
+      }
+
+      /* ── THE PLAZA ───────────────────────────────────────────────
+         A square with a gilded statue in the middle. Each of its four
+         faces carries a board. Nothing here is networked: the rosters
+         are fictional and your own row is read from your save, which
+         the panel says out loud rather than implying a live ranking. */
+      const BOARD_NAMES = [
+        "KINGBOBJR", "REQUIEM", "WORKERLOAD", "DARIOS1757", "CARTER",
+        "halfguard", "Nikko_Helios", "DanaPikala", "coldstorage", "tenbell",
+        "cutman_lee", "sparrow", "Ortiz_88", "glassjaw", "roundtwelve",
+        "southpaw", "ringsalt", "brawler_k", "quietcorner", "redcorner",
+      ];
+      const BOARDS = [
+        { id: "rank",  face: "North", name: "Rank",        unit: "pts",
+          blurb: "Ranked by bouts coached and fighters brought home intact.",
+          mine: () => ((P.wins || 0) * 120 + (P.stops || 0) * 180 + (P.bouts || 0) * 40) },
+        { id: "spent", face: "East",  name: "Money Spent", unit: "gems",
+          blurb: "Gems bought through Discord. Yours reads zero because nothing in this build takes payment.",
+          mine: () => (P.spent || 0) },
+        { id: "level", face: "South", name: "Level",       unit: "lv",
+          blurb: "Coach level, earned from experience at the end of every bout.",
+          mine: () => (P.lv || 1) },
+        { id: "gold",  face: "West",  name: "Gold",        unit: "gold",
+          blurb: "Coins in hand right now, not coins earned all time.",
+          mine: () => (P.gold || 0) },
+      ];
+      function boardRows(b) {
+        /* a fixed fictional roster, so the board does not shuffle each visit */
+        const scale = { rank: 9000, spent: 42000, level: 70, gold: 900000 }[b.id];
+        const rows = BOARD_NAMES.map((n, i) => ({
+          n, v: Math.round(scale * (1 - i / BOARD_NAMES.length) * (0.55 + rnd(i * 3.7 + b.id.length) * 0.45)),
+        }));
+        rows.push({ n: "YOU", v: b.mine(), me: true });
+        rows.sort((x, y) => y.v - x.v);
+        return rows;
+      }
+      function openBoard(id) {
+        const b = BOARDS.find((x) => x.id === id) || BOARDS[0];
+        const rows = boardRows(b);
+        const mineAt = rows.findIndex((r) => r.me) + 1;
+        document.querySelectorAll(".boardwrap").forEach((n) => n.remove());
+        const el = document.createElement("div");
+        el.className = "boardwrap";
+        el.setAttribute("role", "dialog");
+        el.setAttribute("aria-label", b.name + " board");
+        el.innerHTML = `
+          <div class="board">
+            <div class="board-head">
+              <div>
+                <span>${b.face} Face</span>
+                <h3>${b.name}</h3>
+              </div>
+              <button class="board-close" type="button" aria-label="Close">&times;</button>
+            </div>
+            <p class="board-blurb">${escapeUI(b.blurb)}</p>
+            <ol class="board-list">
+              ${rows.slice(0, 12).map((r, i) => `
+                <li class="${r.me ? "me" : ""}">
+                  <b>${i + 1}</b><span>${escapeUI(r.n)}</span>
+                  <s>${r.v.toLocaleString()} ${b.unit}</s>
+                </li>`).join("")}
+            </ol>
+            <div class="board-mine">Your position: <b>#${mineAt}</b> &middot; ${b.mine().toLocaleString()} ${b.unit}</div>
+            <p class="board-note">Offline board. These names are fictional and the standings are generated on your own device — nothing is submitted anywhere.</p>
+          </div>`;
+        el.querySelector(".board-close").addEventListener("click", () => el.remove());
+        el.addEventListener("click", (e) => { if (e.target === el) el.remove(); });
+        document.body.appendChild(el);
+      }
+
+      /* ── TRADE CENTRAL ───────────────────────────────────────── */
+      const TRADE_OFFERS = [
+        { who: "coldstorage", has: "Pier 14 ticket", wants: "2,500 gold" },
+        { who: "cutman_lee",  has: "Swab kit (3)",   wants: "1x Exp boost" },
+        { who: "halfguard",   has: "Gold boost 3h",  wants: "180 gems" },
+        { who: "tenbell",     has: "Furnace St pass", wants: "900 gold" },
+        { who: "glassjaw",    has: "Mouthguard, red", wants: "Any boost" },
+        { who: "sparrow",     has: "1,000 gold",     wants: "60 gems" },
+      ];
+      const TRADE_CHAT = [
+        { who: "tenbell", t: "anyone got a spare gold boost" },
+        { who: "sparrow", t: "selling 1k gold, 60 gems, first come" },
+        { who: "cutman_lee", t: "wtb swabs. paying over" },
+      ];
+      function openTrade() {
+        document.querySelectorAll(".tradewrap").forEach((n) => n.remove());
+        const el = document.createElement("div");
+        el.className = "tradewrap";
+        el.setAttribute("role", "dialog");
+        el.setAttribute("aria-label", "Trade Central");
+        el.innerHTML = `
+          <div class="trade">
+            <div class="trade-head">
+              <h3>Trade Central</h3>
+              <button class="trade-close" type="button" aria-label="Close">&times;</button>
+            </div>
+            <div class="trade-body">
+              <div class="trade-col">
+                <div class="trade-h">Open offers</div>
+                <div class="trade-list">
+                  ${TRADE_OFFERS.map((o) => `
+                    <div class="trade-offer">
+                      <b>${escapeUI(o.who)}</b>
+                      <span><i>has</i> ${escapeUI(o.has)}</span>
+                      <span><i>wants</i> ${escapeUI(o.wants)}</span>
+                      <button type="button" disabled>Offer</button>
+                    </div>`).join("")}
+                </div>
+              </div>
+              <div class="trade-col">
+                <div class="trade-h">Floor chat</div>
+                <div class="trade-chat" id="trade-chat"></div>
+                <form class="trade-say" id="trade-say">
+                  <input id="trade-input" type="text" maxlength="120" placeholder="Say something on the floor" aria-label="Chat message">
+                  <button type="submit">Send</button>
+                </form>
+              </div>
+            </div>
+            <p class="trade-note">Not connected yet. The traders and their offers are fictional, and anything you type stays in this browser — no one else can see it and nothing is sent anywhere.</p>
+          </div>`;
+        document.body.appendChild(el);
+        const log = $("#trade-chat");
+        const push = (who, t, me) => {
+          const d = document.createElement("div");
+          d.className = "tc-line" + (me ? " me" : "");
+          d.innerHTML = `<b>${escapeUI(who)}</b><span>${escapeUI(t)}</span>`;
+          log.appendChild(d);
+          log.scrollTop = log.scrollHeight;
+        };
+        TRADE_CHAT.forEach((m) => push(m.who, m.t));
+        $("#trade-say").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const inp = $("#trade-input"), v = inp.value.trim();
+          if (!v) return;
+          push("YOU", v, true);
+          inp.value = "";
+        });
+        el.querySelector(".trade-close").addEventListener("click", () => el.remove());
+        el.addEventListener("click", (e) => { if (e.target === el) el.remove(); });
+      }
+
+      /* ── PLAZA ART ───────────────────────────────────────────── */
+      function drawPlaza(ctx, W, H, t) {
+        const b = (X, Y, Wd, Ht, c) => {
+          ctx.fillStyle = c;
+          ctx.fillRect(Math.round(X), Math.round(Y), Math.max(1, Math.round(Wd)), Math.max(1, Math.round(Ht)));
+        };
+        const horizon = H * .56;
+        const glow = 0.82 + Math.sin(t * Math.PI * 2) * 0.18;
+        /* dusk sky */
+        const sky = ctx.createLinearGradient(0, 0, 0, horizon);
+        sky.addColorStop(0, "#241c34");
+        sky.addColorStop(.55, "#4a2f3f");
+        sky.addColorStop(1, "#8a4c44");
+        ctx.fillStyle = sky; ctx.fillRect(0, 0, W, horizon);
+        for (let i = 0; i < 40; i++) {
+          const sx = rnd(i * 4.3) * W, sy = rnd(i * 7.1) * horizon * .7;
+          b(sx, sy, 1, 1, "rgba(255,230,200,.5)");
+        }
+        /* distant skyline */
+        for (let i = 0; i < 14; i++) {
+          const bw = W * .09, bx = i * bw * .78 - W * .04;
+          const bh = horizon * (.22 + rnd(i * 2.9) * .3);
+          b(bx, horizon - bh, bw, bh, "#2b2234");
+        }
+        /* flanking buildings */
+        const face = (x, w) => {
+          b(x, horizon - H * .50, w, H * .50 + H * .14, "#2f2a36");
+          b(x + w * .06, horizon - H * .47, w * .88, H * .47, "#3a3341");
+          for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 3; c++) {
+              const wx = x + w * (.14 + c * .28), wy = horizon - H * .44 + r * H * .085;
+              const lit = (r * 3 + c + Math.floor(x)) % 4 < 2;
+              b(wx, wy, w * .17, H * .055, lit ? "#e8b765" : "#241f2b");
+              if (lit) b(wx + w * .03, wy + H * .012, w * .11, H * .03, "#ffd9a0");
+            }
+          }
+        };
+        face(-W * .06, W * .30);
+        face(W * .76, W * .30);
+        /* cobbles */
+        b(0, horizon, W, H - horizon, "#312b33");
+        for (let y = horizon; y < H; y += H * .035) {
+          const row = Math.round((y - horizon) / (H * .035));
+          for (let x = (row % 2 ? -W * .03 : 0); x < W; x += W * .062) {
+            b(x, y, W * .058, H * .03, (row * 3 + Math.round(x)) % 3 ? "#3a333c" : "#342d36");
+          }
+        }
+        /* plinth */
+        const px0 = W * .38, pw = W * .24, pyTop = horizon - H * .02;
+        b(px0 - pw * .14, pyTop + H * .10, pw * 1.28, H * .07, "#4a4350");
+        b(px0 - pw * .07, pyTop + H * .05, pw * 1.14, H * .06, "#564e5d");
+        b(px0, pyTop - H * .02, pw, H * .08, "#625969");
+        /* light spill around the base */
+        const gg = ctx.createRadialGradient(W * .5, pyTop + H * .07, 2, W * .5, pyTop + H * .07, W * .30);
+        gg.addColorStop(0, "rgba(255,206,110," + (.42 * glow).toFixed(3) + ")");
+        gg.addColorStop(1, "rgba(255,206,110,0)");
+        ctx.fillStyle = gg; ctx.fillRect(0, horizon - H * .1, W, H * .5);
+        /* ── the gilded fighter ── */
+        const GX = W * .5, GY = pyTop - H * .02, S = H * .30;
+        const G1 = "#f3d070", G2 = "#c99a33", G3 = "#8d661c", G4 = "#fff0bb";
+        b(GX - S * .20, GY - S * .10, S * .40, S * .12, G2);              /* feet / base */
+        b(GX - S * .16, GY - S * .40, S * .13, S * .32, G2);              /* legs */
+        b(GX + S * .03, GY - S * .40, S * .13, S * .32, G2);
+        b(GX - S * .14, GY - S * .38, S * .08, S * .28, G1);
+        b(GX - S * .22, GY - S * .72, S * .44, S * .34, G2);              /* torso */
+        b(GX - S * .17, GY - S * .69, S * .30, S * .28, G1);
+        b(GX - S * .12, GY - S * .64, S * .18, S * .10, G4);              /* chest light */
+        b(GX - S * .36, GY - S * .80, S * .17, S * .22, G2);              /* arms up */
+        b(GX + S * .19, GY - S * .80, S * .17, S * .22, G2);
+        b(GX - S * .40, GY - S * .97, S * .21, S * .20, G1);              /* gloves */
+        b(GX + S * .19, GY - S * .97, S * .21, S * .20, G1);
+        b(GX - S * .37, GY - S * .93, S * .12, S * .11, G4);
+        b(GX + S * .22, GY - S * .93, S * .12, S * .11, G4);
+        b(GX - S * .13, GY - S * .95, S * .26, S * .23, G2);              /* head */
+        b(GX - S * .09, GY - S * .92, S * .18, S * .17, G1);
+        b(GX - S * .13, GY - S * .99, S * .26, S * .08, G3);              /* brow */
+        b(GX - S * .05, GY - S * .78, S * .10, S * .03, G3);              /* mouth */
+        /* four engraved faces on the plinth */
+        const plate = (x, y, w2, h2) => {
+          b(x, y, w2, h2, "#3f3845");
+          b(x + w2 * .08, y + h2 * .14, w2 * .84, h2 * .72, "#8d661c");
+          b(x + w2 * .14, y + h2 * .26, w2 * .72, h2 * .20, "#f3d070");
+          b(x + w2 * .14, y + h2 * .54, w2 * .52, h2 * .16, "#c99a33");
+        };
+        plate(px0 + pw * .06, pyTop + H * .062, pw * .38, H * .042);
+        plate(px0 + pw * .56, pyTop + H * .062, pw * .38, H * .042);
+        /* lanterns */
+        for (const lx of [W * .22, W * .78]) {
+          b(lx - W * .006, horizon - H * .24, W * .012, H * .24, "#2a2430");
+          b(lx - W * .024, horizon - H * .29, W * .048, H * .055, "#ffd98a");
+          b(lx - W * .016, horizon - H * .283, W * .032, H * .04, "#fff3cf");
+          const lg = ctx.createRadialGradient(lx, horizon - H * .26, 2, lx, horizon - H * .26, W * .14);
+          lg.addColorStop(0, "rgba(255,214,130,.28)"); lg.addColorStop(1, "rgba(255,214,130,0)");
+          ctx.fillStyle = lg; ctx.fillRect(lx - W * .14, horizon - H * .4, W * .28, H * .35);
+        }
+        /* trade central gate, right */
+        const tgx = W * .80;
+        b(tgx - W * .02, horizon - H * .30, W * .025, H * .30, "#4a3523");
+        b(tgx + W * .17, horizon - H * .30, W * .025, H * .30, "#4a3523");
+        b(tgx - W * .05, horizon - H * .34, W * .27, H * .05, "#5b4129");
+        b(tgx - W * .01, horizon - H * .325, W * .19, H * .03, "#2a1f14");
+        b(tgx + W * .01, horizon - H * .318, W * .15, H * .016, "#e8c272");
+        /* bunting of market stalls under it */
+        b(tgx, horizon - H * .10, W * .18, H * .10, "#2d2535");
+        b(tgx + W * .01, horizon - H * .085, W * .16, H * .05, "#3c3345");
+        /* grade */
+        const v = ctx.createRadialGradient(W / 2, H * .52, Math.min(W, H) * .3, W / 2, H * .52, H * .95);
+        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.6)");
+        ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "rgba(8,11,18,.12)";
+        const st = Math.max(2, Math.round(H * .017));
+        for (let y = 0; y < H; y += st) ctx.fillRect(0, y, W, 1);
       }
 
       /* ── MARKET ──────────────────────────────────────────────────
