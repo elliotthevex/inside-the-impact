@@ -3707,11 +3707,17 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         const paint = () => drawPunchScene(actx, AW, AH, lobbyT);
         if (reduced) { lobbyT = .49; paint(); }
         else {
+          /* Wall-clock driven: the punch takes the same 5.3s whether the
+             browser hands us 60fps or 3. Advancing per frame made the
+             whole combination play in slow motion on a throttled tab. */
+          const CYCLE = 5300;
+          let t0 = 0;
           const loop = (ts) => {
             if (!art.isConnected) return;
-            if (ts - lobbyLast > 33) {
+            if (!t0) t0 = ts;
+            if (ts - lobbyLast > 32) {
               lobbyLast = ts;
-              lobbyT = (lobbyT + .0062) % 1;
+              lobbyT = ((ts - t0) % CYCLE) / CYCLE;
               paint();
             }
             lobbyRAF = requestAnimationFrame(loop);
@@ -3759,7 +3765,12 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         gcv.width = gw; gcv.height = gHt;
         gc.imageSmoothingEnabled = false;
         drawGym(gc, gw, gHt, gym.k, seed);
-        requestAnimationFrame(() => gl.classList.add("in"));
+        /* Force layout so the transition has a start value, then reveal
+           synchronously. rAF is paused while the page is hidden, and a
+           loading screen that waits for a frame that never comes stays
+           invisible for its whole life. */
+        void gl.offsetWidth;
+        gl.classList.add("in");
 
         const dots = $("#gl-dots"), fill = $("#gl-fill");
         let d = 0, pct = 0;
