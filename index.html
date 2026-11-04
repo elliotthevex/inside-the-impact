@@ -2758,6 +2758,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .gu-close{flex:none;width:40px;height:40px;cursor:pointer;border:0;background:transparent;
   color:#cdbb92;font:300 30px/1 var(--mono);transition:.12s}
 .gu-close:hover{color:#fff6e2;transform:scale(1.1)}
+.gu-body[hidden]{display:none}
 .gu-body{flex:1;min-height:0;display:grid;gap:clamp(8px,1.6vw,20px);
   grid-template-columns:minmax(150px,.85fr) minmax(0,1.3fr) minmax(190px,1fr);
   padding:clamp(10px,2.2vh,24px) clamp(10px,2vw,26px)}
@@ -2811,6 +2812,63 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .gu-buy.poor{opacity:.45;cursor:not-allowed}
 .gu-maxed{margin-top:9px;padding:9px;text-align:center;border:1px solid #4a5565;background:#171b22;
   color:#9aa5b1;font:700 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase}
+/* ── skill tree ── */
+.gu-spchip{display:grid;place-items:center;width:17px;height:17px;flex:none;
+  background:#6d3bd1;color:#efe8ff;font:700 8px/1 var(--mono);letter-spacing:.02em}
+.sk-body{grid-template-columns:minmax(140px,.8fr) minmax(0,1.7fr) minmax(190px,1fr)}
+.sk-tree{overflow-y:auto;padding-right:8px;min-height:0}
+.sk-tree::-webkit-scrollbar{width:6px}
+.sk-tree::-webkit-scrollbar-thumb{background:var(--lb-gold)}
+.sk-cat{margin:clamp(8px,1.4vh,14px) 0 6px;padding-bottom:4px;
+  border-bottom:1px solid rgba(232,194,114,.3);
+  font:700 clamp(8.5px,1.1vw,10.5px)/1.3 var(--mono);letter-spacing:.2em;
+  text-transform:uppercase;color:var(--lb-gold)}
+.sk-cat:first-child{margin-top:0}
+.sk-row{display:grid;gap:7px;grid-template-columns:repeat(auto-fill,minmax(124px,1fr))}
+.sk-node{position:relative;padding:8px 9px;cursor:pointer;text-align:left;
+  border:2px solid #3c4452;background:#0d1219;transition:.12s}
+.sk-node:hover{border-color:#8d7338}
+.sk-node b{display:block;font:700 clamp(10px,1.3vw,12.5px)/1.25 var(--mono);
+  letter-spacing:.04em;color:#d7dee6}
+.sk-node s{display:block;margin-top:3px;text-decoration:none;
+  font:400 9px/1.3 Arial,sans-serif;color:#79838f}
+.sk-node.own{border-color:var(--lb-gold);background:rgba(232,194,114,.08)}
+.sk-node.own b{color:#ffeec4}
+.sk-node.open{border-color:#6d3bd1;background:rgba(109,59,209,.1)}
+.sk-node.open s{color:#b9a0f0}
+.sk-node.lock{opacity:.5}
+.sk-node.sel{box-shadow:0 0 0 1px var(--lb-gold),0 0 14px rgba(232,194,114,.3)}
+.sk-pips{display:flex;gap:2px;margin-top:5px}
+.sk-pips u{flex:1;height:3px;background:#2a3340;text-decoration:none}
+.sk-pips u.on{background:var(--lb-gold)}
+.sk-head span{font:700 8.5px/1.6 var(--mono);letter-spacing:.2em;
+  text-transform:uppercase;color:#9aa5b1}
+.sk-head h3{margin:2px 0 0;font:400 clamp(16px,2.4vw,27px)/1 var(--serif);
+  letter-spacing:.06em;text-transform:uppercase;color:var(--lb-gold)}
+.sk-desc{margin:9px 0 12px;font:400 clamp(11px,1.4vw,14px)/1.55 var(--serif);color:#c3ccd6}
+.sk-now{display:flex;flex-direction:column;gap:7px;margin-bottom:auto}
+.sk-now div{padding:7px 9px;border:1px solid #2b3744;background:#0b1017}
+.sk-now u{display:block;text-decoration:none;font:700 8px/1.5 var(--mono);
+  letter-spacing:.16em;text-transform:uppercase;color:#79838f}
+.sk-now b{display:block;margin-top:2px;font:700 clamp(10px,1.3vw,12px)/1.4 var(--mono);color:#d7dee6}
+.sk-now b.up{color:#8ad17e}
+.sk-buy{margin-top:11px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:clamp(8px,1.4vh,12px) 8px;cursor:pointer;border:1px solid #c79f49;
+  background:linear-gradient(180deg,#f0d593,#c79f49);color:#140e04;
+  font:700 clamp(10px,1.3vw,13px)/1 var(--mono);letter-spacing:.06em}
+.sk-buy:hover{background:#fff0c8}
+.sk-buy svg{width:15px;height:15px}
+.sk-buy.sp{border-color:#6d3bd1;background:linear-gradient(180deg,#9b6ff0,#6d3bd1);color:#f3edff}
+.sk-buy.sp:hover{background:#b48cff}
+.sk-gate{margin-top:11px;padding:9px;text-align:center;border:1px solid #4a5565;
+  background:#171b22;color:#9aa5b1;font:700 9.5px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.sk-gate b{color:#ffeec4}
+@media(max-width:860px){
+  .sk-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(120px,1fr) auto}
+  .sk-body .gu-left{grid-column:1;grid-row:1}
+  .sk-tree{grid-column:2;grid-row:1}
+  .sk-body .gu-panel{grid-column:1/-1;grid-row:2;max-height:44vh}
+}
 @media(max-width:860px){
   .gu-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(120px,1fr) auto}
   .gu-left{grid-column:1;grid-row:1}
@@ -3664,6 +3722,16 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             boutsConcussed: 0,
           },
         };
+        /* what you have unlocked shows up in the fighter you take to camp:
+           punches add power, footwork adds speed, guard and slip add
+           defence. Small, so the simulation's own balance still leads. */
+        try {
+          ensureSkills();
+          const sk = skillStats();
+          G.me.pow = cl(G.me.pow + Math.min(3, sk.dmg / 22), 1, 10);
+          G.me.spd = cl(G.me.spd + Math.min(2, (sk.spd - 1) * 4 + (sk.move - 1) * 3), 1, 10);
+          G.me.def = cl(G.me.def + Math.min(3, sk.soak * 4 + sk.evade * 4), 1, 10);
+        } catch (e) {}
         G.w = 0;
         G.l = 0;
         G.k = 0;
@@ -3840,14 +3908,14 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
          the economy has to agree with what the game is teaching, or the
          player learns the opposite of the lesson. */
       const REWARDS = {
-        win:     { share: 1,   xpShare: 1,    label: "Win" },
-        lose:    { share: .4,  xpShare: .62,  label: "Loss" },
-        towel:   { share: 1,   xpShare: 1.6,  label: "Corner stoppage" },
-        medstop: { share: 1,   xpShare: 1.6,  label: "Medical stoppage" },
-        sdh:     { share: .25, xpShare: .85,  label: "Catastrophic outcome" },
-        ko:      { share: .25, xpShare: .85,  label: "Knockout" },
-        champ:   { share: 2,   xpShare: 2.4,  label: "Title won" },
-        ret:     { share: .5,  xpShare: .75,  label: "Retirement" },
+        win:     { share: 1,   xpShare: 1,    sp: 2, label: "Win" },
+        lose:    { share: .4,  xpShare: .62,  sp: 1, label: "Loss" },
+        towel:   { share: 1,   xpShare: 1.6,  sp: 2, label: "Corner stoppage" },
+        medstop: { share: 1,   xpShare: 1.6,  sp: 2, label: "Medical stoppage" },
+        sdh:     { share: .25, xpShare: .85,  sp: 1, label: "Catastrophic outcome" },
+        ko:      { share: .25, xpShare: .85,  sp: 1, label: "Knockout" },
+        champ:   { share: 2,   xpShare: 2.4,  sp: 6, label: "Title won" },
+        ret:     { share: .5,  xpShare: .75,  sp: 1, label: "Retirement" },
       };
       const xpNeed = (lv) => 200 + lv * 140;
       /* The four numbers on the lobby card. Gold and Exp are read by the
@@ -3875,7 +3943,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       };
       let P = null;
       function loadProfile() {
-        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {}, up: null, gymStat: { strength: 0 } };
+        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {}, up: null, gymStat: { strength: 0 }, skills: null, sp: 3 };
         try {
           const raw = localStorage.getItem(PROFILE_KEY);
           P = raw ? Object.assign(base, JSON.parse(raw)) : base;
@@ -3894,9 +3962,11 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           gold: Math.round(d.gold * base.share * PM.gold * gm),
           gems: Math.round(d.gems * gm * base.share),
           xp: Math.round((d.xp || 120) * gm * PM.exp * base.xpShare),
+          sp: base.sp || 0,
           diff: d.name,
         });
         P.gold += r.gold; P.gems += r.gems; P.xp += r.xp; P.bouts++;
+        P.sp = (P.sp || 0) + (r.sp || 0);
         if (kind === "win" || kind === "champ") P.wins++;
         if (kind === "towel" || kind === "medstop") P.stops++;
         let gained = 0;
@@ -6367,10 +6437,180 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         }
       }
 
+      /* ── SKILLS ──────────────────────────────────────────────────
+         Three currencies do different jobs. Experience raises your
+         coach level. Skill points unlock a skill for the first time.
+         Gold raises a skill you already own. A skill is only worth
+         unlocking if it does something, so every one of these is read
+         by Street Fight, and the punches and guard feed the bout
+         simulation's starting attributes too. */
+      const SKILL_CATS = ["Punches", "Defence", "Movement", "Combos", "Special"];
+      const SKILLS = [
+        { id: "jab",   cat: "Punches", name: "Jab",           sp: 0, max: 6, base: 260,
+          desc: "The range finder. Fast, cheap, and how most rounds are actually won.",
+          per: (l) => ({ dmg: 4 + l * 1.6, spd: 1 + l * .05 }),
+          note: (l) => `${(4 + l * 1.6).toFixed(1)} damage · ${(1 + l * .05).toFixed(2)}x hand speed` },
+        { id: "cross", cat: "Punches", name: "Cross",         sp: 1, max: 6, base: 380, req: "jab",
+          desc: "The straight power hand behind the jab.",
+          per: (l) => ({ dmg: 9 + l * 2.6 }),
+          note: (l) => `${(9 + l * 2.6).toFixed(1)} damage` },
+        { id: "lhook", cat: "Punches", name: "Left Hook",     sp: 2, max: 6, base: 520, req: "cross",
+          desc: "A short arc to the side of the head. Hard to see coming.",
+          per: (l) => ({ dmg: 12 + l * 3.1, stun: .04 + l * .012 }),
+          note: (l) => `${(12 + l * 3.1).toFixed(1)} damage · ${Math.round((.04 + l * .012) * 100)}% stagger` },
+        { id: "upper", cat: "Punches", name: "Uppercut",      sp: 3, max: 6, base: 700, req: "lhook",
+          desc: "Up the middle. The shot that snaps a head back.",
+          per: (l) => ({ dmg: 16 + l * 4.0, stun: .08 + l * .018 }),
+          note: (l) => `${(16 + l * 4).toFixed(1)} damage · ${Math.round((.08 + l * .018) * 100)}% stagger` },
+
+        { id: "guard", cat: "Defence", name: "High Guard",    sp: 1, max: 6, base: 300,
+          desc: "Hands up. Takes the force on the gloves instead of the head.",
+          per: (l) => ({ soak: .12 + l * .055 }),
+          note: (l) => `${Math.round((.12 + l * .055) * 100)}% of incoming damage absorbed` },
+        { id: "slip",  cat: "Defence", name: "Slip",          sp: 2, max: 5, base: 460, req: "guard",
+          desc: "Move the head off the centre line so the shot passes.",
+          per: (l) => ({ evade: .06 + l * .028 }),
+          note: (l) => `${Math.round((.06 + l * .028) * 100)}% chance to make them miss` },
+        { id: "roll",  cat: "Defence", name: "Shoulder Roll", sp: 3, max: 4, base: 640, req: "slip",
+          desc: "Ride the hook on the shoulder and come back up in range.",
+          per: (l) => ({ evade: .04 + l * .022, soak: .05 + l * .02 }),
+          note: (l) => `${Math.round((.04 + l * .022) * 100)}% evade · ${Math.round((.05 + l * .02) * 100)}% soak` },
+
+        { id: "step",  cat: "Movement", name: "Footwork",     sp: 1, max: 6, base: 280,
+          desc: "Cover ground without crossing your feet.",
+          per: (l) => ({ move: 1 + l * .11 }),
+          note: (l) => `${(1 + l * .11).toFixed(2)}x movement speed` },
+        { id: "burst", cat: "Movement", name: "Burst Step",   sp: 2, max: 5, base: 520, req: "step",
+          desc: "A short explosive step that closes or breaks distance.",
+          per: (l) => ({ dash: .9 + l * .16 }),
+          note: (l) => `${(.9 + l * .16).toFixed(2)}x dash distance` },
+
+        { id: "onetwo", cat: "Combos", name: "One-Two",       sp: 2, max: 5, base: 560, req: "cross",
+          desc: "Jab and cross as one motion. The second lands because the first went.",
+          per: (l) => ({ chain: 2, combo: 1.12 + l * .07 }),
+          note: (l) => `2-punch chain at ${(1.12 + l * .07).toFixed(2)}x damage` },
+        { id: "triple", cat: "Combos", name: "Triple Threat", sp: 4, max: 4, base: 880, req: "onetwo",
+          desc: "Jab, cross, hook. Three shots before he resets his guard.",
+          per: (l) => ({ chain: 3, combo: 1.22 + l * .09 }),
+          note: (l) => `3-punch chain at ${(1.22 + l * .09).toFixed(2)}x damage` },
+
+        { id: "counter", cat: "Special", name: "Counter Window", sp: 4, max: 4, base: 950, req: "slip",
+          desc: "Make him miss and the gap he leaves is yours for a moment.",
+          per: (l) => ({ counter: 1.3 + l * .22 }),
+          note: (l) => `${(1.3 + l * .22).toFixed(2)}x damage right after an evade` },
+        { id: "hay",     cat: "Special", name: "Haymaker",      sp: 5, max: 3, base: 1300, req: "upper",
+          desc: "Everything behind one shot. Slow, obvious, and it ends things.",
+          per: (l) => ({ dmg: 34 + l * 11, wind: 1 }),
+          note: (l) => `${34 + l * 11} damage · long wind-up` },
+      ];
+      const skillById = (id) => SKILLS.find((s) => s.id === id);
+      const skLevel = (id) => (P && P.skills && P.skills[id]) || 0;
+      const skOwned = (id) => skLevel(id) > 0;
+      const skCost = (s) => Math.round(s.base * Math.pow(1.48, Math.max(0, skLevel(s.id) - 1)));
+      const skLocked = (s) => s.req && !skOwned(s.req);
+      /* aggregate everything the player owns into one set of numbers the
+         modes can read without knowing about the tree */
+      function skillStats() {
+        const out = { dmg: 0, spd: 1, soak: 0, evade: 0, move: 1, dash: 0,
+                      chain: 1, combo: 1, counter: 1, stun: 0, punches: [] };
+        for (const s of SKILLS) {
+          const l = skLevel(s.id);
+          if (!l) continue;
+          const p = s.per(l);
+          if (p.dmg) { out.dmg += p.dmg; out.punches.push({ id: s.id, name: s.name, dmg: p.dmg, stun: p.stun || 0, wind: p.wind || 0 }); }
+          if (p.spd) out.spd *= p.spd;
+          if (p.soak) out.soak += p.soak;
+          if (p.evade) out.evade += p.evade;
+          if (p.move) out.move *= p.move;
+          if (p.dash) out.dash = Math.max(out.dash, p.dash);
+          if (p.chain) out.chain = Math.max(out.chain, p.chain);
+          if (p.combo) out.combo = Math.max(out.combo, p.combo);
+          if (p.counter) out.counter = Math.max(out.counter, p.counter);
+          if (p.stun) out.stun += p.stun;
+        }
+        out.soak = Math.min(.70, out.soak);
+        out.evade = Math.min(.55, out.evade);
+        if (!out.punches.length) out.punches.push({ id: "jab", name: "Jab", dmg: 4, stun: 0, wind: 0 });
+        return out;
+      }
+      function ensureSkills() {
+        if (!P) loadProfile();
+        if (!P.skills) { P.skills = { jab: 1 }; saveProfile(); }       /* the jab is free */
+        if (P.sp == null) { P.sp = 3; saveProfile(); }                  /* three to start with */
+      }
+      function unlockSkill(id) {
+        const s = skillById(id);
+        if (!s || skOwned(id)) return false;
+        if (skLocked(s)) return gateToast("Unlock " + skillById(s.req).name + " first."), false;
+        if (P.sp < s.sp) return gateToast("Need " + s.sp + " skill point" + (s.sp === 1 ? "" : "s") + "."), false;
+        P.sp -= s.sp;
+        P.skills[id] = 1;
+        saveProfile();
+        gateToast(s.name + " unlocked.");
+        return true;
+      }
+      function upgradeSkill(id) {
+        const s = skillById(id);
+        if (!s || !skOwned(id)) return false;
+        if (skLevel(id) >= s.max) return gateToast(s.name + " is maxed."), false;
+        const c = skCost(s);
+        if (P.gold < c) return gateToast("Need " + c.toLocaleString() + " gold."), false;
+        P.gold -= c;
+        P.skills[id] = skLevel(id) + 1;
+        saveProfile();
+        refreshLobbyCard();
+        return true;
+      }
+
+      /* ── SKILL TREE SCREEN ───────────────────────────────────── */
+      let skSel = "jab";
+      function renderSkillTree(host, panel, onChange) {
+        ensureSkills();
+        host.innerHTML = SKILL_CATS.map((cat) => `
+          <div class="sk-cat">${cat}</div>
+          <div class="sk-row">
+            ${SKILLS.filter((s) => s.cat === cat).map((s) => {
+              const l = skLevel(s.id), locked = skLocked(s), owned = l > 0;
+              const state = owned ? "own" : locked ? "lock" : "open";
+              return `<button class="sk-node ${state} ${s.id === skSel ? "sel" : ""}" data-sk="${s.id}" type="button">
+                <b>${escapeUI(s.name)}</b>
+                <s>${owned ? "Lv " + l + " / " + s.max : locked ? "Needs " + escapeUI(skillById(s.req).name) : s.sp + " SP"}</s>
+                ${owned ? `<i class="sk-pips">${Array.from({ length: s.max }, (_, i) =>
+                  `<u class="${i < l ? "on" : ""}"></u>`).join("")}</i>` : ""}
+              </button>`;
+            }).join("")}
+          </div>`).join("");
+        host.querySelectorAll("[data-sk]").forEach((bn) =>
+          bn.addEventListener("click", () => { skSel = bn.dataset.sk; onChange(); }));
+
+        const s = skillById(skSel) || SKILLS[0];
+        const l = skLevel(s.id), owned = l > 0, locked = skLocked(s), maxed = l >= s.max;
+        const cost = skCost(s);
+        panel.innerHTML = `
+          <div class="sk-head"><span>${s.cat}</span><h3>${escapeUI(s.name)}</h3></div>
+          <p class="sk-desc">${escapeUI(s.desc)}</p>
+          <div class="sk-now">
+            <div><u>Now</u><b>${owned ? escapeUI(s.note(l)) : "Locked"}</b></div>
+            ${owned && !maxed ? `<div><u>Level ${l + 1}</u><b class="up">${escapeUI(s.note(l + 1))}</b></div>` : ""}
+          </div>
+          ${locked
+            ? `<div class="sk-gate">Unlock <b>${escapeUI(skillById(s.req).name)}</b> first.</div>`
+            : !owned
+              ? `<button class="sk-buy sp" id="sk-act" type="button">Unlock &middot; ${s.sp} SP</button>`
+              : maxed
+                ? `<div class="sk-gate">Fully upgraded.</div>`
+                : `<button class="sk-buy" id="sk-act" type="button">${COIN_SVG}Upgrade &middot; ${cost.toLocaleString()}</button>`}`;
+        const act = panel.querySelector("#sk-act");
+        if (act) act.addEventListener("click", () => {
+          const did = owned ? upgradeSkill(s.id) : unlockSkill(s.id);
+          if (did) onChange();
+        });
+      }
+
       /* ── GEAR UP SCREEN ──────────────────────────────────────── */
       const GEAR_RAIL = [
         { id: "upgrades", label: "Upgrades", live: true },
-        { id: "skills",   label: "Skills" },
+        { id: "skills",   label: "Skills", live: true },
         { id: "perks",    label: "Perks" },
         { id: "artifacts",label: "Artifacts" },
         { id: "prestige", label: "Prestige" },
@@ -6401,17 +6641,25 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         el.innerHTML = `
           <div class="gu-head">
             <div class="gu-title" id="gu-title">Gear Up</div>
-            <div class="mk-purse"><div><span id="gu-gold"></span>${COIN_SVG}</div></div>
+            <div class="mk-purse">
+              <div><span id="gu-sp"></span><b class="gu-spchip">SP</b></div>
+              <div><span id="gu-gold"></span>${COIN_SVG}</div>
+            </div>
             <button class="gu-close" type="button" aria-label="Close">&times;</button>
           </div>
           <div class="mk-rule"></div>
-          <div class="gu-body">
+          <div class="gu-body" id="gu-body">
             <div class="gu-left">
               <div class="gu-rail" id="gu-rail"></div>
               <div class="gu-picker" id="gu-picker"></div>
             </div>
             <div class="gu-art"><canvas id="gu-canvas" aria-hidden="true"></canvas></div>
             <div class="gu-panel" id="gu-panel"></div>
+          </div>
+          <div class="gu-body sk-body" id="sk-body" hidden>
+            <div class="gu-left"><div class="gu-rail" id="sk-rail"></div></div>
+            <div class="sk-tree" id="sk-tree"></div>
+            <div class="gu-panel" id="sk-panel"></div>
           </div>`;
         document.body.appendChild(el);
 
@@ -6490,9 +6738,26 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           if (buy) buy.addEventListener("click", () => doUpgrade(t));
         }
         function renderAll() {
+          ensureSkills();
           $("#gu-gold").textContent = P.gold.toLocaleString();
-          $("#gu-title").textContent = gearRail === "upgrades" ? "Upgrades" : "Gear Up";
-          renderRail(); renderPicker(); renderPanel(); paintArt();
+          $("#gu-sp").textContent = P.sp;
+          const onSkills = gearRail === "skills";
+          $("#gu-title").textContent = onSkills ? "Skills" : gearRail === "upgrades" ? "Upgrades" : "Gear Up";
+          $("#gu-body").hidden = onSkills;
+          $("#sk-body").hidden = !onSkills;
+          renderRail();
+          if (onSkills) {
+            $("#sk-rail").innerHTML = $("#gu-rail").innerHTML;
+            $("#sk-rail").querySelectorAll("[data-rail]").forEach((bn) =>
+              bn.addEventListener("click", () => {
+                const g = GEAR_RAIL.find((x) => x.id === bn.dataset.rail);
+                if (!g.live) return maintenance(g.id);
+                gearRail = g.id; renderAll();
+              }));
+            renderSkillTree($("#sk-tree"), $("#sk-panel"), renderAll);
+          } else {
+            renderPicker(); renderPanel(); paintArt();
+          }
         }
         function doUpgrade(t) {
           const i = upLevel(t.id);
@@ -6750,7 +7015,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
               const card = document.createElement("div");
               card.style.cssText = "margin:12px 0 0;border:2px solid #e8c272;background:rgba(10,13,18,.9);padding:11px 13px;font:700 10.5px/1.6 var(--mono);letter-spacing:.08em;color:#ffeec4";
               card.innerHTML = `<div style="color:#e8c272;letter-spacing:.16em;margin-bottom:5px">CORNER PAYOUT · ${escapeUI(r.label.toUpperCase())} · ${escapeUI(String(r.diff).toUpperCase())}</div>
-                <div style="color:#b9c4d0">+${r.gold} gold · +${r.xp} XP${r.gems ? ` · +${r.gems} gems` : ""}${r.levels ? ` · <b style="color:#8ad17e">LEVEL ${P.lv}</b>` : ""}</div>
+                <div style="color:#b9c4d0">+${r.gold} gold · +${r.xp} XP${r.sp ? ` · +${r.sp} SP` : ""}${r.gems ? ` · +${r.gems} gems` : ""}${r.levels ? ` · <b style="color:#8ad17e">LEVEL ${P.lv}</b>` : ""}</div>
                 ${(t === "towel" || t === "medstop") ? `<div style="margin-top:6px;color:#8ad17e;font-weight:400;font-size:10px;letter-spacing:.04em">Stoppages pay above a win in this game. That is deliberate.</div>` : ""}`;
               host.appendChild(card);
             }
