@@ -2364,7 +2364,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
 body:has(#boot) #gear-btn,body:has(.lobby) #gear-btn,
 body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .mz-rw.exp{border-color:#8f6fd0}
-.mz-rw i.exp{display:grid;place-items:center;font:700 9px/1 var(--mono);letter-spacing:.04em;color:#bda4f2}
+.mz-rw i.exp{display:grid;place-items:center}
 
 /* ══ MODE SELECT (after PLAY) ═════════════════════════════════ */
 .modesel{
@@ -4375,7 +4375,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           $("#mz-rewards").innerHTML =
             `<div class="mz-rw">${COIN}<b>${Math.round(d.gold * mult).toLocaleString()}</b><s>Coins</s></div>
              <div class="mz-rw gem">${GEM}<b>${d.gems}</b><s>Gem${d.gems === 1 ? "" : "s"}</s></div>
-             <div class="mz-rw exp"><i class="exp">EXP</i><b>${d.xp.toLocaleString()}</b><s>Exp</s></div>`;
+             <div class="mz-rw exp"><i class="exp"><svg viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px"><path d="M12 1.5 14.6 9 22 11.6 14.6 14.2 12 22 9.4 14.2 2 11.6 9.4 9z" fill="#8f6fd0" stroke="#d5c2f6" stroke-width="1.1" stroke-linejoin="round"/></svg></i><b>${d.xp.toLocaleString()}</b><s>Exp</s></div>`;
           $("#mz-note").textContent = locked
             ? `Locked until level ${d.lv}. You are level ${P.lv}.`
             : "Paid out when the bout ends — a stoppage to protect the fighter pays the full amount.";
