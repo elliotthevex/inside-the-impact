@@ -1893,126 +1893,357 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
 </style>
 </head>
 <style id="lobby-style">
-/* ── LOBBY / MAIN MENU ──────────────────────────────────────────
-   Prototype. Full-bleed game menu rather than a web page: the first
-   screen should read as something you play, not something you study. */
-.lobby{
-  position:fixed;inset:0;z-index:40;overflow-y:auto;overflow-x:hidden;
-  display:flex;flex-direction:column;align-items:center;
-  background:#060a11;
-  font-family:"Arial Black","Courier New",monospace;
-  -webkit-user-select:none;user-select:none;
-}
-/* arena backdrop: dark house, hot ring lights from below */
-.lobby-bg{position:absolute;inset:0;z-index:0}
-.lobby-bg::before{
-  content:"";position:absolute;inset:0;
-  background:
-    radial-gradient(ellipse 120% 70% at 50% 108%, rgba(255,138,46,.55) 0%, rgba(176,58,30,.28) 30%, transparent 62%),
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(70,120,170,.30), transparent 65%),
-    linear-gradient(180deg,#05080e 0%,#0a1420 45%,#160f0c 100%);
-}
-/* crowd */
-.lobby-bg::after{
-  content:"";position:absolute;left:0;right:0;top:18%;height:26%;
-  background-image:radial-gradient(circle,rgba(255,196,120,.22) 1px,transparent 1.4px);
-  background-size:13px 11px;opacity:.75;
-  mask-image:linear-gradient(180deg,transparent,#000 40%,transparent);
-}
-.lobby-ropes{position:absolute;left:0;right:0;bottom:0;height:34%;z-index:1;opacity:.55}
-.lobby-ropes i{position:absolute;left:-5%;width:110%;height:3px;display:block}
-.lobby-ropes i:nth-child(1){bottom:76%;background:#d94f3e;transform:rotate(-1.1deg)}
-.lobby-ropes i:nth-child(2){bottom:58%;background:#e8e2d0;transform:rotate(-.7deg)}
-.lobby-ropes i:nth-child(3){bottom:40%;background:#3e94e6;transform:rotate(-.3deg)}
-.lobby-floor{position:absolute;left:0;right:0;bottom:0;height:22%;z-index:1;
-  background:linear-gradient(180deg,rgba(140,88,46,.55),rgba(60,34,18,.9));
-  box-shadow:inset 0 3px 0 rgba(255,210,150,.25)}
-/* embers */
-.ember{position:absolute;bottom:-12px;width:3px;height:3px;background:#ffb347;z-index:2;
-  box-shadow:0 0 6px 2px rgba(255,150,60,.55);animation:rise linear infinite}
-@keyframes rise{
-  0%{transform:translateY(0) translateX(0);opacity:0}
-  12%{opacity:.95}
-  100%{transform:translateY(-78vh) translateX(var(--dx,14px));opacity:0}
-}
-.lobby-vignette{position:absolute;inset:0;z-index:3;pointer-events:none;
-  background:radial-gradient(ellipse 85% 70% at 50% 45%,transparent 35%,rgba(0,0,0,.72) 100%)}
+/* ── FRONT END: BOOT → LOBBY → GYM LOAD ─────────────────────────
+   Three screens sit in front of the simulation. They exist because a
+   teaching game nobody opens teaches nobody: the front end has to feel
+   like something you play. Everything here is drawn in-page (canvas
+   pixel art, CSS) so the build stays one offline file. */
 
-/* top bar */
-.lobby-top{position:relative;z-index:6;width:100%;display:flex;align-items:center;gap:8px;
-  padding:9px 11px;font:700 10px/1 "Courier New",monospace;letter-spacing:.08em}
-.lobby-icon{width:30px;height:30px;display:grid;place-items:center;flex:none;cursor:pointer;
-  border:2px solid #44627d;background:rgba(12,24,38,.86);color:#cfe0ee;font-size:13px;
-  box-shadow:2px 2px 0 #02060b}
-.lobby-icon:hover{border-color:var(--wn);color:var(--wn)}
-.lobby-ticker{flex:1;text-align:center;color:#ffd98a;text-transform:uppercase;opacity:.9}
+:root{
+  --lb-gold:#e8c272;
+  --lb-gold-dim:#8d7338;
+  --lb-red:#d8402f;
+  --lb-ink:#05080d;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --mono:"Courier New",ui-monospace,monospace;
+}
 
-/* logo */
-.lobby-mid{position:relative;z-index:6;flex:1;width:100%;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:clamp(8px,2.2vh,18px);padding:4px 12px}
-.lobby-logo{text-align:center;line-height:.92}
-.lobby-logo .l1{
-  font-size:clamp(19px,5.2vw,32px);letter-spacing:.1em;color:#ffe9b0;
-  text-shadow:0 2px 0 #7a2b1c,0 4px 0 #3a1109,0 7px 16px rgba(0,0,0,.8)}
-.lobby-logo .l2{
-  font-size:clamp(34px,10.5vw,64px);letter-spacing:.03em;
-  background:linear-gradient(180deg,#fff6d2 0%,#ffcf59 42%,#c8831f 70%,#8a4a12 100%);
+/* ══ BOOT SCREEN ══════════════════════════════════════════════ */
+#boot{
+  position:fixed;inset:0;z-index:95;background:#000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;padding:24px;text-align:center;
+  transition:opacity .55s ease;
+}
+#boot.gone{opacity:0;pointer-events:none}
+.boot-mark{
+  position:relative;
+  font:900 clamp(30px,8.4vw,74px)/.86 "Arial Black","Helvetica Neue",Impact,sans-serif;
+  letter-spacing:-.025em;text-transform:uppercase;
+  background:linear-gradient(177deg,#ffd9c6 2%,#f2695a 26%,#c2271c 56%,#7d140e 88%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
-  filter:drop-shadow(0 3px 0 #5e1d10) drop-shadow(0 7px 14px rgba(0,0,0,.75))}
-.lobby-logo .l3{
-  margin-top:7px;font:700 clamp(8px,2.3vw,11px)/1.4 "Courier New",monospace;
-  letter-spacing:.34em;color:#ffcf8a;text-transform:uppercase;opacity:.92}
-
-/* guide pill, like the boxed button in the reference */
-.lobby-guide{
-  padding:7px 15px;border:2px solid #f4e3bb;background:rgba(12,22,34,.9);color:#fff4d5;
-  font:900 11px/1.2 "Courier New",monospace;letter-spacing:.12em;text-transform:uppercase;
-  cursor:pointer;box-shadow:3px 3px 0 #02060b}
-.lobby-guide:hover{background:#e4a939;color:#1a1208;border-color:#fff3cf}
-
-/* menu */
-.lobby-menu{display:flex;flex-direction:column;align-items:center;gap:clamp(1px,.7vh,6px);width:100%}
-.lobby-item{
-  position:relative;background:none;border:0;cursor:pointer;padding:4px 30px;
-  color:#e9f1f7;font:900 clamp(13px,3.5vw,19px)/1.25 "Arial Black","Courier New",monospace;
-  letter-spacing:.11em;text-transform:uppercase;
-  text-shadow:0 2px 0 rgba(0,0,0,.85),0 0 14px rgba(0,0,0,.6);
-  transition:color .1s,transform .1s,text-shadow .1s}
-.lobby-item:hover,.lobby-item:focus-visible{color:#ffd14f;transform:scale(1.06);outline:none;
-  text-shadow:0 2px 0 #3a1109,0 0 18px rgba(255,180,60,.75)}
-.lobby-item:hover::before,.lobby-item:focus-visible::before{content:"◀";position:absolute;left:2px;font-size:.62em;color:#ffb347}
-.lobby-item:hover::after,.lobby-item:focus-visible::after{content:"▶";position:absolute;right:2px;font-size:.62em;color:#ffb347}
-.lobby-item.primary{color:#ffe9b0;font-size:clamp(16px,4.4vw,23px)}
-.lobby-item.soon{color:#9fb0c2}
-.lobby-item.soon:hover{color:#cfd9e4}
-
-/* footer */
-.lobby-foot{position:relative;z-index:6;width:100%;padding:7px 12px 10px;text-align:center}
-.lobby-credit{font:700 10px/1.5 "Courier New",monospace;letter-spacing:.14em;color:#c9a96a;text-transform:uppercase}
-.lobby-disclaim{margin-top:3px;font:400 9px/1.45 Arial,sans-serif;color:#8ea2b4;max-width:430px;
-  margin-left:auto;margin-right:auto}
-
-/* maintenance modal */
-.maint-wrap{position:fixed;inset:0;z-index:70;display:grid;place-items:center;
-  background:rgba(3,7,12,.8);padding:16px;animation:fadein .12s steps(2,end)}
-@keyframes fadein{from{opacity:0}to{opacity:1}}
-.maint{width:min(380px,100%);border:3px solid var(--wn);background:#15202f;
-  box-shadow:6px 6px 0 #02060b;padding:18px;text-align:center}
-.maint h3{margin:0 0 8px;font:900 15px/1.2 "Arial Black",monospace;letter-spacing:.07em;color:#ffd14f;text-transform:uppercase}
-.maint p{margin:0 0 14px;font:12px/1.6 Arial,sans-serif;color:#cfdbe6}
-.maint .tagname{color:#ffd14f;font-weight:700}
-.maint button{width:100%;padding:11px;border:3px solid #52718a;background:#162739;color:#fff3cf;
-  font:900 12px/1 "Courier New",monospace;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
-  box-shadow:3px 3px 0 #02060b}
-.maint button:hover{border-color:var(--wn);color:var(--wn)}
-
-@media(max-height:560px){
-  .lobby-logo .l2{font-size:clamp(34px,11vw,56px)}
-  .lobby-item{padding:3px 26px}
-  .lobby-mid{gap:6px}
+  -webkit-text-stroke:1px rgba(255,196,142,.3);
+  filter:drop-shadow(0 0 16px rgba(206,52,36,.62)) drop-shadow(0 3px 0 rgba(0,0,0,.9));
+  animation:bootPulse 3.4s ease-in-out infinite;
 }
+.boot-mark .bm2{
+  display:block;
+  font-size:.5em;letter-spacing:.14em;
+  background:linear-gradient(180deg,#ffe9ba,#e0a94c 55%,#8d6421);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  -webkit-text-stroke:0;
+  filter:drop-shadow(0 0 10px rgba(226,170,76,.5));
+  margin-top:.1em;
+}
+@keyframes bootPulse{0%,100%{filter:drop-shadow(0 0 14px rgba(206,52,36,.5)) drop-shadow(0 3px 0 rgba(0,0,0,.9))}50%{filter:drop-shadow(0 0 30px rgba(226,74,52,.85)) drop-shadow(0 3px 0 rgba(0,0,0,.9))}}
+.boot-rule{
+  width:min(300px,62vw);height:1px;margin:22px 0 0;
+  background:linear-gradient(90deg,transparent,rgba(232,194,114,.55),transparent);
+}
+.boot-status{
+  margin-top:26px;min-height:1.4em;
+  font:400 clamp(13px,2.6vw,17px)/1.4 var(--serif);
+  letter-spacing:.06em;color:#cdbb92;
+}
+.boot-status.done{font-size:clamp(11px,2vw,13px);color:#8ad17e;letter-spacing:.2em}
+.boot-bar{
+  width:min(260px,58vw);height:3px;margin-top:16px;
+  background:#15110b;border:1px solid #2b2317;overflow:hidden;
+}
+.boot-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#8d2d20,#e8c272);transition:width .22s linear}
+.boot-note{
+  position:absolute;left:0;right:0;bottom:18px;padding:0 20px;
+  font:400 9.5px/1.6 Arial,sans-serif;color:#4a5560;letter-spacing:.04em;
+}
+
+/* ══ LOBBY ════════════════════════════════════════════════════ */
+.lobby{
+  position:fixed;inset:0;z-index:40;overflow:hidden;
+  background:#05080d;display:flex;flex-direction:column;
+  font-family:var(--mono);
+  animation:lobbyIn .4s ease both;
+}
+@keyframes lobbyIn{from{opacity:0}to{opacity:1}}
+.lb-art{position:absolute;inset:0;width:100%;height:100%;z-index:0;
+  image-rendering:pixelated;image-rendering:crisp-edges;object-fit:cover;display:block}
+.lb-shade{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(3,5,9,.92) 0,rgba(3,5,9,.35) 14%,transparent 30%),
+    linear-gradient(0deg,rgba(3,5,9,.95) 0,rgba(3,5,9,.45) 16%,transparent 36%),
+    radial-gradient(ellipse at 50% 46%,transparent 34%,rgba(3,5,9,.6) 100%)}
+
+/* ── top bar ── */
+.lb-top{
+  position:relative;z-index:5;display:flex;align-items:stretch;gap:0;
+  background:linear-gradient(180deg,#0a0d12 70%,#070a0e);
+  border-bottom:2px solid var(--lb-gold);
+  box-shadow:0 3px 14px rgba(0,0,0,.65);
+  padding:0 8px 0 0;
+}
+.lb-brand{
+  display:flex;align-items:center;gap:9px;padding:0 14px 0 12px;flex:none;
+}
+.lb-brand b{
+  display:grid;place-items:center;width:27px;height:27px;flex:none;
+  background:linear-gradient(145deg,#d8402f,#7d140e);color:#ffe7cf;
+  font:900 14px/1 "Arial Black",sans-serif;
+  box-shadow:0 0 0 1px #2a0d08, 0 0 11px rgba(198,46,32,.5);
+  transform:rotate(-6deg);
+}
+.lb-tabs{display:flex;align-items:stretch;gap:0;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+.lb-tabs::-webkit-scrollbar{display:none}
+.lb-tab{
+  position:relative;flex:none;padding:13px 15px 12px;border:0;background:transparent;cursor:pointer;
+  color:#7f8794;font:700 11.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  transition:color .13s;white-space:nowrap;
+}
+.lb-tab:hover{color:#c8d2de}
+.lb-tab.active{
+  color:#ffeec4;background:linear-gradient(180deg,rgba(232,194,114,.2),rgba(232,194,114,.04));
+  box-shadow:inset 0 -3px 0 var(--lb-gold);
+}
+.lb-tab.active::after{
+  content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--lb-gold);
+}
+.lb-tab.locked::before{
+  content:"";position:absolute;top:8px;right:6px;width:4px;height:4px;border-radius:50%;
+  background:#56606d;
+}
+.lb-cur{
+  display:flex;flex-direction:column;justify-content:center;gap:3px;flex:none;
+  padding:0 4px 0 16px;border-left:1px solid #1e2631;margin-left:6px;
+}
+.lb-cur div{display:flex;align-items:center;justify-content:flex-end;gap:7px}
+.lb-cur span{font:700 12.5px/1 var(--mono);color:#f1e6cc;letter-spacing:.03em;font-variant-numeric:tabular-nums}
+.lb-coin,.lb-gem{width:15px;height:15px;flex:none;display:block}
+.lb-icons{display:flex;align-items:center;gap:5px;flex:none;padding-left:10px}
+.lb-ic{
+  width:30px;height:30px;display:grid;place-items:center;cursor:pointer;
+  border:1px solid #27313e;background:#0d1219;color:#8e99a7;font-size:13px;line-height:1;
+  transition:.13s;
+}
+.lb-ic:hover{border-color:var(--lb-gold);color:var(--lb-gold)}
+
+/* ── centre stage ── */
+.lb-stage{position:relative;z-index:4;flex:1;min-height:0}
+.lb-tagline{
+  position:absolute;top:min(5vh,34px);left:50%;transform:translateX(-50%);
+  text-align:center;width:max-content;max-width:90vw;pointer-events:none;
+}
+.lb-tagline b{
+  display:block;font:700 clamp(9px,1.9vw,11px)/1 var(--mono);letter-spacing:.34em;
+  color:var(--lb-gold);text-transform:uppercase;opacity:.9;
+  text-shadow:0 2px 10px #000;
+}
+.lb-tagline i{
+  display:block;margin-top:7px;font:italic 400 clamp(11px,2.3vw,14px)/1.5 var(--serif);
+  color:#9fa9b4;text-shadow:0 2px 8px #000;
+}
+
+/* ── profile block (bottom-left) ── */
+.lb-profile{
+  position:absolute;left:14px;bottom:30px;z-index:6;
+  display:flex;align-items:flex-end;gap:9px;
+}
+.lb-av{
+  width:62px;flex:none;border:2px solid var(--lb-gold);background:#0b0f15;
+  box-shadow:0 5px 16px rgba(0,0,0,.7);
+}
+.lb-av canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.lb-av b{
+  display:block;padding:2px 0 3px;text-align:center;background:#0b0f15;
+  border-top:2px solid var(--lb-gold);
+  font:700 10px/1 var(--mono);letter-spacing:.1em;color:#ffeec4;
+}
+.lb-mults{display:flex;flex-direction:column;gap:4px}
+.lb-mult{
+  display:flex;align-items:center;gap:0;border:2px solid var(--lb-gold);
+  background:rgba(7,10,15,.86);box-shadow:0 3px 11px rgba(0,0,0,.6);
+}
+.lb-mult u{
+  text-decoration:none;padding:3px 7px;font:700 9.5px/1.25 var(--mono);letter-spacing:.11em;
+  color:#ffeec4;border-right:2px solid var(--lb-gold);background:rgba(232,194,114,.12);
+}
+.lb-mult s{text-decoration:none;padding:3px 8px;font:700 9.5px/1.25 var(--mono);color:#b9c4d0;font-variant-numeric:tabular-nums}
+.lb-switch{
+  align-self:flex-start;margin-bottom:5px;padding:6px 11px;cursor:pointer;
+  border:2px solid var(--lb-gold);background:rgba(7,10,15,.86);
+  color:#ffeec4;font:700 10px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  box-shadow:0 3px 11px rgba(0,0,0,.6);transition:.13s;
+}
+.lb-switch:hover{background:rgba(232,194,114,.2)}
+
+/* ── play block (bottom-right) ── */
+.lb-playwrap{position:absolute;right:14px;bottom:30px;z-index:6;width:min(224px,38vw)}
+.lb-slot{
+  width:100%;padding:6px;margin-bottom:7px;text-align:center;
+  border:2px solid var(--lb-gold);background:rgba(7,10,15,.86);
+  font:700 10px/1.2 var(--mono);letter-spacing:.12em;color:#9aa5b1;
+  box-shadow:0 3px 11px rgba(0,0,0,.6);
+}
+.lb-slot b{color:#ffeec4}
+.lb-play{
+  display:block;width:100%;padding:clamp(13px,2.6vh,22px) 10px;cursor:pointer;
+  border:3px solid var(--lb-gold);
+  background:linear-gradient(180deg,rgba(14,18,25,.93),rgba(7,10,15,.96));
+  color:#fff6e2;font:400 clamp(26px,5.4vw,44px)/1 var(--serif);letter-spacing:.1em;
+  text-transform:uppercase;text-shadow:0 2px 12px rgba(232,194,114,.35);
+  box-shadow:0 6px 20px rgba(0,0,0,.72), inset 0 0 26px rgba(232,194,114,.07);
+  transition:transform .11s, box-shadow .13s, background .13s;
+}
+.lb-play:hover{
+  transform:translateY(-2px);
+  background:linear-gradient(180deg,rgba(232,194,114,.22),rgba(16,11,6,.95));
+  box-shadow:0 9px 26px rgba(0,0,0,.78), inset 0 0 34px rgba(232,194,114,.16);
+}
+.lb-play:active{transform:translateY(1px)}
+
+/* ── xp strip ── */
+.lb-xp{
+  position:absolute;left:0;right:0;bottom:0;z-index:7;height:22px;
+  background:#05080d;border-top:1px solid #1b2531;overflow:hidden;
+}
+.lb-xp i{
+  position:absolute;inset:0 auto 0 0;display:block;
+  background:linear-gradient(180deg,#6d3bd1,#3e1e86);
+  box-shadow:0 0 14px rgba(120,70,220,.5);transition:width .5s ease;
+}
+.lb-xp span{
+  position:relative;display:block;text-align:center;line-height:22px;
+  font:700 10px/22px var(--mono);letter-spacing:.09em;color:#e8e1f5;
+  text-shadow:0 1px 2px rgba(0,0,0,.85);font-variant-numeric:tabular-nums;
+}
+.lb-disclaim{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:26px;z-index:5;
+  width:min(430px,56vw);text-align:center;pointer-events:none;
+  font:400 8.5px/1.5 Arial,sans-serif;color:#5d6875;
+}
+
+/* ── maintenance toast ── */
+.maint-wrap{
+  position:fixed;left:50%;top:62px;transform:translateX(-50%);z-index:70;
+  width:min(330px,calc(100vw - 24px));
+  animation:toastIn .22s cubic-bezier(.2,1.3,.5,1) both;
+}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,-10px)}to{opacity:1;transform:translate(-50%,0)}}
+.maint-wrap.out{animation:toastOut .25s ease forwards}
+@keyframes toastOut{to{opacity:0;transform:translate(-50%,-10px)}}
+.maint{
+  border:2px solid var(--lb-gold);background:rgba(10,13,18,.96);
+  box-shadow:0 10px 30px rgba(0,0,0,.7);padding:11px 13px;
+}
+.maint h3{
+  margin:0 0 4px;font:700 11px/1.2 var(--mono);letter-spacing:.14em;
+  color:#ffd14f;text-transform:uppercase;
+}
+.maint p{margin:0;font:400 11px/1.5 Arial,sans-serif;color:#aab6c3}
+.maint .tagname{color:#ffeec4;font-weight:700}
+.maint button{
+  margin-top:9px;width:100%;padding:6px;cursor:pointer;
+  border:1px solid #2b3744;background:#0e141c;color:#9aa5b1;
+  font:700 9.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+}
+.maint button:hover{border-color:var(--lb-gold);color:var(--lb-gold)}
+
+/* ══ GYM LOADING SCREEN ═══════════════════════════════════════ */
+#gymload{
+  position:fixed;inset:0;z-index:85;background:#000;
+  display:flex;flex-direction:column;align-items:center;
+  opacity:0;transition:opacity .4s ease;
+}
+#gymload.in{opacity:1}
+.gl-name{
+  position:relative;z-index:3;width:100%;padding:clamp(14px,3.4vh,34px) 16px clamp(8px,1.6vh,14px);
+  text-align:center;
+  font:400 clamp(17px,4.2vw,34px)/1.2 var(--serif);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--lb-gold);
+  text-shadow:0 0 22px rgba(232,194,114,.3),0 2px 6px #000;
+}
+.gl-art{
+  position:relative;flex:1;min-height:0;width:100%;display:grid;place-items:center;overflow:hidden;
+}
+.gl-art canvas{
+  width:100%;height:100%;object-fit:cover;display:block;
+  image-rendering:pixelated;image-rendering:crisp-edges;
+  animation:glDrift 16s ease-in-out infinite alternate;
+}
+@keyframes glDrift{from{transform:scale(1.02)}to{transform:scale(1.1)}}
+.gl-art::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(0,0,0,.95),rgba(0,0,0,.18) 16%,rgba(0,0,0,.1) 60%,rgba(0,0,0,.95)),
+    radial-gradient(ellipse at 50% 50%,transparent 38%,rgba(0,0,0,.72));
+}
+.gl-foot{
+  position:relative;z-index:3;width:100%;padding:0 16px clamp(16px,4vh,40px);
+  text-align:center;
+}
+.gl-load{
+  font:400 clamp(16px,3.6vw,28px)/1.1 var(--serif);letter-spacing:.2em;
+  text-transform:uppercase;color:var(--lb-gold);
+}
+.gl-load i{font-style:normal;display:inline-block;width:1.6em;text-align:left}
+.gl-bar{
+  width:min(190px,40vw);height:2px;margin:10px auto 0;background:rgba(232,194,114,.2);
+}
+.gl-bar i{display:block;height:100%;width:0;background:var(--lb-gold);
+  box-shadow:0 0 9px rgba(232,194,114,.7);transition:width .3s linear}
+.gl-quote{
+  margin:clamp(12px,2.6vh,22px) auto 0;max-width:min(640px,92vw);
+  font:400 clamp(11.5px,2.5vw,17px)/1.5 var(--serif);color:#cbbd9c;
+  text-shadow:0 2px 6px #000;
+}
+.gl-safety{
+  margin-top:11px;font:400 9px/1.5 Arial,sans-serif;color:#555f6b;letter-spacing:.03em;
+}
+
+/* ── narrow screens ── */
+@media(max-width:1000px){
+  .lb-tab{padding:12px 10px;font-size:10.5px;letter-spacing:.06em}
+}
+@media(max-width:760px){
+  .lb-brand span{display:none}
+  .lb-tab{padding:12px 11px;font-size:10.5px;letter-spacing:.07em}
+  .lb-cur{padding-left:10px;margin-left:3px}
+  .lb-cur span{font-size:11px}
+  .lb-icons .lb-ic:nth-child(n+2){display:none}
+  .lb-profile{left:10px;bottom:28px;gap:7px}
+  .lb-av{width:48px}
+  .lb-playwrap{right:10px;bottom:28px;width:min(170px,44vw)}
+  .lb-disclaim{display:none}
+  .lb-tagline{top:14px}
+}
+@media(max-width:520px){
+  .lb-profile .lb-switch{display:none}
+  .lb-mult u{padding:2px 5px;font-size:8.5px}
+  .lb-mult s{padding:2px 6px;font-size:8.5px}
+}
+@media(max-height:560px){
+  .lb-tagline{display:none}
+  .lb-profile,.lb-playwrap{bottom:26px}
+}
+@media(prefers-reduced-motion:reduce){
+  .boot-mark,.gl-art canvas{animation:none}
+  .lobby{animation:none}
+}
+body[data-reduce-motion="1"] .boot-mark,
+body[data-reduce-motion="1"] .gl-art canvas{animation:none}
+/* ── overlay housekeeping ── */
+body:has(#boot),body:has(.lobby),body:has(#gymload){overflow:hidden}
+/* the settings chip lives top-right, which is where the lobby keeps its
+   currency: fold it away and let the lobby's own gear icon open it */
+body:has(.lobby) #game-settings:not([open]){display:none}
+body:has(.lobby) #game-settings[open]{z-index:60;top:60px;right:14px}
+body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
 </style>
 <body data-phase="title">
+<div id="boot">
+<div class="boot-mark">Inside the<span class="bm2">Impact</span></div>
+<div class="boot-rule"></div>
+<div aria-live="polite" class="boot-status" id="boot-status" role="status">Loading</div>
+<div class="boot-bar"><i id="boot-bar-fill"></i></div>
+<div class="boot-note">Fictional teaching simulation · not a medical device, examination or clearance tool. Created by Joohyun Lee.</div>
+</div>
 <details class="game-settings" id="game-settings">
 <summary aria-label="Game settings">⚙ Settings</summary>
 <div class="settings-panel"><h2>ACCESSIBILITY</h2>
@@ -2818,58 +3049,575 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
         if (typeof closeLobby === "function") closeLobby();
         if (startFreshGame) hub();
       }
-      /* ── LOBBY ──────────────────────────────────────────────────
-         Main menu. PLAY and SETTINGS are live; the rest are stubs that
-         say so, so the shape of the game is visible before it is built. */
-      const LOBBY_MENU = [
-        { id: "play", label: "Play", live: true, cls: "primary" },
-        { id: "customization", label: "Customization" },
-        { id: "afk", label: "AFK Zone" },
-        { id: "codes", label: "Codes" },
-        { id: "friends", label: "Friends" },
-        { id: "settings", label: "Settings", live: true },
+      /* ══ FRONT END ═══════════════════════════════════════════════
+         Boot → lobby → gym load → simulation. All art is pixel art
+         drawn into canvases at runtime, so the game stays one file
+         that works offline with no asset pipeline. */
+
+      const px = (w, h) => {
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        const x = c.getContext("2d");
+        x.imageSmoothingEnabled = false;
+        return { c, x };
+      };
+      const cl01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+      const eOut = (v) => 1 - Math.pow(1 - cl01(v), 3);
+      const eIn = (v) => Math.pow(cl01(v), 2.4);
+      /* deterministic noise so a given gym always looks like itself */
+      const rnd = (s) => { let v = Math.sin(s * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+
+      /* ── PLAYER PROFILE ──────────────────────────────────────────
+         Persistent meta layer. The economy is the lesson: a safety
+         stop pays more than a win, because the pressure this game
+         teaches you to resist is the pressure to treat it as a loss. */
+      const PROFILE_KEY = "iti.profile.v2";
+      const REWARDS = {
+        win:     { gold: 120, xp: 80,  gems: 1, label: "Win" },
+        lose:    { gold: 45,  xp: 50,  gems: 0, label: "Loss" },
+        towel:   { gold: 150, xp: 130, gems: 2, label: "Corner stoppage" },
+        medstop: { gold: 150, xp: 130, gems: 2, label: "Medical stoppage" },
+        sdh:     { gold: 20,  xp: 70,  gems: 0, label: "Catastrophic outcome" },
+        ko:      { gold: 20,  xp: 70,  gems: 0, label: "Knockout" },
+        champ:   { gold: 700, xp: 450, gems: 20, label: "Title won" },
+        ret:     { gold: 60,  xp: 60,  gems: 0, label: "Retirement" },
+      };
+      const xpNeed = (lv) => 200 + lv * 140;
+      let P = null;
+      function loadProfile() {
+        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0 };
+        try {
+          const raw = localStorage.getItem(PROFILE_KEY);
+          P = raw ? Object.assign(base, JSON.parse(raw)) : base;
+        } catch (e) { P = base; }
+        return P;
+      }
+      function saveProfile() {
+        try { localStorage.setItem(PROFILE_KEY, JSON.stringify(P)); } catch (e) {}
+      }
+      function grantReward(kind) {
+        const r = REWARDS[kind];
+        if (!r || !P) return null;
+        P.gold += r.gold; P.gems += r.gems; P.xp += r.xp; P.bouts++;
+        if (kind === "win" || kind === "champ") P.wins++;
+        if (kind === "towel" || kind === "medstop") P.stops++;
+        let gained = 0;
+        while (P.xp >= xpNeed(P.lv)) { P.xp -= xpNeed(P.lv); P.lv++; gained++; }
+        saveProfile();
+        return { ...r, levels: gained };
+      }
+
+      /* ── PIXEL ART · LOBBY PUNCH ─────────────────────────────────
+         Close-up: a straight right landing flush. The head is built
+         from a silhouette profile, drawn to a buffer, then blitted
+         column by column through a shockwave displacement — so the
+         cheek actually caves and the face twists off the impact
+         instead of just sliding sideways. Every measurement is a
+         percentage, so the frame holds whatever window it is given. */
+      const SK = "#e0a478", SK2 = "#bd7e56", SK3 = "#8f5737", SK4 = "#6d4028",
+            SKH = "#ffd2a8", HR = "#17120d", HR2 = "#2b2217",
+            EYEW = "#f6edda", PUP = "#1b1109",
+            MTH = "#3f0f0c", GRD = "#e6eef4",
+            GL = "#cc3728", GL2 = "#941d14", GL3 = "#5f0f0a", GLH = "#ef6e59",
+            LAC = "#f2e3c4", WRAP = "#2b3440", WRAP2 = "#1a212b";
+      const headBuf = px(8, 8);
+
+      /* head in three-quarter profile facing left: [y%, left%, right%] */
+      const PROF = [
+        [0, 37, 63], [4, 28, 73], [9, 22, 80], [15, 18, 84], [22, 15, 86],
+        [28, 13, 86], [33, 14, 86], [38, 12, 85], [44, 8, 84], [49, 5, 83],
+        [53, 10, 83], [57, 8, 82], [62, 7, 81], [67, 9, 79], [72, 12, 77],
+        [77, 15, 74], [83, 21, 68], [88, 30, 61], [92, 38, 56],
+      ];
+      function silhouette(y) {
+        for (let i = 1; i < PROF.length; i++) {
+          if (y <= PROF[i][0] || i === PROF.length - 1) {
+            const a = PROF[i - 1], b = PROF[i];
+            const k = cl01((y - a[0]) / Math.max(.001, b[0] - a[0]));
+            return [a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+          }
+        }
+        return [20, 80];
+      }
+
+      function drawHead(w, h, sq) {
+        headBuf.c.width = w; headBuf.c.height = h;
+        const x = headBuf.x;
+        x.imageSmoothingEnabled = false;
+        x.clearRect(0, 0, w, h);
+        const U = w / 100, V = h / 100;
+        const b = (X, Y, W, H, c) => {
+          x.fillStyle = c;
+          x.fillRect(Math.round(X * U), Math.round(Y * V),
+                     Math.max(1, Math.round(W * U)), Math.max(1, Math.round(H * V)));
+        };
+        const js = sq * 4.5, jd = sq * 5;          /* jaw swing / drop */
+        const band = 1.6;
+
+        /* neck and trapezius, behind everything */
+        b(44, 84, 36, 18, SK4);
+        b(48, 82, 28, 20, SK3);
+        b(53, 85, 18, 17, SK2);
+
+        /* ── silhouette, filled band by band ── */
+        for (let y = 0; y < 93; y += band) {
+          let [xl, xr] = silhouette(y);
+          let yy = y;
+          if (y > 62) { const k = (y - 62) / 31; xl += js * k; xr += js * k; yy += jd * k; }
+          const bw = xr - xl;
+          const hair = y < 23;
+          b(xl, yy, bw, band + .4, hair ? HR : SK);
+          if (!hair) {
+            b(xr - bw * .20, yy, bw * .20, band + .4, SK2);   /* back of head falls away */
+            b(xr - bw * .07, yy, bw * .07, band + .4, SK3);
+            if (y < 32) b(xl + bw * .24, yy, bw * .34, band + .4, SKH);
+            if (y > 74) b(xl, yy, bw, band + .4, y > 84 ? SK3 : SK2);
+          } else if (y > 4 && y < 19) {
+            b(xl + bw * .22, yy, bw * .3, band + .4, HR2);     /* sheen on the crop */
+          }
+        }
+        /* hairline edge and back of the crop */
+        for (let y = 23; y < 40; y += band) {
+          const [, xr] = silhouette(y);
+          b(xr - 7, y, 7, band + .4, HR);
+        }
+        b(13, 22, 70, 2.4, HR);
+
+        /* ── features ── */
+        /* brow ridge and shadowed socket */
+        b(13, 27, 34, 4, HR);
+        b(15, 31, 29, 4, SK3);
+        b(45, 28, 16, 3, SK2);
+        /* eye — open, then squeezed shut under the shot */
+        const lid = sq * 5;
+        if (lid < 4.2) {
+          b(17, 34 + lid, 21, 7 - lid, EYEW);
+          b(23, 35 + lid, 7, Math.max(1.5, 6 - lid), PUP);
+          b(24, 36 + lid, 2.4, Math.max(.8, 2.4 - lid), "#3f6f8a");
+          b(17, 34 + lid, 21, 1.4, SK4);
+        } else {
+          b(17, 38, 21, 2.2, SK4);
+        }
+        /* cheekbone — the plane the glove is sitting on */
+        b(14, 42, 30, 11, sq > .4 ? SK3 : SK2);
+        b(16, 43, 24, 8, sq > .25 ? SK3 : SKH);
+        if (sq > .45) b(17, 45, 19, 5, SK4);
+        /* nostril and the shadow under the nose */
+        b(9, 49, 7, 3.4, SK4);
+        b(8, 52, 16, 3, SK3);
+        /* mouth — opens, skews, mouthguard shows */
+        const mO = sq * 7, mS = js;
+        b(11 + mS, 61 + jd * .6, 36, 3, SK4);
+        b(12 + mS, 63 + jd * .6, 33, 4 + mO, MTH);
+        b(15 + mS, 64 + jd * .6, 26, 3, GRD);
+        if (sq > .35) b(15 + mS, 66 + jd * .6 + mO - 2, 21, 2.2, "#c9d5de");
+        b(12 + mS, 69 + jd * .6 + mO, 31, 2.4, SK3);
+        /* chin and under-jaw */
+        b(16 + js, 76 + jd, 30, 4, SK3);
+        b(20 + js, 85 + jd, 34, 5, SK4);
+        /* ear */
+        b(68, 39, 11, 16, SK2); b(70, 42, 6.5, 10, SK3); b(71.5, 45, 3, 4.5, SK);
+        /* sweat sheen */
+        b(42, 16, 3.4, 1.6, SKH); b(58, 20, 2.6, 1.6, SKH); b(63, 56, 2.2, 1.4, SKH);
+        /* cut over the eye, once the shot has landed */
+        if (sq > .25) { b(14, 24, 9, 2.2, "#9c1e18"); b(16, 26, 5.5, 1.6, "#78130f"); }
+      }
+
+      /* glove + forearm, leading edge at gx, vertical centre at gy */
+      function drawGlove(x, gx, gy, gh, sq) {
+        const b = (X, Y, W, H, c) => {
+          x.fillStyle = c;
+          x.fillRect(Math.round(X), Math.round(Y), Math.max(1, Math.round(W)), Math.max(1, Math.round(H)));
+        };
+        const gw = gh * .94, flat = sq * gh * .11;
+        const top = gy - gh / 2, bx = gx - gw;
+        /* forearm and wrap running back off frame */
+        b(-6, gy - gh * .26, bx + 6, gh * .52, WRAP2);
+        b(-6, gy - gh * .19, bx + 4, gh * .38, WRAP);
+        for (let i = 0; i < 10; i++) b(bx - gh * .18 - i * gh * .17, gy - gh * .21, gh * .05, gh * .42, "#141a22");
+        /* cuff */
+        b(bx - gh * .17, top + gh * .13, gh * .23, gh * .76, GL3);
+        b(bx - gh * .13, top + gh * .19, gh * .17, gh * .64, GL2);
+        /* glove body, compressing into the cheek */
+        b(bx, top + flat * .5, gw - flat, gh - flat, GL2);
+        b(bx + gh * .05, top + gh * .11 + flat * .5, gw - gh * .10 - flat, gh * .74 - flat, GL);
+        b(bx + gh * .08, top + gh * .17, gw * .36, gh * .27, GLH);
+        /* knuckle face flattened against the skin */
+        b(gx - gw * .17 - flat, top + gh * .13 + flat, gw * .19, gh * .72 - flat * 2, GL2);
+        b(gx - gw * .14 - flat, top + gh * .23 + flat, gw * .10, gh * .48 - flat * 2, GLH);
+        /* laces and thumb */
+        b(bx + gh * .05, top + gh * .33, gh * .07, gh * .33, LAC);
+        for (let i = 0; i < 4; i++) b(bx - gh * .03, top + gh * .33 + i * gh * .10, gh * .19, gh * .027, LAC);
+        b(bx + gh * .02, top + gh * .70, gh * .33, gh * .25, GL2);
+        b(bx + gh * .06, top + gh * .74, gh * .24, gh * .17, GL);
+      }
+
+      function drawPunchScene(ctx, W, H, t) {
+        const b = (X, Y, Wd, Ht, c) => {
+          ctx.fillStyle = c;
+          ctx.fillRect(Math.round(X), Math.round(Y), Math.max(1, Math.round(Wd)), Math.max(1, Math.round(Ht)));
+        };
+        /* impulse: a hard spike, then a damped wobble as the head rings */
+        let imp = 0;
+        if (t >= .44 && t < .485) imp = (t - .44) / .045;
+        else if (t >= .485) {
+          const k = (t - .485) / .5;
+          imp = Math.max(0, Math.cos(k * Math.PI * 2.1) * Math.exp(-k * 3.4));
+        }
+        const sq = cl01(imp);
+        /* glove travel */
+        let ext;
+        if (t < .40) ext = eIn(t / .40) * .13;
+        else if (t < .47) ext = .13 + .87 * eOut((t - .40) / .07);
+        else if (t < .60) ext = 1 - .05 * ((t - .47) / .13);
+        else ext = .95 * (1 - eOut((t - .60) / .40));
+
+        /* ── layout: sized off BOTH axes so no window crops the shot ── */
+        const hh = Math.min(H * .56, W * .46);      /* head height */
+        const hw = hh * .80;
+        const hx = W * .50 - hw * .06;              /* head sits just right of centre */
+        const hy = H * .50 - hh * .50;
+        const impX = hx + hw * .20;                 /* the cheek, in canvas space */
+        const impY = hy + hh * .49;
+        const gh = hh * .42;
+        const gxRest = Math.min(W * .14, impX - gh * 1.5);
+        const gxHit = hx + hw * .12;
+        const gx = gxRest + (gxHit - gxRest) * ext;
+        const shake = sq * H * .016;
+        const sx = (rnd(t * 97) - .5) * shake, sy = (rnd(t * 57) - .5) * shake;
+
+        ctx.save();
+        ctx.translate(Math.round(sx), Math.round(sy));
+
+        /* ── the room behind the exchange ── */
+        b(-4, -4, W + 8, H + 8, "#090d14");
+        b(-4, -4, W + 8, H * .48, "#111926");
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, "rgba(255,226,168,.20)");
+        g.addColorStop(1, "rgba(255,226,168,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(W * .44, -4); ctx.lineTo(W * .54, -4);
+        ctx.lineTo(W * .82, H); ctx.lineTo(W * .14, H); ctx.fill();
+        /* blurred crowd in the dark */
+        const cw = Math.max(3, Math.round(W * .014));
+        for (let i = 0; i < 130; i++) {
+          const cxp = (i * 53 * cw) % W, cyp = H * .13 + ((i * 29) % Math.round(H * .25)), q = (i * 7) % 5;
+          b(cxp, cyp, cw, cw * 1.2, q < 2 ? "#1a2331" : q < 4 ? "#222939" : "#2a2333");
+          if (q === 1) b(cxp + 1, cyp + 1, cw * .4, cw * .4, "#4c4030");
+        }
+        /* ropes, apron, mat */
+        const rw = Math.max(2, Math.round(H * .012));
+        b(-4, H * .28, W + 8, rw, "#8a2820");
+        b(-4, H * .45, W + 8, rw, "#b7b19e");
+        b(-4, H * .62, W + 8, rw, "#2b5c94");
+        b(-4, H * .76, W + 8, H, "#0c0f17");
+        b(-4, H * .76, W + 8, H * .018, "#1a202f");
+        b(-4, H * .82, W + 8, H, "#090c13");
+
+        /* ── receiving fighter, blitted through the shockwave ── */
+        const bw = Math.max(8, Math.round(hw)), bh = Math.max(8, Math.round(hh));
+        drawHead(bw, bh, sq);
+        const impCol = impX - hx;
+        const shift = sq * bw * .085;
+        const spread = bw * bw * .045, lift2 = bw * bw * .09, vspread = bw * bw * .03;
+        for (let c = 0; c < bw; c++) {
+          const d = c - impCol;
+          const push = shift + sq * bw * .055 * Math.exp(-(d * d) / spread);
+          const lift = -sq * bh * .018 * Math.exp(-(d * d) / lift2) + sq * (d / bw) * bh * .035;
+          const vsq = 1 - sq * .10 * Math.exp(-(d * d) / vspread);
+          const dh = bh * vsq;
+          ctx.drawImage(headBuf.c, c, 0, 1, bh,
+            Math.round(hx + c + push), Math.round(hy + lift + (bh - dh)), 1, Math.ceil(dh));
+        }
+
+        /* ── attacker: shoulder in the near foreground, arm across frame ── */
+        b(-W * .08, H * .52 + ext * H * .03, W * .24, H * .60, "#241913");
+        b(-W * .08, H * .57 + ext * H * .03, W * .18, H * .55, "#35251c");
+        b(W * .01, H * .60 + ext * H * .03, W * .07, H * .50, "#452f23");
+        drawGlove(ctx, gx, impY, gh, sq);
+
+        /* ── impact: flash, rings, spray ── */
+        if (sq > .10) {
+          const a = sq, cxI = gx - gh * .04, cyI = impY;
+          ctx.fillStyle = "rgba(255,241,208," + (a * .26).toFixed(3) + ")";
+          ctx.beginPath(); ctx.arc(cxI, cyI, gh * (.10 + a * .20), 0, 6.3); ctx.fill();
+          ctx.strokeStyle = "rgba(255,226,168," + (a * .5).toFixed(3) + ")";
+          ctx.lineWidth = Math.max(1, H * .005);
+          ctx.beginPath(); ctx.arc(cxI, cyI, gh * (.26 + (1 - a) * .55), 0, 6.3); ctx.stroke();
+          for (let i = 0; i < 6; i++) {
+            const ang = i * 1.047 + .3, r0 = gh * (.2 + a * .1), r1 = r0 + gh * (.09 + a * .26);
+            ctx.beginPath();
+            ctx.moveTo(cxI + Math.cos(ang) * r0, cyI + Math.sin(ang) * r0);
+            ctx.lineTo(cxI + Math.cos(ang) * r1, cyI + Math.sin(ang) * r1);
+            ctx.stroke();
+          }
+          const dsz = Math.max(2, H * .009);
+          for (let i = 0; i < 12; i++) {
+            const sp = (1 - sq) * hh * .34 + gh * .2, ang = -2.4 + rnd(i * 3.3) * 3.2;
+            b(cxI + Math.cos(ang) * sp, cyI + Math.sin(ang) * sp * .75,
+              dsz * (1 + (i % 2) * .5), dsz, i % 3 ? "#d6e4ef" : "#ffe9c4");
+          }
+        }
+        /* overhead bulb */
+        b(W * .485, -4, Math.max(1, W * .004), H * .06, "#2a2a2a");
+        b(W * .466, H * .05, W * .040, H * .032, "#ffeab4");
+        b(W * .475, H * .044, W * .022, H * .016, "#fff8e2");
+        ctx.restore();
+        /* grade */
+        ctx.fillStyle = "rgba(8,11,18,.14)";
+        const step = Math.max(2, Math.round(H * .017));
+        for (let y = 0; y < H; y += step) ctx.fillRect(0, y, W, 1);
+      }
+      /* ── PIXEL ART · UNDERGROUND GYMS ────────────────────────────
+         Four rooms drawn procedurally. Each one is somewhere a fight
+         like this actually happens: a basement, a boiler room, a
+         parking level, a bag room over a shuttered shop. */
+      const GYMS = [
+        { n: "Sub-Level Nine · Ironworks", k: 0 },
+        { n: "The Boiler Room", k: 1 },
+        { n: "Parking Level C · Chalk Circle", k: 2 },
+        { n: "Kowloon Bag Room", k: 3 },
+        { n: "Pier 14 · Cold Storage", k: 1 },
+        { n: "The Cellar, Yongsan", k: 0 },
+        { n: "Furnace Street Athletic Club", k: 3 },
+        { n: "Loading Bay Seven", k: 2 },
+      ];
+      const QUOTES = [
+        "Everyone has a plan until they get punched in the mouth.",
+        "The fight is won or lost far away from witnesses.",
+        "A corner that cannot say stop is not a corner.",
+        "It is not the mountain we conquer, but ourselves.",
+        "The body remembers what the scorecard forgets.",
+        "You do not rise to the occasion. You fall to your training.",
+        "Protect yourself at all times.",
+        "The bravest thing a corner does is throw the towel.",
+        "He who is not courageous enough to take risks will accomplish nothing.",
+        "To be a champion you have to believe in yourself when nobody else will.",
+        "Rounds are cheap. Brains are not.",
+        "The last round is the one you do not remember.",
+      ];
+
+      function drawGym(ctx, W, H, kind, seed) {
+        const b = (X, Y, Wd, Ht, c) => { ctx.fillStyle = c; ctx.fillRect(X | 0, Y | 0, Wd | 0, Ht | 0); };
+        const R = (i) => rnd(seed * 13.7 + i * 2.31);
+        const horizon = Math.round(H * .62);
+        /* shell */
+        b(0, 0, W, H, "#070a0f");
+        b(0, 0, W, horizon, kind === 1 ? "#1a1310" : kind === 2 ? "#12151b" : "#141a22");
+        /* back wall texture: breeze block, tile or concrete pour */
+        for (let y = 0; y < horizon; y += 11) {
+          for (let xx = (y / 11) % 2 ? -14 : 0; xx < W; xx += 29) {
+            const q = R(y * 3 + xx);
+            b(xx, y, 28, 10, q < .25 ? (kind === 1 ? "#241a14" : "#1a212b")
+              : q < .6 ? (kind === 1 ? "#1e1510" : "#161d26") : (kind === 1 ? "#2b1f17" : "#1d2530"));
+          }
+        }
+        /* damp staining */
+        for (let i = 0; i < 9; i++) {
+          const xx = R(i) * W, wd = 12 + R(i + 40) * 40;
+          b(xx, 0, wd, horizon * (.3 + R(i + 80) * .6), "rgba(5,8,12,.42)");
+        }
+        /* floor */
+        b(0, horizon, W, H - horizon, kind === 2 ? "#15181e" : "#1b1611");
+        b(0, horizon, W, 4, "#070a0f");
+        for (let y = horizon + 8; y < H; y += 13) b(0, y, W, 1, "rgba(0,0,0,.3)");
+
+        /* hanging bulbs, the light every one of these rooms is lit by */
+        const bulbs = 3 + (kind === 3 ? 2 : 0);
+        for (let i = 0; i < bulbs; i++) {
+          const bx = Math.round(W * (i + .5) / bulbs + (R(i + 5) - .5) * 20), by = Math.round(H * .12);
+          b(bx, 0, 1, by, "#2a2a2a");
+          const g = ctx.createRadialGradient(bx, by + 4, 2, bx, by + 4, H * .55);
+          g.addColorStop(0, "rgba(255,218,150,.4)");
+          g.addColorStop(.45, "rgba(255,200,120,.08)");
+          g.addColorStop(1, "rgba(255,200,120,0)");
+          ctx.fillStyle = g;
+          ctx.fillRect(bx - H * .55, by - 10, H * 1.1, H);
+          b(bx - 4, by, 9, 7, "#ffeab4"); b(bx - 2, by - 2, 5, 4, "#fff8e2");
+        }
+
+        if (kind === 0) {
+          /* basement ring: posts, ropes, apron */
+          const ry = horizon - 46;
+          for (const pxp of [Math.round(W * .1), Math.round(W * .9)]) {
+            b(pxp - 4, ry - 34, 9, 80, "#2a2f38"); b(pxp - 2, ry - 32, 4, 76, "#3b434f");
+            b(pxp - 7, ry - 38, 15, 7, "#8d2a22");
+          }
+          for (let i = 0; i < 4; i++) {
+            const yy = ry - 26 + i * 13;
+            b(W * .1, yy, W * .8, 3, i === 1 ? "#b9b3a0" : i === 3 ? "#2c5e96" : "#8d2a22");
+            b(W * .1, yy + 3, W * .8, 1, "rgba(0,0,0,.45)");
+          }
+          b(W * .06, ry + 44, W * .88, 10, "#3a2c20");
+          b(W * .08, horizon - 2, W * .84, 18, "#0b0e13");
+          /* stacked chairs and a bucket at ringside */
+          b(W * .03, horizon + 12, 22, 26, "#20262f");
+          b(W * .78, horizon + 20, 14, 16, "#39404a");
+        } else if (kind === 1) {
+          /* boiler room: pipework, valves, one bag */
+          for (let i = 0; i < 5; i++) {
+            const yy = Math.round(H * (.08 + i * .1));
+            b(0, yy, W, 7, "#3a2a1c"); b(0, yy + 1, W, 3, "#55402b");
+            for (let j = 0; j < 7; j++) b(W * j / 7 + R(j) * 20, yy - 2, 7, 11, "#2a1e14");
+          }
+          b(W * .06, horizon - 96, 34, 100, "#2e2117"); b(W * .06 + 6, horizon - 90, 22, 88, "#42301f");
+          b(W * .58, 0, 4, 48, "#2a2a2a");
+          b(W * .54, 48, 30, 86, "#2b1d14"); b(W * .555, 52, 22, 78, "#3d2a1b");
+          for (let i = 0; i < 5; i++) b(W * .54, 56 + i * 16, 30, 2, "#1b120c");
+        } else if (kind === 2) {
+          /* parking level: pillars, painted bay lines, chalk circle */
+          for (let i = 0; i < 4; i++) {
+            const pxp = Math.round(W * (.08 + i * .28));
+            b(pxp, 0, 42, horizon + 10, "#191d24");
+            b(pxp + 4, 0, 32, horizon + 8, "#222831");
+            b(pxp + 4, horizon - 40, 32, 10, "#8d7338");
+            b(pxp + 4, horizon - 26, 32, 4, "#2a3038");
+          }
+          ctx.strokeStyle = "rgba(226,220,200,.3)"; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.ellipse(W * .5, horizon + (H - horizon) * .45, W * .26, (H - horizon) * .3, 0, 0, 6.3); ctx.stroke();
+          b(W * .72, horizon - 34, 90, 40, "#1d2129"); b(W * .74, horizon - 28, 78, 30, "#262c36");
+        } else {
+          /* bag room: a row of heavy bags and a wall of mirror */
+          b(W * .54, horizon - 118, W * .42, 104, "#1b222c");
+          b(W * .55, horizon - 115, W * .40, 98, "#232c38");
+          for (let i = 0; i < 4; i++) b(W * .55, horizon - 112 + i * 25, W * .40, 1, "rgba(255,255,255,.05)");
+          for (let i = 0; i < 4; i++) {
+            const bx = Math.round(W * (.06 + i * .13)), sw = Math.sin(seed + i) * 5;
+            b(bx + sw * .4, 0, 3, 40, "#2a2a2a");
+            b(bx - 13 + sw, 40, 30, 14, "#241a12");
+            b(bx - 15 + sw, 52, 34, 92, "#2b1d14");
+            b(bx - 12 + sw, 56, 24, 84, "#3d2a1b");
+            b(bx - 12 + sw, 56, 9, 84, "#4a331f");
+            for (let j = 0; j < 4; j++) b(bx - 15 + sw, 62 + j * 20, 34, 2, "#1a110b");
+          }
+        }
+        /* dust in the beams */
+        for (let i = 0; i < 70; i++) {
+          const dx = R(i + 200) * W, dy = R(i + 300) * H;
+          b(dx, dy, 1 + (i % 2), 1, i % 4 ? "rgba(255,230,180,.18)" : "rgba(255,230,180,.34)");
+        }
+        /* grade + grain */
+        const v = ctx.createRadialGradient(W / 2, H * .5, H * .22, W / 2, H * .5, H * .95);
+        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.72)");
+        ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "rgba(10,8,6,.2)";
+        for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
+      }
+
+      /* ── SMALL PIXEL AVATAR ──────────────────────────────────── */
+      function drawAvatar(ctx) {
+        const b = (X, Y, W, H, c) => { ctx.fillStyle = c; ctx.fillRect(X, Y, W, H); };
+        b(0, 0, 34, 34, "#10151d");
+        b(0, 0, 34, 16, "#19202b");
+        b(7, 22, 20, 12, "#8d2a22");          /* shoulders */
+        b(10, 24, 14, 10, "#b03a2c");
+        b(9, 6, 16, 18, SK2);                 /* head */
+        b(11, 9, 12, 14, SK);
+        b(9, 4, 16, 6, HR);                   /* hair */
+        b(8, 8, 3, 8, HR);  b(23, 8, 3, 8, HR);
+        b(12, 13, 3, 3, "#f4ead6"); b(19, 13, 3, 3, "#f4ead6");
+        b(13, 14, 2, 2, PUP); b(20, 14, 2, 2, PUP);
+        b(14, 19, 6, 2, "#8a4f34");           /* mouth */
+        b(11, 11, 5, 1, HR); b(18, 11, 5, 1, HR);
+        b(21, 7, 4, 2, "#a3201a");            /* old cut */
+      }
+
+      /* ── BOOT SEQUENCE ───────────────────────────────────────── */
+      function bootUp() {
+        const boot = $("#boot");
+        if (!boot) { intro(); return; }
+        const status = $("#boot-status"), bar = $("#boot-bar-fill");
+        const steps = [
+          "Loading", "Loading corner data", "Loading fighter", "Loading the room",
+        ];
+        let step = 0, dots = 0, pct = 0, done = false;
+        /* pre-render the art the lobby needs while the words are on screen */
+        const warm = () => { try { drawHead(120, 150, 0); } catch (e) {} };
+        setTimeout(warm, 80);
+        const tick = setInterval(() => {
+          if (done) return;
+          dots = (dots + 1) % 4;
+          if (dots === 0) step = Math.min(steps.length - 1, step + 1);
+          status.textContent = steps[step] + ".".repeat(dots);
+          pct = Math.min(100, pct + 9 + Math.random() * 11);
+          bar.style.width = pct + "%";
+          if (pct >= 100) {
+            clearInterval(tick);
+            done = true;
+            bar.style.width = "100%";
+            status.textContent = "Loaded!";
+            status.className = "boot-status done";
+            setTimeout(() => {
+              boot.classList.add("gone");
+              setTimeout(() => boot.remove(), 600);
+            }, 760);
+          }
+        }, 240);
+      }
+
+      /* ── LOBBY ───────────────────────────────────────────────────
+         Front page of the game. GEAR UP is the only live tab; the
+         others say so rather than pretending. PLAY is the whole
+         point of the screen, so it gets the whole corner. */
+      const LOBBY_TABS = [
+        { id: "gear", label: "Gear Up", live: true },
+        { id: "quests", label: "Quests" },
+        { id: "equipment", label: "Equipment" },
+        { id: "inventory", label: "Inventory" },
+        { id: "market", label: "Market" },
+        { id: "rankings", label: "Rankings" },
+        { id: "gym", label: "Gym" },
+        { id: "battlepass", label: "Battlepass" },
       ];
       const MAINT_COPY = {
-        customization:
-          "Pick your fighter’s look, stance and corner team. Not built yet.",
-        afk: "Somewhere to idle between fights and read the Codex. Not built yet.",
+        quests: "Daily corner objectives — spot the sign, make the call. Not built yet.",
+        equipment: "Gloves, wraps, headgear and a corner kit that changes the fight. Not built yet.",
+        inventory: "Everything you have earned between bouts. Not built yet.",
+        market: "Spend gold on corner upgrades. Not built yet.",
+        rankings: "Leaderboards for wins — and for fighters retired healthy. Not built yet.",
+        gym: "Build out your own gym and take on students. Not built yet.",
+        battlepass: "A season of corner challenges. Not built yet.",
+        friends: "Coach against a friend — one of you in each corner, same fighter, different calls. Not built yet.",
+        customization: "Pick your fighter's look, stance and corner team. Not built yet.",
         codes: "Redeem codes for cosmetics. Not built yet.",
-        friends:
-          "Coach against a friend — one of you in each corner, same fighter, different calls. Not built yet.",
       };
+      let lobbyRAF = 0, lobbyT = 0, lobbyLast = 0;
+
       function lobbyGo(id) {
-        if (id === "play") return instructions();
+        if (id === "play") return enterMatch();
+        if (id === "gear") return;
+        if (id === "guide") return instructions();
         if (id === "settings") {
           const s = $("#game-settings");
-          if (s) {
-            s.open = true;
-            s.scrollIntoView({ block: "nearest" });
-          }
+          if (s) { s.open = true; s.scrollIntoView({ block: "nearest" }); }
           return;
         }
         maintenance(id);
       }
       function maintenance(id) {
-        const label = (LOBBY_MENU.find((x) => x.id === id) || {}).label || id;
+        const label = (LOBBY_TABS.find((x) => x.id === id) || {}).label
+          || id.charAt(0).toUpperCase() + id.slice(1);
+        document.querySelectorAll(".maint-wrap").forEach((n) => n.remove());
         const wrap = document.createElement("div");
         wrap.className = "maint-wrap";
-        wrap.innerHTML = `<div class="maint" role="dialog" aria-modal="true">
-          <h3>🚧 Under maintenance</h3>
-          <p><span class="tagname">${escapeUI(label)}</span> isn’t in the build yet.</p>
-          <p class="mu" style="font-size:11px">${escapeUI(MAINT_COPY[id] || "")}</p>
-          <button type="button">Back to menu</button></div>`;
-        const close = () => wrap.remove();
+        wrap.innerHTML = `<div class="maint" role="status">
+          <h3>Under maintenance</h3>
+          <p><span class="tagname">${escapeUI(label)}</span> isn't in the build yet.</p>
+          <p class="mu" style="font-size:10.5px;margin-top:5px;color:#7e8995">${escapeUI(MAINT_COPY[id] || "")}</p>
+          <button type="button">Dismiss</button></div>`;
+        const close = () => {
+          wrap.classList.add("out");
+          setTimeout(() => wrap.remove(), 260);
+        };
         wrap.querySelector("button").addEventListener("click", close);
-        wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
-        document.addEventListener(
-          "keydown",
-          function esc(e) {
-            if (e.key === "Escape") { close(); document.removeEventListener("keydown", esc); }
-          },
-        );
         document.body.appendChild(wrap);
-        wrap.querySelector("button").focus();
+        setTimeout(() => { if (wrap.isConnected) close(); }, 4200);
       }
+
+      const COIN_SVG = `<svg class="lb-coin" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="#e0a93c" stroke="#8a5f14" stroke-width="1.4"/><circle cx="8" cy="8" r="4.4" fill="#f7d070"/><path d="M6.4 5.6h3.2v1.3H8.7v4.4H7.3V6.9H6.4z" fill="#8a5f14"/></svg>`;
+      const GEM_SVG = `<svg class="lb-gem" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2 14.4 6 8 14.8 1.6 6z" fill="#d8402f" stroke="#6d120c" stroke-width="1.2" stroke-linejoin="round"/><path d="M8 1.2 11 6 8 14.8 5 6z" fill="#f2695a"/><path d="M1.6 6h12.8" stroke="#8c1d13" stroke-width="1"/></svg>`;
+
       function intro() {
         setLandingChrome(false);
         setGamePhase("title");
@@ -2877,64 +3625,183 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
         $("#cv").style.display = "none";
         $("#sub").textContent = "";
         document.querySelectorAll(".lobby,.maint-wrap").forEach((n) => n.remove());
+        if (!P) loadProfile();
 
-        const embers = Array.from({ length: 14 }, () => {
-          const l = Math.round(Math.random() * 100),
-            d = (6 + Math.random() * 7).toFixed(1),
-            delay = (Math.random() * 7).toFixed(1),
-            dx = Math.round(Math.random() * 60 - 30);
-          return `<i class="ember" style="left:${l}%;--dx:${dx}px;animation-duration:${d}s;animation-delay:-${delay}s"></i>`;
-        }).join("");
-
+        const need = xpNeed(P.lv), pctXP = Math.min(100, (P.xp / need) * 100);
         const el = document.createElement("div");
         el.className = "lobby";
         el.innerHTML = `
-          <div class="lobby-bg"></div>
-          <div class="lobby-ropes"><i></i><i></i><i></i></div>
-          <div class="lobby-floor"></div>
-          ${embers}
-          <div class="lobby-vignette"></div>
+          <canvas class="lb-art" id="lobby-art" role="img"
+            aria-label="Pixel art: a boxer taking a straight right flush on the cheek, head twisting off the impact"></canvas>
+          <div class="lb-shade"></div>
 
-          <div class="lobby-top">
-            <button class="lobby-icon" data-lobby="codes" title="Codes">▣</button>
-            <button class="lobby-icon" data-lobby="customization" title="Customization">☰</button>
-            <div class="lobby-ticker">Prototype build · menu mock-up</div>
-            <button class="lobby-icon" data-lobby="friends" title="Friends">👤</button>
-          </div>
-
-          <div class="lobby-mid">
-            <div class="lobby-logo">
-              <div class="l1">Inside the</div>
-              <div class="l2">Impact</div>
-              <div class="l3">Boxing Safety Simulation</div>
+          <div class="lb-top">
+            <div class="lb-brand"><b>◆</b><span style="font:700 10px/1.3 var(--mono);letter-spacing:.1em;color:#8e99a7">INSIDE THE<br>IMPACT</span></div>
+            <div class="lb-tabs" role="tablist">
+              ${LOBBY_TABS.map((t) => `<button class="lb-tab ${t.live ? "active" : "locked"}" data-lobby="${t.id}" role="tab" aria-selected="${!!t.live}">${t.label}</button>`).join("")}
             </div>
-            <button class="lobby-guide" data-lobby="guide">Newbie guide</button>
-            <nav class="lobby-menu" aria-label="Main menu">
-              ${LOBBY_MENU.map(
-                (m) =>
-                  `<button class="lobby-item ${m.cls || ""} ${m.live ? "" : "soon"}" data-lobby="${m.id}">${m.label}</button>`,
-              ).join("")}
-            </nav>
+            <div class="lb-cur">
+              <div><span id="lb-gold">${P.gold.toLocaleString()}</span>${COIN_SVG}</div>
+              <div><span id="lb-gems">${P.gems.toLocaleString()}</span>${GEM_SVG}</div>
+            </div>
+            <div class="lb-icons">
+              <button class="lb-ic" data-lobby="guide" title="Coach briefing" aria-label="Coach briefing">▤</button>
+              <button class="lb-ic" data-lobby="friends" title="Friends" aria-label="Friends">⚇</button>
+              <button class="lb-ic" data-lobby="settings" title="Settings" aria-label="Settings">⚙</button>
+            </div>
           </div>
 
-          <div class="lobby-foot">
-            <div class="lobby-credit">Created by Joohyun Lee</div>
-            <div class="lobby-disclaim">Fictional teaching simulation — not a medical device, examination or clearance tool. Emergency in South Korea: 119.</div>
-          </div>`;
+          <div class="lb-stage">
+            <div class="lb-tagline">
+              <b>Corner · Season One</b>
+              <i>A safety stop pays more than a win. That is the whole game.</i>
+            </div>
 
-        el.querySelectorAll("[data-lobby]").forEach((b) =>
-          b.addEventListener("click", () => {
-            const id = b.dataset.lobby;
-            if (id === "guide") return instructions();
-            lobbyGo(id);
-          }),
-        );
+            <div class="lb-profile">
+              <div class="lb-av"><canvas id="lb-avatar" width="34" height="34" aria-hidden="true"></canvas><b>LV. ${P.lv}</b></div>
+              <button class="lb-switch" data-lobby="gym">Switch gym</button>
+              <div class="lb-mults">
+                <div class="lb-mult"><u>GOLD</u><s>${(1 + P.lv * .01).toFixed(2)}x</s></div>
+                <div class="lb-mult"><u>SAFE</u><s>${P.stops}</s></div>
+                <div class="lb-mult"><u>BOUTS</u><s>${P.bouts}</s></div>
+              </div>
+            </div>
+
+            <div class="lb-playwrap">
+              <div class="lb-slot">NEXT BOUT · <b>${escapeUI((G && G.opp && G.opp.n) || "N/A")}</b></div>
+              <button class="lb-play" data-lobby="play">Play</button>
+            </div>
+
+            <div class="lb-disclaim">Fictional teaching simulation — not a medical device, examination or clearance tool. Emergency in South Korea: 119.</div>
+          </div>
+
+          <div class="lb-xp"><i style="width:${pctXP}%"></i><span>XP ${Math.round(pctXP)}% (${P.xp.toLocaleString()} / ${need.toLocaleString()})</span></div>`;
+
+        el.querySelectorAll("[data-lobby]").forEach((btn) =>
+          btn.addEventListener("click", () => lobbyGo(btn.dataset.lobby)));
         document.body.appendChild(el);
+
+        const av = $("#lb-avatar");
+        if (av) drawAvatar(av.getContext("2d"));
+
+        /* The punch runs at 30fps — it is wallpaper, not a renderer. The
+           canvas is sized to its own box at roughly 5 screen pixels per
+           art pixel, so the frame is never cropped and the blocks stay
+           chunky on any window. */
+        const art = $("#lobby-art"), actx = art.getContext("2d");
+        let AW = 0, AH = 0;
+        const sizeArt = () => {
+          const r = art.getBoundingClientRect();
+          const w = Math.max(150, Math.min(480, Math.round(r.width / 4)));
+          const h = Math.max(80, Math.round(w * (r.height / Math.max(1, r.width))));
+          if (w === AW && h === AH) return false;
+          AW = w; AH = h; art.width = w; art.height = h;
+          actx.imageSmoothingEnabled = false;
+          return true;
+        };
+        sizeArt();
+        cancelAnimationFrame(lobbyRAF);
+        lobbyT = 0; lobbyLast = 0;
+        const reduced = document.body.dataset.reduceMotion === "1"
+          || matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const paint = () => drawPunchScene(actx, AW, AH, lobbyT);
+        if (reduced) { lobbyT = .49; paint(); }
+        else {
+          const loop = (ts) => {
+            if (!art.isConnected) return;
+            if (ts - lobbyLast > 33) {
+              lobbyLast = ts;
+              lobbyT = (lobbyT + .0062) % 1;
+              paint();
+            }
+            lobbyRAF = requestAnimationFrame(loop);
+          };
+          lobbyRAF = requestAnimationFrame(loop);
+        }
+        if (window.ResizeObserver) {
+          const ro = new ResizeObserver(() => { if (sizeArt()) paint(); });
+          ro.observe(art);
+        }
         window.scrollTo(0, 0);
       }
       /* the lobby is an overlay, so it has to come down when play starts */
       function closeLobby() {
+        cancelAnimationFrame(lobbyRAF);
         document.querySelectorAll(".lobby,.maint-wrap").forEach((n) => n.remove());
+      }
+
+      /* ── GYM LOADING ─────────────────────────────────────────────
+         The teleport screen. A real room, a real name, and a line
+         worth reading while the simulation comes up behind it. */
+      function enterMatch() {
+        const seed = Date.now() % 100000;
+        const gym = GYMS[Math.floor(Math.random() * GYMS.length)];
+        const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+        document.querySelectorAll("#gymload,.maint-wrap").forEach((n) => n.remove());
+
+        const gl = document.createElement("div");
+        gl.id = "gymload";
+        gl.innerHTML = `
+          <div class="gl-name">${escapeUI(gym.n)}</div>
+          <div class="gl-art"><canvas id="gl-canvas" width="480" height="270" role="img"
+            aria-label="Pixel art of an underground boxing gym"></canvas></div>
+          <div class="gl-foot">
+            <div class="gl-load">Loading<i id="gl-dots"></i></div>
+            <div class="gl-bar"><i id="gl-fill"></i></div>
+            <div class="gl-quote">${escapeUI(quote)}</div>
+            <div class="gl-safety">Simulation · not diagnosis. Warning signs mean stop contact.</div>
+          </div>`;
+        document.body.appendChild(gl);
+        const gc = $("#gl-canvas").getContext("2d");
+        gc.imageSmoothingEnabled = false;
+        drawGym(gc, 480, 270, gym.k, seed);
+        requestAnimationFrame(() => gl.classList.add("in"));
+
+        const dots = $("#gl-dots"), fill = $("#gl-fill");
+        let d = 0, pct = 0;
+        const tick = setInterval(() => {
+          d = (d + 1) % 4;
+          dots.textContent = ".".repeat(d);
+          pct = Math.min(100, pct + 7 + Math.random() * 10);
+          fill.style.width = pct + "%";
+          if (pct >= 100) {
+            clearInterval(tick);
+            setTimeout(() => {
+              closeLobby();
+              const first = !P.seen;
+              if (first) { P.seen = 1; saveProfile(); }
+              gl.style.opacity = "0";
+              setTimeout(() => gl.remove(), 420);
+              if (first) instructions(); else hub();
+            }, 520);
+          }
+        }, 230);
+      }
+
+      /* ── REWARD HOOK ─────────────────────────────────────────────
+         Wraps the simulation's own ending so every outcome pays into
+         the meta layer, without touching the fight logic itself. */
+      function installRewards() {
+        if (typeof end !== "function" || end.__wrapped) return;
+        const inner = end;
+        const wrapped = function (t) {
+          const r = grantReward(t);
+          const out = inner.apply(this, arguments);
+          if (r) {
+            const host = $("#m");
+            if (host) {
+              const card = document.createElement("div");
+              card.style.cssText = "margin:12px 0 0;border:2px solid #e8c272;background:rgba(10,13,18,.9);padding:11px 13px;font:700 10.5px/1.6 var(--mono);letter-spacing:.08em;color:#ffeec4";
+              card.innerHTML = `<div style="color:#e8c272;letter-spacing:.16em;margin-bottom:5px">CORNER PAYOUT · ${escapeUI(r.label.toUpperCase())}</div>
+                <div style="color:#b9c4d0">+${r.gold} gold · +${r.xp} XP${r.gems ? ` · +${r.gems} gems` : ""}${r.levels ? ` · <b style="color:#8ad17e">LEVEL ${P.lv}</b>` : ""}</div>
+                ${(t === "towel" || t === "medstop") ? `<div style="margin-top:6px;color:#8ad17e;font-weight:400;font-size:10px;letter-spacing:.04em">Stoppages pay above a win in this game. That is deliberate.</div>` : ""}`;
+              host.appendChild(card);
+            }
+          }
+          return out;
+        };
+        wrapped.__wrapped = true;
+        end = wrapped;
       }
       const M = (m) => G.me,
         bar = (l, v, mx, c) =>
@@ -4544,7 +5411,10 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
         if (cv.style.display == "block") draw();
         requestAnimationFrame(L);
       })();
+      loadProfile();
       newGame();
+      installRewards();
+      bootUp();
     </script><script id="redesign-interactions">
 (() => {
   const $ = (s, root=document) => root.querySelector(s);
