@@ -111,6 +111,9 @@
     if (GYM_MACHINES.some((m) => m.stat && m.stat !== "strength"))
       throw new Error("the gym should only train strength now");
     if (typeof strCap !== "function" || strCap() <= 0) throw new Error("no carry capacity");
+    /* levelling must get harder, and the HUD must track it */
+    if (gymNeed(5) <= gymNeed(0) * 2) throw new Error("level curve is too flat");
+    if (typeof refreshGymHud !== "function") throw new Error("no HUD refresh");
   });
 
   setLobbyView("ring");
