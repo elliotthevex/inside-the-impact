@@ -2235,6 +2235,172 @@ body:has(#boot),body:has(.lobby),body:has(#gymload){overflow:hidden}
 body:has(.lobby) #game-settings:not([open]){display:none}
 body:has(.lobby) #game-settings[open]{z-index:60;top:60px;right:14px}
 body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
+/* ══ MODE SELECT (after PLAY) ═════════════════════════════════ */
+.modesel{
+  position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;
+  background:rgba(4,6,10,.88);padding:0 14px 14px;
+}
+.ms-head{
+  display:flex;align-items:center;gap:14px;
+  padding:clamp(14px,3vh,30px) 2px clamp(10px,2vh,18px);
+}
+.ms-blurb{
+  flex:1;min-width:0;
+  font:400 clamp(13px,2.4vw,21px)/1.35 var(--serif);color:#e7ddc6;
+  text-shadow:0 2px 10px #000;
+}
+.ms-close{
+  flex:none;width:38px;height:38px;cursor:pointer;
+  border:2px solid var(--lb-gold);background:rgba(10,13,18,.9);
+  color:var(--lb-gold);font:400 19px/1 var(--mono);
+}
+.ms-close:hover{background:rgba(232,194,114,.2)}
+.ms-grid{
+  flex:1;min-height:0;display:grid;gap:clamp(8px,1.4vw,18px);
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.ms-card{
+  position:relative;display:flex;flex-direction:column;min-height:0;cursor:pointer;
+  border:2px solid var(--lb-gold);background:#0a0d13;padding:0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(0,0,0,.6);
+  transition:transform .13s, box-shadow .13s, border-color .13s;
+}
+.ms-card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 14px 34px rgba(0,0,0,.75), 0 0 22px rgba(232,194,114,.22);
+}
+.ms-card canvas{
+  position:absolute;inset:0;width:100%;height:100%;display:block;
+  image-rendering:pixelated;image-rendering:crisp-edges;object-fit:cover;
+}
+.ms-card::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(4,6,10,.88) 0,rgba(4,6,10,.12) 26%,rgba(4,6,10,.2) 62%,rgba(4,6,10,.9));
+}
+.ms-label{
+  position:relative;z-index:2;padding:clamp(8px,1.6vh,16px) 8px 0;text-align:center;
+  font:400 clamp(14px,2.3vw,30px)/1.05 var(--serif);letter-spacing:.07em;
+  text-transform:uppercase;color:#ffeec4;text-shadow:0 2px 10px #000,0 0 18px rgba(232,194,114,.3);
+}
+.ms-sub{
+  position:relative;z-index:2;margin-top:auto;padding:0 10px clamp(9px,1.8vh,16px);
+  text-align:center;font:400 clamp(9px,1.35vw,12px)/1.45 Arial,sans-serif;color:#aab4c0;
+  text-shadow:0 2px 6px #000;
+}
+.ms-card.soon{border-color:#5d6470}
+.ms-card.soon .ms-label{color:#9aa3af;text-shadow:0 2px 10px #000}
+.ms-card.soon canvas{filter:grayscale(.7) brightness(.55)}
+.ms-lock{
+  position:absolute;top:0;left:0;z-index:3;padding:3px 9px;
+  background:#5d6470;color:#0a0d13;
+  font:700 8.5px/1.5 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+}
+.ms-card.live .ms-lock{background:var(--lb-gold);color:#120d04}
+@media(max-width:820px){
+  .ms-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:420px){
+  .ms-head{padding-top:12px}
+  .ms-blurb{font-size:12px}
+}
+
+/* ══ MISSION SETUP (gym + difficulty + rewards) ═══════════════ */
+.msetup{
+  position:fixed;inset:0;z-index:62;display:grid;place-items:center;
+  background:rgba(4,6,10,.9);padding:14px;
+}
+.mz-wrap{
+  display:grid;gap:12px;width:min(1020px,100%);max-height:100%;
+  grid-template-columns:minmax(0,1.9fr) minmax(0,.85fr);
+}
+.mz-panel,.mz-maps{
+  border:2px solid var(--lb-gold);background:rgba(13,16,22,.95);
+  box-shadow:0 12px 36px rgba(0,0,0,.7);min-height:0;
+}
+.mz-panel{display:flex;flex-direction:column;padding:clamp(12px,2.4vh,24px) clamp(12px,2vw,26px)}
+.mz-gym{
+  text-align:center;font:400 clamp(20px,3.6vw,40px)/1.1 var(--serif);
+  letter-spacing:.06em;text-transform:uppercase;color:#ffeec4;
+  text-shadow:0 0 20px rgba(232,194,114,.3);
+}
+.mz-rule{height:2px;margin:clamp(7px,1.4vh,13px) 0;background:linear-gradient(90deg,transparent,var(--lb-gold),transparent)}
+.mz-h{
+  text-align:center;font:400 clamp(13px,2.1vw,23px)/1.1 var(--serif);
+  letter-spacing:.13em;text-transform:uppercase;color:var(--lb-gold);
+}
+.mz-diffrow{display:flex;align-items:center;justify-content:center;gap:clamp(10px,3vw,30px);margin:clamp(5px,1vh,10px) 0}
+.mz-arrow{
+  flex:none;width:34px;height:34px;cursor:pointer;border:0;background:transparent;
+  color:var(--lb-gold);font:400 24px/1 var(--serif);transition:.12s;
+}
+.mz-arrow:hover{color:#fff6e2;transform:scale(1.2)}
+.mz-diff{
+  flex:1;text-align:center;min-width:0;
+  font:400 clamp(14px,2.6vw,27px)/1.15 var(--serif);letter-spacing:.06em;text-transform:uppercase;
+}
+.mz-diff small{display:block;margin-top:3px;font:400 clamp(9px,1.3vw,12px)/1.4 Arial,sans-serif;color:#8d97a3;letter-spacing:0;text-transform:none}
+.mz-rewards{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:clamp(6px,1.2vw,12px);
+  margin:clamp(6px,1.2vh,12px) 0 auto;
+}
+.mz-rw{
+  min-width:clamp(74px,12vw,104px);padding:7px 6px 6px;text-align:center;
+  border:2px solid var(--lb-gold);background:#0a0e14;
+}
+.mz-rw.gem{border-color:#d8402f}
+.mz-rw i{display:block;margin:0 auto 4px;width:22px;height:22px}
+.mz-rw b{display:block;font:700 clamp(12px,1.9vw,17px)/1.1 var(--mono);color:#f1e6cc;font-variant-numeric:tabular-nums}
+.mz-rw s{display:block;margin-top:2px;text-decoration:none;font:700 8px/1.4 var(--mono);letter-spacing:.14em;color:#8d97a3;text-transform:uppercase}
+.mz-note{
+  margin:clamp(6px,1.2vh,11px) 0 0;text-align:center;
+  font:400 10px/1.5 Arial,sans-serif;color:#79838f;
+}
+.mz-btns{display:flex;gap:9px;justify-content:center;margin-top:clamp(9px,1.8vh,16px)}
+.mz-btn{
+  flex:1;max-width:190px;padding:clamp(8px,1.5vh,13px) 10px;cursor:pointer;
+  border:2px solid var(--lb-gold);background:rgba(232,194,114,.12);color:#ffeec4;
+  font:700 clamp(10px,1.5vw,13px)/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  transition:.12s;
+}
+.mz-btn:hover{background:rgba(232,194,114,.3)}
+.mz-btn.go{background:var(--lb-gold);color:#140e04}
+.mz-btn.go:hover{background:#fff0c8}
+.mz-maps{display:flex;flex-direction:column;padding:10px 0 10px 10px;min-height:0}
+.mz-maps h3{
+  margin:0 10px 8px 0;text-align:center;
+  font:400 clamp(14px,1.9vw,22px)/1 var(--serif);letter-spacing:.14em;
+  text-transform:uppercase;color:var(--lb-gold);
+}
+.mz-list{overflow-y:auto;padding-right:8px;display:flex;flex-direction:column;gap:8px;min-height:0}
+.mz-list::-webkit-scrollbar{width:6px}
+.mz-list::-webkit-scrollbar-thumb{background:var(--lb-gold)}
+.mz-map{
+  position:relative;cursor:pointer;border:2px solid #2b3744;background:#0a0e14;padding:0;
+  overflow:hidden;text-align:center;transition:.12s;
+}
+.mz-map:hover{border-color:#7d6a3c}
+.mz-map.sel{border-color:var(--lb-gold);box-shadow:0 0 14px rgba(232,194,114,.3)}
+.mz-map b{
+  display:block;padding:5px 6px;
+  font:700 clamp(8.5px,1.1vw,11px)/1.3 var(--mono);letter-spacing:.08em;
+  text-transform:uppercase;color:#d7dee6;
+}
+.mz-map.sel b{color:#ffeec4}
+.mz-map canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.gate-toast{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:78;
+  padding:14px 26px;border:2px solid var(--lb-gold);background:rgba(13,16,22,.97);
+  box-shadow:0 12px 40px rgba(0,0,0,.8);
+  font:400 clamp(15px,2.6vw,26px)/1.2 var(--serif);color:#e8453a;letter-spacing:.03em;
+  animation:gateIn .18s ease both;
+}
+@keyframes gateIn{from{opacity:0;transform:translate(-50%,-50%) scale(.94)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@media(max-width:780px){
+  .mz-wrap{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(90px,.5fr)}
+  .mz-maps{padding:9px 0 9px 9px}
+  .mz-list{flex-direction:row;overflow-x:auto;overflow-y:hidden}
+  .mz-map{flex:none;width:132px}
+}
 </style>
 <body data-phase="title">
 <div id="boot">
@@ -3072,15 +3238,19 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
          stop pays more than a win, because the pressure this game
          teaches you to resist is the pressure to treat it as a loss. */
       const PROFILE_KEY = "iti.profile.v2";
+      /* share: the fraction of the chosen difficulty's purse this outcome
+         earns. A stoppage to protect the fighter earns the full purse —
+         the economy has to agree with what the game is teaching, or the
+         player learns the opposite of the lesson. */
       const REWARDS = {
-        win:     { gold: 120, xp: 80,  gems: 1, label: "Win" },
-        lose:    { gold: 45,  xp: 50,  gems: 0, label: "Loss" },
-        towel:   { gold: 150, xp: 130, gems: 2, label: "Corner stoppage" },
-        medstop: { gold: 150, xp: 130, gems: 2, label: "Medical stoppage" },
-        sdh:     { gold: 20,  xp: 70,  gems: 0, label: "Catastrophic outcome" },
-        ko:      { gold: 20,  xp: 70,  gems: 0, label: "Knockout" },
-        champ:   { gold: 700, xp: 450, gems: 20, label: "Title won" },
-        ret:     { gold: 60,  xp: 60,  gems: 0, label: "Retirement" },
+        win:     { share: 1,    xp: 80,  label: "Win" },
+        lose:    { share: .4,   xp: 50,  label: "Loss" },
+        towel:   { share: 1,    xp: 130, label: "Corner stoppage" },
+        medstop: { share: 1,    xp: 130, label: "Medical stoppage" },
+        sdh:     { share: .25,  xp: 70,  label: "Catastrophic outcome" },
+        ko:      { share: .25,  xp: 70,  label: "Knockout" },
+        champ:   { share: 2,    xp: 450, label: "Title won" },
+        ret:     { share: .5,   xp: 60,  label: "Retirement" },
       };
       const xpNeed = (lv) => 200 + lv * 140;
       let P = null;
@@ -3096,8 +3266,15 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         try { localStorage.setItem(PROFILE_KEY, JSON.stringify(P)); } catch (e) {}
       }
       function grantReward(kind) {
-        const r = REWARDS[kind];
-        if (!r || !P) return null;
+        const base = REWARDS[kind];
+        if (!base || !P) return null;
+        const d = activeDiff || DIFFS[0];
+        const mult = 1 + P.lv * 0.01;
+        const r = Object.assign({}, base, {
+          gold: Math.round(d.gold * base.share * mult),
+          gems: Math.round(d.gems * base.share),
+          diff: d.name,
+        });
         P.gold += r.gold; P.gems += r.gems; P.xp += r.xp; P.bouts++;
         if (kind === "win" || kind === "champ") P.wins++;
         if (kind === "towel" || kind === "medstop") P.stops++;
@@ -3585,7 +3762,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
       let lobbyRAF = 0, lobbyT = 0, lobbyLast = 0;
 
       function lobbyGo(id) {
-        if (id === "play") return enterMatch();
+        if (id === "play") return openModeSelect();
         if (id === "gear") return;
         if (id === "guide") return instructions();
         if (id === "settings") {
@@ -3739,9 +3916,9 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
       /* ── GYM LOADING ─────────────────────────────────────────────
          The teleport screen. A real room, a real name, and a line
          worth reading while the simulation comes up behind it. */
-      function enterMatch() {
+      function enterMatch(chosenGym) {
         const seed = Date.now() % 100000;
-        const gym = GYMS[Math.floor(Math.random() * GYMS.length)];
+        const gym = chosenGym || GYMS[Math.floor(Math.random() * GYMS.length)];
         const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
         document.querySelectorAll("#gymload,.maint-wrap").forEach((n) => n.remove());
 
@@ -3791,6 +3968,302 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         }, 230);
       }
 
+      /* ── MODE SELECT ─────────────────────────────────────────────
+         PLAY opens a picker rather than dropping straight into the
+         career. Missions is the career and is live; the other three
+         are stubs that say so instead of pretending. */
+      const MODES = [
+        { id: "missions", label: "Missions", live: true,
+          sub: "The career. Eight bouts, then the title — and every call in between.",
+          art: 0 },
+        { id: "workout", label: "Workout", live: false,
+          sub: "Camp drills as their own mode: bag work, pads and load you have to manage.",
+          art: 1 },
+        { id: "duel", label: "1v1", live: false,
+          sub: "Two players, one fighter. One of you in each corner, making opposite calls.",
+          art: 2 },
+        { id: "thecall", label: "The Call", live: false,
+          sub: "Ten seconds of tape. Continue, stop, or call the doctor. Placeholder name.",
+          art: 3 },
+      ];
+
+      /* small pixel scenes for the cards, same palette as the lobby */
+      function drawModeArt(ctx, W, H, kind) {
+        const b = (X, Y, Wd, Ht, c) => {
+          ctx.fillStyle = c;
+          ctx.fillRect(Math.round(X), Math.round(Y), Math.max(1, Math.round(Wd)), Math.max(1, Math.round(Ht)));
+        };
+        const R = (i) => rnd(kind * 31.7 + i * 2.13);
+        b(0, 0, W, H, "#0a0e15");
+        b(0, 0, W, H * .52, "#141c2a");
+        /* a hanging bulb and its cone, in every room */
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, "rgba(255,226,168,.26)");
+        g.addColorStop(1, "rgba(255,226,168,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(W * .38, 0); ctx.lineTo(W * .62, 0);
+        ctx.lineTo(W * .92, H); ctx.lineTo(W * .08, H); ctx.fill();
+        b(W * .49, 0, Math.max(1, W * .02), H * .07, "#2a2a2a");
+        b(W * .42, H * .06, W * .16, H * .028, "#ffeab4");
+        /* crowd haze */
+        for (let i = 0; i < 40; i++)
+          b(R(i) * W, H * .14 + R(i + 50) * H * .2, W * .07, H * .022,
+            i % 3 ? "#1c2432" : "#262c3c");
+
+        if (kind === 0) {
+          /* MISSIONS — a lone fighter in the ring, gloves up */
+          b(0, H * .66, W, H, "#0d1119");
+          for (let i = 0; i < 3; i++)
+            b(0, H * (.40 + i * .09), W, Math.max(1, H * .011),
+              i === 0 ? "#8a2820" : i === 1 ? "#b7b19e" : "#2b5c94");
+          const cx = W * .5, fy = H * .42;
+          b(cx - W * .13, fy + H * .10, W * .26, H * .30, "#2b3a4c");   /* torso */
+          b(cx - W * .10, fy + H * .13, W * .20, H * .24, "#384a5e");
+          b(cx - W * .08, fy, W * .16, H * .11, SK2);                    /* head */
+          b(cx - W * .06, fy + H * .015, W * .12, H * .08, SK);
+          b(cx - W * .08, fy - H * .012, W * .16, H * .035, HR);
+          b(cx - W * .19, fy + H * .06, W * .11, H * .09, GL2);          /* gloves */
+          b(cx - W * .17, fy + H * .072, W * .07, H * .06, GL);
+          b(cx + W * .08, fy + H * .055, W * .11, H * .09, GL2);
+          b(cx + W * .10, fy + H * .067, W * .07, H * .06, GL);
+          b(cx - W * .12, fy + H * .40, W * .09, H * .22, "#22303f");    /* legs */
+          b(cx + W * .03, fy + H * .40, W * .09, H * .22, "#22303f");
+        } else if (kind === 1) {
+          /* WORKOUT — heavy bag taking a hook */
+          b(0, H * .70, W, H, "#1d1912");
+          b(W * .46, 0, Math.max(1, W * .03), H * .18, "#2a2a2a");
+          b(W * .34, H * .17, W * .28, H * .05, "#241a12");
+          b(W * .32, H * .21, W * .32, H * .44, "#3b281a");
+          b(W * .35, H * .23, W * .22, H * .40, "#523724");
+          b(W * .35, H * .23, W * .08, H * .40, "#64452a");
+          for (let i = 0; i < 4; i++) b(W * .32, H * (.27 + i * .10), W * .32, H * .012, "#1a110b");
+          b(W * .04, H * .40, W * .22, H * .12, GL2);                    /* glove mid-hook */
+          b(W * .07, H * .425, W * .15, H * .08, GL);
+          b(W * .20, H * .43, W * .09, H * .07, GLH);
+          b(-W * .1, H * .44, W * .16, H * .09, WRAP);
+          /* skipping rope coiled on the floor */
+          ctx.strokeStyle = "#8d7338"; ctx.lineWidth = Math.max(1, H * .008);
+          ctx.beginPath(); ctx.ellipse(W * .62, H * .83, W * .2, H * .05, 0, 0, 6.3); ctx.stroke();
+        } else if (kind === 2) {
+          /* 1V1 — two fighters squaring up, gloves touching */
+          b(0, H * .70, W, H, "#0d1119");
+          for (let i = 0; i < 2; i++)
+            b(0, H * (.44 + i * .11), W, Math.max(1, H * .011), i ? "#2b5c94" : "#8a2820");
+          const mk = (x, flip, trunk) => {
+            const s = flip ? -1 : 1;
+            b(x - W * .09, H * .40, W * .18, H * .24, trunk);
+            b(x - W * .06, H * .30, W * .12, H * .10, SK2);
+            b(x - W * .04, H * .315, W * .09, H * .07, SK);
+            b(x - W * .06, H * .285, W * .12, H * .032, HR);
+            b(x + s * W * .07, H * .38, W * .10, H * .08, flip ? "#2c5c94" : GL2);
+            b(x - W * .07, H * .62, W * .06, H * .18, "#1c2733");
+            b(x + W * .01, H * .62, W * .06, H * .18, "#1c2733");
+          };
+          mk(W * .27, false, "#8a2820");
+          mk(W * .73, true, "#2b4f7e");
+          b(W * .46, H * .38, W * .08, H * .07, "#ffeab4");             /* gloves meeting */
+        } else {
+          /* THE CALL — the corner between rounds: stool, towel, watch */
+          b(0, H * .62, W, H, "#141019");
+          b(W * .3, H * .44, W * .40, H * .05, "#2a3242");               /* stool seat */
+          b(W * .34, H * .49, W * .05, H * .22, "#232a37");
+          b(W * .61, H * .49, W * .05, H * .22, "#232a37");
+          b(W * .33, H * .35, W * .34, H * .11, "#e8e2d2");              /* towel */
+          b(W * .36, H * .37, W * .26, H * .06, "#fff6e6");
+          b(W * .40, H * .44, W * .2, H * .09, "#d9d2c0");
+          b(W * .12, H * .55, W * .16, H * .16, "#3a4350");              /* bucket */
+          b(W * .14, H * .57, W * .12, H * .03, "#59636f");
+          /* stopwatch, the whole point of the mode */
+          const wx = W * .76, wy = H * .60, r = Math.min(W, H) * .085;
+          ctx.fillStyle = "#e8c272";
+          ctx.beginPath(); ctx.arc(wx, wy, r, 0, 6.3); ctx.fill();
+          ctx.fillStyle = "#15110a";
+          ctx.beginPath(); ctx.arc(wx, wy, r * .72, 0, 6.3); ctx.fill();
+          ctx.strokeStyle = "#e8c272"; ctx.lineWidth = Math.max(1, r * .16);
+          ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + r * .45, wy - r * .35); ctx.stroke();
+          b(wx - r * .22, wy - r * 1.35, r * .44, r * .3, "#e8c272");
+        }
+        /* grade */
+        const v = ctx.createRadialGradient(W / 2, H * .5, Math.min(W, H) * .25, W / 2, H * .5, H * .85);
+        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.6)");
+        ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "rgba(8,11,18,.14)";
+        const st = Math.max(2, Math.round(H * .016));
+        for (let y = 0; y < H; y += st) ctx.fillRect(0, y, W, 1);
+      }
+
+      function closeModeSelect() {
+        document.querySelectorAll(".modesel").forEach((n) => n.remove());
+      }
+      function openModeSelect() {
+        closeModeSelect();
+        const el = document.createElement("div");
+        el.className = "modesel";
+        el.setAttribute("role", "dialog");
+        el.setAttribute("aria-label", "Choose a mode");
+        el.innerHTML = `
+          <div class="ms-head">
+            <div class="ms-blurb">Pick how you want to coach tonight. One corner, one fighter, and every round you let him take is yours.</div>
+            <button class="ms-close" type="button" aria-label="Back to lobby">&times;</button>
+          </div>
+          <div class="ms-grid">
+            ${MODES.map((m) => `
+              <button class="ms-card ${m.live ? "live" : "soon"}" data-mode="${m.id}" type="button">
+                <canvas aria-hidden="true"></canvas>
+                <span class="ms-lock">${m.live ? "Open" : "Soon"}</span>
+                <span class="ms-label">${m.label}</span>
+                <span class="ms-sub">${escapeUI(m.sub)}</span>
+              </button>`).join("")}
+          </div>`;
+        document.body.appendChild(el);
+
+        /* paint each card once, at its own size */
+        el.querySelectorAll(".ms-card").forEach((card, i) => {
+          const cv = card.querySelector("canvas");
+          const r = cv.getBoundingClientRect();
+          const w = Math.max(60, Math.min(220, Math.round((r.width || 160) / 2.6)));
+          const h = Math.max(90, Math.round(w * ((r.height || 400) / Math.max(1, r.width || 160))));
+          cv.width = w; cv.height = h;
+          const c = cv.getContext("2d");
+          c.imageSmoothingEnabled = false;
+          drawModeArt(c, w, h, MODES[i].art);
+        });
+
+        el.querySelector(".ms-close").addEventListener("click", closeModeSelect);
+        el.addEventListener("click", (e) => { if (e.target === el) closeModeSelect(); });
+        el.querySelectorAll("[data-mode]").forEach((btn) =>
+          btn.addEventListener("click", () => {
+            const m = MODES.find((x) => x.id === btn.dataset.mode);
+            if (m && m.live) { closeModeSelect(); return openMissionSetup(); }
+            maintenance(btn.dataset.mode);
+          }));
+        document.addEventListener("keydown", function esc(e) {
+          if (e.key === "Escape") { closeModeSelect(); document.removeEventListener("keydown", esc); }
+        });
+      }
+
+      /* ── MISSION SETUP ───────────────────────────────────────────
+         Pick the room and the level of fight. Difficulty is the honest
+         trade this game is about: a harder card pays more and hurts
+         the fighter faster, so the stoppage decision arrives sooner
+         and costs you more to make. Payouts are coins and gems only
+         for now. */
+      const DIFFS = [
+        { id: "novice",    name: "Novice",     grade: "E+ GRADE", col: "#6fcf5e",
+          gold: 400,   gems: 1,  lv: 1,
+          blurb: "Four rounds, a light puncher. Room to read the signs before they matter." },
+        { id: "club",      name: "Club Show",  grade: "D+ GRADE", col: "#e8c272",
+          gold: 1100,  gems: 3,  lv: 1,
+          blurb: "Six rounds on a small-hall card. He can hurt you if you let it run." },
+        { id: "contender", name: "Contender",  grade: "B- GRADE", col: "#b17ae0",
+          gold: 3200,  gems: 8,  lv: 4,
+          blurb: "Eight rounds against someone ranked. Damage accumulates faster than you expect." },
+        { id: "title",     name: "Title Fight", grade: "A- GRADE", col: "#e8453a",
+          gold: 9000,  gems: 25, lv: 8,
+          blurb: "Twelve rounds, a champion, and every reason in the world not to stop it." },
+      ];
+      let selGym = 0, selDiff = 1;
+      /* set when a bout starts; scales the payout the simulation hands back */
+      let activeDiff = DIFFS[1];
+
+      function gateToast(msg) {
+        document.querySelectorAll(".gate-toast").forEach((n) => n.remove());
+        const t = document.createElement("div");
+        t.className = "gate-toast";
+        t.setAttribute("role", "alert");
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 1900);
+      }
+      function closeMissionSetup() {
+        document.querySelectorAll(".msetup").forEach((n) => n.remove());
+      }
+      function openMissionSetup() {
+        closeModeSelect();
+        closeMissionSetup();
+        if (!P) loadProfile();
+        const el = document.createElement("div");
+        el.className = "msetup";
+        el.setAttribute("role", "dialog");
+        el.setAttribute("aria-label", "Mission setup");
+        el.innerHTML = `
+          <div class="mz-wrap">
+            <div class="mz-panel">
+              <div class="mz-gym" id="mz-gym"></div>
+              <div class="mz-rule"></div>
+              <div class="mz-h">Difficulty</div>
+              <div class="mz-diffrow">
+                <button class="mz-arrow" id="mz-prev" type="button" aria-label="Easier">&lt;</button>
+                <div class="mz-diff" id="mz-diff"></div>
+                <button class="mz-arrow" id="mz-next" type="button" aria-label="Harder">&gt;</button>
+              </div>
+              <div class="mz-h">Rewards</div>
+              <div class="mz-rewards" id="mz-rewards"></div>
+              <div class="mz-note" id="mz-note"></div>
+              <div class="mz-btns">
+                <button class="mz-btn" id="mz-back" type="button">Back</button>
+                <button class="mz-btn go" id="mz-create" type="button">Create</button>
+              </div>
+            </div>
+            <div class="mz-maps">
+              <h3>Gyms</h3>
+              <div class="mz-list" id="mz-list"></div>
+            </div>
+          </div>`;
+        document.body.appendChild(el);
+
+        /* map list, each with its own little room drawn in */
+        const list = $("#mz-list");
+        GYMS.forEach((g, i) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "mz-map" + (i === selGym ? " sel" : "");
+          btn.innerHTML = `<b>${escapeUI(g.n)}</b><canvas width="132" height="62" aria-hidden="true"></canvas>`;
+          const c = btn.querySelector("canvas").getContext("2d");
+          c.imageSmoothingEnabled = false;
+          drawGym(c, 132, 62, g.k, i * 7 + 3);
+          btn.addEventListener("click", () => {
+            selGym = i;
+            list.querySelectorAll(".mz-map").forEach((n, j) => n.classList.toggle("sel", j === i));
+            paint();
+          });
+          list.appendChild(btn);
+        });
+
+        const COIN = `<i>${COIN_SVG.replace('class="lb-coin"', 'style="width:22px;height:22px"')}</i>`;
+        const GEM = `<i>${GEM_SVG.replace('class="lb-gem"', 'style="width:22px;height:22px"')}</i>`;
+        function paint() {
+          const d = DIFFS[selDiff], locked = P.lv < d.lv;
+          $("#mz-gym").textContent = GYMS[selGym].n;
+          $("#mz-diff").innerHTML =
+            `<span style="color:${d.col}">${d.name.toUpperCase()} (${d.grade})</span><small>${escapeUI(d.blurb)}</small>`;
+          const mult = 1 + P.lv * 0.01;
+          $("#mz-rewards").innerHTML =
+            `<div class="mz-rw">${COIN}<b>${Math.round(d.gold * mult).toLocaleString()}</b><s>Coins</s></div>
+             <div class="mz-rw gem">${GEM}<b>${d.gems}</b><s>Gems</s></div>`;
+          $("#mz-note").textContent = locked
+            ? `Locked until level ${d.lv}. You are level ${P.lv}.`
+            : "Paid out when the bout ends — a stoppage to protect the fighter pays the full amount.";
+          $("#mz-create").textContent = locked ? "Locked" : "Create";
+          $("#mz-create").style.opacity = locked ? ".55" : "";
+        }
+        $("#mz-prev").addEventListener("click", () => { selDiff = (selDiff + DIFFS.length - 1) % DIFFS.length; paint(); });
+        $("#mz-next").addEventListener("click", () => { selDiff = (selDiff + 1) % DIFFS.length; paint(); });
+        $("#mz-back").addEventListener("click", () => { closeMissionSetup(); openModeSelect(); });
+        $("#mz-create").addEventListener("click", () => {
+          const d = DIFFS[selDiff];
+          if (P.lv < d.lv) return gateToast(`You are not Level ${d.lv}+!`);
+          activeDiff = d;
+          closeMissionSetup();
+          enterMatch(GYMS[selGym]);
+        });
+        document.addEventListener("keydown", function esc(e) {
+          if (e.key === "Escape") { closeMissionSetup(); document.removeEventListener("keydown", esc); }
+        });
+        paint();
+      }
+
       /* ── REWARD HOOK ─────────────────────────────────────────────
          Wraps the simulation's own ending so every outcome pays into
          the meta layer, without touching the fight logic itself. */
@@ -3805,7 +4278,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
             if (host) {
               const card = document.createElement("div");
               card.style.cssText = "margin:12px 0 0;border:2px solid #e8c272;background:rgba(10,13,18,.9);padding:11px 13px;font:700 10.5px/1.6 var(--mono);letter-spacing:.08em;color:#ffeec4";
-              card.innerHTML = `<div style="color:#e8c272;letter-spacing:.16em;margin-bottom:5px">CORNER PAYOUT · ${escapeUI(r.label.toUpperCase())}</div>
+              card.innerHTML = `<div style="color:#e8c272;letter-spacing:.16em;margin-bottom:5px">CORNER PAYOUT · ${escapeUI(r.label.toUpperCase())} · ${escapeUI(String(r.diff).toUpperCase())}</div>
                 <div style="color:#b9c4d0">+${r.gold} gold · +${r.xp} XP${r.gems ? ` · +${r.gems} gems` : ""}${r.levels ? ` · <b style="color:#8ad17e">LEVEL ${P.lv}</b>` : ""}</div>
                 ${(t === "towel" || t === "medstop") ? `<div style="margin-top:6px;color:#8ad17e;font-weight:400;font-size:10px;letter-spacing:.04em">Stoppages pay above a win in this game. That is deliberate.</div>` : ""}`;
               host.appendChild(card);
