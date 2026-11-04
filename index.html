@@ -2149,9 +2149,12 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
 #gymload{
   position:fixed;inset:0;z-index:85;background:#000;
   display:flex;flex-direction:column;align-items:center;
-  opacity:0;transition:opacity .4s ease;
 }
-#gymload.in{opacity:1}
+#gymload.out{opacity:0;transition:opacity .35s ease}
+#gymload .gl-name,#gymload .gl-art,#gymload .gl-foot{animation:glIn .34s ease both}
+#gymload .gl-art{animation-delay:.04s}
+#gymload .gl-foot{animation-delay:.09s}
+@keyframes glIn{from{opacity:0}to{opacity:1}}
 .gl-name{
   position:relative;z-index:3;width:100%;padding:clamp(14px,3.4vh,34px) 16px clamp(8px,1.6vh,14px);
   text-align:center;
@@ -3765,12 +3768,10 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         gcv.width = gw; gcv.height = gHt;
         gc.imageSmoothingEnabled = false;
         drawGym(gc, gw, gHt, gym.k, seed);
-        /* Force layout so the transition has a start value, then reveal
-           synchronously. rAF is paused while the page is hidden, and a
-           loading screen that waits for a frame that never comes stays
-           invisible for its whole life. */
-        void gl.offsetWidth;
-        gl.classList.add("in");
+        /* The screen is opaque the moment it is in the document. It used
+           to fade the whole container in from a requestAnimationFrame
+           callback, so on a throttled tab the player saw straight through
+           it to the lobby — or saw nothing at all. */
 
         const dots = $("#gl-dots"), fill = $("#gl-fill");
         let d = 0, pct = 0;
@@ -3785,8 +3786,8 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
               closeLobby();
               const first = !P.seen;
               if (first) { P.seen = 1; saveProfile(); }
-              gl.style.opacity = "0";
-              setTimeout(() => gl.remove(), 420);
+              gl.classList.add("out");
+              setTimeout(() => gl.remove(), 400);
               if (first) instructions(); else hub();
             }, 520);
           }
