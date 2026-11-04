@@ -2171,8 +2171,8 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
 .gl-art::after{
   content:"";position:absolute;inset:0;pointer-events:none;
   background:
-    linear-gradient(180deg,rgba(0,0,0,.95),rgba(0,0,0,.18) 16%,rgba(0,0,0,.1) 60%,rgba(0,0,0,.95)),
-    radial-gradient(ellipse at 50% 50%,transparent 38%,rgba(0,0,0,.72));
+    linear-gradient(180deg,rgba(0,0,0,.92),rgba(0,0,0,.1) 15%,rgba(0,0,0,.06) 62%,rgba(0,0,0,.92)),
+    radial-gradient(ellipse at 50% 50%,transparent 46%,rgba(0,0,0,.5));
 }
 .gl-foot{
   position:relative;z-index:3;width:100%;padding:0 16px clamp(16px,4vh,40px);
@@ -3404,22 +3404,22 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         const horizon = Math.round(H * .62);
         /* shell */
         b(0, 0, W, H, "#070a0f");
-        b(0, 0, W, horizon, kind === 1 ? "#1a1310" : kind === 2 ? "#12151b" : "#141a22");
+        b(0, 0, W, horizon, kind === 1 ? "#2a1f18" : kind === 2 ? "#1e232c" : "#202833");
         /* back wall texture: breeze block, tile or concrete pour */
         for (let y = 0; y < horizon; y += 11) {
           for (let xx = (y / 11) % 2 ? -14 : 0; xx < W; xx += 29) {
             const q = R(y * 3 + xx);
-            b(xx, y, 28, 10, q < .25 ? (kind === 1 ? "#241a14" : "#1a212b")
-              : q < .6 ? (kind === 1 ? "#1e1510" : "#161d26") : (kind === 1 ? "#2b1f17" : "#1d2530"));
+            b(xx, y, 28, 10, q < .25 ? (kind === 1 ? "#3a2a1e" : "#2a3442")
+              : q < .6 ? (kind === 1 ? "#31231a" : "#232c38") : (kind === 1 ? "#44301f" : "#313c4b"));
           }
         }
         /* damp staining */
         for (let i = 0; i < 9; i++) {
           const xx = R(i) * W, wd = 12 + R(i + 40) * 40;
-          b(xx, 0, wd, horizon * (.3 + R(i + 80) * .6), "rgba(5,8,12,.42)");
+          b(xx, 0, wd, horizon * (.3 + R(i + 80) * .6), "rgba(5,8,12,.26)");
         }
         /* floor */
-        b(0, horizon, W, H - horizon, kind === 2 ? "#15181e" : "#1b1611");
+        b(0, horizon, W, H - horizon, kind === 2 ? "#232832" : "#2a2219");
         b(0, horizon, W, 4, "#070a0f");
         for (let y = horizon + 8; y < H; y += 13) b(0, y, W, 1, "rgba(0,0,0,.3)");
 
@@ -3429,8 +3429,8 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
           const bx = Math.round(W * (i + .5) / bulbs + (R(i + 5) - .5) * 20), by = Math.round(H * .12);
           b(bx, 0, 1, by, "#2a2a2a");
           const g = ctx.createRadialGradient(bx, by + 4, 2, bx, by + 4, H * .55);
-          g.addColorStop(0, "rgba(255,218,150,.4)");
-          g.addColorStop(.45, "rgba(255,200,120,.08)");
+          g.addColorStop(0, "rgba(255,218,150,.6)");
+          g.addColorStop(.45, "rgba(255,200,120,.16)");
           g.addColorStop(1, "rgba(255,200,120,0)");
           ctx.fillStyle = g;
           ctx.fillRect(bx - H * .55, by - 10, H * 1.1, H);
@@ -3441,7 +3441,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
           /* basement ring: posts, ropes, apron */
           const ry = horizon - 46;
           for (const pxp of [Math.round(W * .1), Math.round(W * .9)]) {
-            b(pxp - 4, ry - 34, 9, 80, "#2a2f38"); b(pxp - 2, ry - 32, 4, 76, "#3b434f");
+            b(pxp - 4, ry - 34, 9, 80, "#39404b"); b(pxp - 2, ry - 32, 4, 76, "#4e5765");
             b(pxp - 7, ry - 38, 15, 7, "#8d2a22");
           }
           for (let i = 0; i < 4; i++) {
@@ -3463,14 +3463,14 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
           }
           b(W * .06, horizon - 96, 34, 100, "#2e2117"); b(W * .06 + 6, horizon - 90, 22, 88, "#42301f");
           b(W * .58, 0, 4, 48, "#2a2a2a");
-          b(W * .54, 48, 30, 86, "#2b1d14"); b(W * .555, 52, 22, 78, "#3d2a1b");
+          b(W * .54, 48, 30, 86, "#3b281a"); b(W * .555, 52, 22, 78, "#523724");
           for (let i = 0; i < 5; i++) b(W * .54, 56 + i * 16, 30, 2, "#1b120c");
         } else if (kind === 2) {
           /* parking level: pillars, painted bay lines, chalk circle */
           for (let i = 0; i < 4; i++) {
             const pxp = Math.round(W * (.08 + i * .28));
-            b(pxp, 0, 42, horizon + 10, "#191d24");
-            b(pxp + 4, 0, 32, horizon + 8, "#222831");
+            b(pxp, 0, 42, horizon + 10, "#242b35");
+            b(pxp + 4, 0, 32, horizon + 8, "#303946");
             b(pxp + 4, horizon - 40, 32, 10, "#8d7338");
             b(pxp + 4, horizon - 26, 32, 4, "#2a3038");
           }
@@ -3486,9 +3486,9 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
             const bx = Math.round(W * (.06 + i * .13)), sw = Math.sin(seed + i) * 5;
             b(bx + sw * .4, 0, 3, 40, "#2a2a2a");
             b(bx - 13 + sw, 40, 30, 14, "#241a12");
-            b(bx - 15 + sw, 52, 34, 92, "#2b1d14");
-            b(bx - 12 + sw, 56, 24, 84, "#3d2a1b");
-            b(bx - 12 + sw, 56, 9, 84, "#4a331f");
+            b(bx - 15 + sw, 52, 34, 92, "#3b281a");
+            b(bx - 12 + sw, 56, 24, 84, "#523724");
+            b(bx - 12 + sw, 56, 9, 84, "#64452a");
             for (let j = 0; j < 4; j++) b(bx - 15 + sw, 62 + j * 20, 34, 2, "#1a110b");
           }
         }
@@ -3499,9 +3499,9 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         }
         /* grade + grain */
         const v = ctx.createRadialGradient(W / 2, H * .5, H * .22, W / 2, H * .5, H * .95);
-        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.72)");
+        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.48)");
         ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = "rgba(10,8,6,.2)";
+        ctx.fillStyle = "rgba(10,8,6,.13)";
         for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
       }
 
@@ -3743,7 +3743,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         gl.id = "gymload";
         gl.innerHTML = `
           <div class="gl-name">${escapeUI(gym.n)}</div>
-          <div class="gl-art"><canvas id="gl-canvas" width="480" height="270" role="img"
+          <div class="gl-art"><canvas id="gl-canvas" role="img"
             aria-label="Pixel art of an underground boxing gym"></canvas></div>
           <div class="gl-foot">
             <div class="gl-load">Loading<i id="gl-dots"></i></div>
@@ -3752,9 +3752,13 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
             <div class="gl-safety">Simulation · not diagnosis. Warning signs mean stop contact.</div>
           </div>`;
         document.body.appendChild(gl);
-        const gc = $("#gl-canvas").getContext("2d");
+        const gcv = $("#gl-canvas"), gc = gcv.getContext("2d");
+        const gr = gcv.parentElement.getBoundingClientRect();
+        const gw = Math.max(200, Math.min(640, Math.round((gr.width || 480) / 3)));
+        const gHt = Math.max(120, Math.round(gw * ((gr.height || 270) / Math.max(1, gr.width || 480))));
+        gcv.width = gw; gcv.height = gHt;
         gc.imageSmoothingEnabled = false;
-        drawGym(gc, 480, 270, gym.k, seed);
+        drawGym(gc, gw, gHt, gym.k, seed);
         requestAnimationFrame(() => gl.classList.add("in"));
 
         const dots = $("#gl-dots"), fill = $("#gl-fill");
