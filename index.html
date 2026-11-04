@@ -2901,6 +2901,13 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
   letter-spacing:.04em;color:#efe8ff;text-transform:uppercase}
 .sf-slot s{display:block;margin-top:2px;text-decoration:none;
   font:700 clamp(10px,1.4vw,13px)/1 var(--mono);color:#ffd36a}
+.sf-slot em{display:block;margin-top:2px;font-style:normal;
+  font:700 8.5px/1.3 var(--mono);letter-spacing:.06em;color:#9183a8}
+.sf-slot em::before{content:"\2726 "}
+.sf-slot.broke{opacity:.42;border-color:#4a4258}
+.sf-slot.broke s{color:#8a7f9c}
+.sf-stam{margin-top:5px}
+.sf-stam .sf-bar{height:clamp(7px,1.2vh,10px);border-color:#c79f49}
 .sf-keys{position:absolute;left:50%;bottom:clamp(8px,1.6vh,14px);transform:translateX(-50%);z-index:3;
   font:400 9.5px/1.4 Arial,sans-serif;color:#6b5d82;white-space:nowrap}
 .sf-over{position:absolute;inset:0;z-index:5;display:grid;place-items:center;
@@ -4982,11 +4989,17 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         SF.shake = 0; SF.hitStop = 0; SF.flash = 0; SF.pops = [];
         SF.cam = { x: 0, z: 1, tx: 0, tz: 1 };
         SF.keys.clear();
+        /* the Gear Up stamina track is what sizes the tank, so that
+           upgrade finally pays for something outside the card */
+        const staLv = (typeof upLevel === "function" ? upLevel("sta") : 2) - 2;
         SF.p = {
           x: 0, hp: 100, max: 100, face: 1, step: 0,
+          sta: 100, maxSta: 100 + staLv * 9, regen: 17 + staLv * 1.1,
+          spent: 0, gassed: 0,
           atk: null, guard: false, dashT: 0, hurtT: 0, evadeT: 0,
           sk,
         };
+        SF.p.sta = SF.p.maxSta;
       }
       function sfPunches() {
         /* the hotbar is literally what you own, strongest last */
@@ -5011,17 +5024,28 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         });
       }
 
+      /* heavier punches cost more breath than quick ones */
+      const sfCost = (s) => Math.round(8 + s.dmg * .55);
       function sfAttack(idx) {
         const p = SF.p;
         if (SF.over || p.atk || p.hurtT > 0) return;
         const list = sfPunches();
         const s = list[Math.min(idx, list.length - 1)];
         if (!s) return;
+        const cost = sfCost(s);
+        if (p.sta < cost) {                       /* nothing left to throw it with */
+          if (p.gassed <= 0) { p.gassed = .5; sfPop(p.x, "no breath", "#ff9a5a"); }
+          return;
+        }
+        p.sta -= cost;
+        p.spent = .45;                            /* pause the recovery a beat */
         p.atk = { s, t: 0, dur: s.wind ? .42 : .20, hit: false, heavy: !!s.wind };
       }
       function sfDash() {
         const p = SF.p;
         if (SF.over || p.dashT > 0 || !p.sk.dash) return;
+        if (p.sta < 14) { if (p.gassed <= 0) { p.gassed = .5; sfPop(p.x, "no breath", "#ff9a5a"); } return; }
+        p.sta -= 14; p.spent = .35;
         p.dashT = .22;
       }
 
@@ -5048,6 +5072,14 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         p.x = Math.max(-SF_W, Math.min(SF_W, p.x));
         if (p.hurtT > 0) p.hurtT -= dt;
         if (p.evadeT > 0) p.evadeT -= dt;
+        if (p.gassed > 0) p.gassed -= dt;
+        if (p.spent > 0) p.spent -= dt;
+        else {
+          /* you get it back by backing off: guarding or walking recovers
+             slower than standing off and breathing */
+          const rate = p.regen * (p.guard ? .55 : mv ? .8 : 1.25);
+          p.sta = Math.min(p.maxSta, p.sta + rate * dt);
+        }
 
         if (p.atk) {
           p.atk.t += dt * p.sk.spd;
@@ -5336,6 +5368,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             <div class="sf-timer"><u>Time</u><b id="sf-time">60</b></div>
             <div class="sf-mid">
               <div class="sf-cond"><u>Condition</u><div class="sf-bar"><i id="sf-hp"></i></div></div>
+              <div class="sf-cond sf-stam"><u>Breath</u><div class="sf-bar"><i id="sf-sta"></i></div></div>
               <div class="sf-combo" id="sf-combo"></div>
             </div>
             <div class="sf-kills"><u>Dropped</u><b id="sf-kills">0</b></div>
@@ -5358,7 +5391,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const bar = $("#sf-hotbar");
         const paintBar = () => {
           bar.innerHTML = sfPunches().map((s, i) =>
-            `<button class="sf-slot" data-p="${i}" type="button"><u>${i + 1}</u><b>${escapeUI(s.name)}</b><s>${Math.round(s.dmg)}</s></button>`).join("");
+            `<button class="sf-slot" data-p="${i}" data-cost="${sfCost(s)}" type="button"><u>${i + 1}</u><b>${escapeUI(s.name)}</b><s>${Math.round(s.dmg)}</s><em>${sfCost(s)}</em></button>`).join("");
           bar.querySelectorAll("[data-p]").forEach((bn) =>
             bn.addEventListener("click", () => sfAttack(Number(bn.dataset.p))));
         };
@@ -5379,6 +5412,14 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           if (hEl) { hEl.style.width = (SF.p.hp / SF.p.max * 100) + "%";
                      hEl.style.background = SF.p.hp < 30 ? "#e8453a" : SF.p.hp < 60 ? "#e8883a" : "#6fcf5e"; }
           if (kEl) kEl.textContent = SF.kills;
+          const sEl = $("#sf-sta");
+          if (sEl) {
+            const q = SF.p.sta / SF.p.maxSta;
+            sEl.style.width = (q * 100) + "%";
+            sEl.style.background = q < .22 ? "#e8453a" : q < .5 ? "#e8883a" : "#e8c272";
+          }
+          bar.querySelectorAll("[data-cost]").forEach((bn) =>
+            bn.classList.toggle("broke", SF.p.sta < Number(bn.dataset.cost)));
           if (cEl) cEl.textContent = SF.combo > 1 ? SF.combo + " hit" : "";
           SF.raf = requestAnimationFrame(frame);
         }
