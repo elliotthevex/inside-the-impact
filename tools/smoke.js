@@ -1,0 +1,94 @@
+/* Inside the Impact — runtime smoke test.
+ *
+ * Why this exists: a parse check cannot catch the bug that took the site
+ * down. Deleting a block removed `let lobbyView`, which is valid syntax
+ * and only throws at init — and because init threw, bootUp() never ran,
+ * so the page sat on the loading screen forever.
+ *
+ * Run it in the browser pane against the LOCAL file before deploying:
+ *   1. open file:///…/inside-the-impact.html
+ *   2. wait ~9s for the boot screen to clear
+ *   3. paste this whole file into the JS console / javascript_tool
+ * It returns {pass, failures, checks}. Deploy only on pass: true.
+ */
+(async () => {
+  const fails = [], checks = [];
+  const ok = (name, cond, detail) => {
+    checks.push(name + (cond ? " ok" : " FAILED"));
+    if (!cond) fails.push(name + (detail ? " — " + detail : ""));
+    return cond;
+  };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const tryIt = async (name, fn) => {
+    try { await fn(); ok(name, true); }
+    catch (e) { ok(name, false, e.name + ": " + e.message); }
+  };
+
+  /* ── 1. did init finish? this is the one that bit us ── */
+  ok("boot cleared", !document.querySelector("#boot"),
+     "init threw before bootUp(); check the console for a ReferenceError");
+  ok("lobby built", !!document.querySelector(".lobby"));
+  ok("reward hook installed", typeof end === "function" && !!end.__wrapped);
+
+  /* ── 2. every global the screens rely on ── */
+  const needed = [
+    "P", "ST", "lobbyView", "VIEW_ORDER", "GRADES", "UP_TRACKS", "GYM_MACHINES",
+    "GYM_STATS", "BOARDS", "DIFFS", "GYMS", "MODES", "SETTINGS", "BOOST_DEF",
+    "LOBBY_TABS", "GEAR_RAIL", "PMULT", "fx", "upAverage", "gymLevel", "gymBonus",
+  ];
+  const missing = needed.filter((n) => {
+    try { return eval("typeof " + n) === "undefined"; } catch (e) { return true; }
+  });
+  ok("globals declared", missing.length === 0, "missing: " + missing.join(", "));
+
+  /* ── 3. every room renders ── */
+  for (const v of ["ring", "gym", "plaza"]) {
+    await tryIt("view renders: " + v, async () => { setLobbyView(v); await wait(140); });
+  }
+  setLobbyView("ring"); await wait(120);
+
+  /* ── 4. every screen opens and closes ── */
+  const screens = [
+    ["settings", () => openSettings("display"), closeSettings, ".settings"],
+    ["market", () => openMarket("boosts"), closeMarket, ".market"],
+    ["gear up", () => openGear(), closeGear, ".gearup"],
+    ["mode select", () => openModeSelect(), closeModeSelect, ".modesel"],
+    ["mission setup", () => openMissionSetup(), closeMissionSetup, ".msetup"],
+    ["board", () => openBoard("level"),
+      () => document.querySelectorAll(".boardwrap").forEach((n) => n.remove()), ".boardwrap"],
+    ["trade", () => openTrade(),
+      () => document.querySelectorAll(".tradewrap").forEach((n) => n.remove()), ".tradewrap"],
+  ];
+  for (const [name, open, close, sel] of screens) {
+    await tryIt("screen opens: " + name, async () => {
+      open(); await wait(130);
+      if (!document.querySelector(sel)) throw new Error("no " + sel + " in the DOM");
+      close(); await wait(60);
+      if (document.querySelector(sel)) throw new Error(sel + " would not close");
+    });
+  }
+
+  /* ── 5. the numbers still add up ── */
+  await tryIt("multipliers sane", async () => {
+    const m = PMULT();
+    for (const k of ["gold", "luck", "exp", "str"]) {
+      if (!isFinite(m[k]) || m[k] <= 0) throw new Error(k + " = " + m[k]);
+    }
+  });
+  await tryIt("upgrade ladder sane", async () => {
+    if (GRADES.length !== 18) throw new Error("ladder is " + GRADES.length + " long");
+    if (successPct(15) >= 100 || successPct(17) >= successPct(16)) throw new Error("S-rank odds are wrong");
+    if (upCost(10) <= upCost(2)) throw new Error("cost does not climb");
+  });
+  await tryIt("gym levels sane", async () => {
+    const before = gymBonus("strength");
+    if (!isFinite(before)) throw new Error("strength bonus is " + before);
+    if (GYM_MACHINES.filter((m) => m.stat === "strength").length < 3)
+      throw new Error("weights should train strength");
+    if (!GYM_MACHINES.some((m) => m.id === "treadmill" && m.stat === "stamina"))
+      throw new Error("treadmill should train stamina");
+  });
+
+  setLobbyView("ring");
+  return { pass: fails.length === 0, failures: fails, checks: checks.length + " run" };
+})()
