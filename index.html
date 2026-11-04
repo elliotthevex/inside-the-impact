@@ -2235,6 +2235,137 @@ body:has(#boot),body:has(.lobby),body:has(#gymload){overflow:hidden}
 body:has(.lobby) #game-settings:not([open]){display:none}
 body:has(.lobby) #game-settings[open]{z-index:60;top:60px;right:14px}
 body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
+
+/* ══ SETTINGS ═════════════════════════════════════════════════ */
+.settings{
+  position:fixed;inset:0;z-index:64;display:flex;flex-direction:column;
+  background:rgba(4,6,10,.93);
+}
+.st-head{
+  display:flex;align-items:center;gap:12px;flex:none;
+  padding:clamp(10px,2.2vh,20px) clamp(12px,2vw,26px) clamp(8px,1.6vh,14px);
+}
+.st-title{
+  flex:none;min-width:0;
+  font:400 clamp(18px,3.4vw,34px)/1 var(--serif);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--lb-gold);
+  text-shadow:0 0 20px rgba(232,194,114,.3);
+}
+.st-tabs{flex:1;display:flex;justify-content:center;align-items:center;gap:clamp(6px,1.6vw,20px)}
+.st-tab{
+  width:clamp(36px,4.4vw,52px);height:clamp(32px,3.8vw,44px);
+  display:grid;place-items:center;cursor:pointer;
+  border:0;background:transparent;color:#7a6a45;transition:.13s;padding:0;
+}
+.st-tab svg{width:72%;height:72%;display:block}
+.st-tab:hover{color:#c3a86a;transform:translateY(-2px)}
+.st-tab.on{color:var(--lb-gold);filter:drop-shadow(0 0 9px rgba(232,194,114,.5))}
+.st-close{
+  flex:none;width:40px;height:40px;cursor:pointer;border:0;background:transparent;
+  color:#cdbb92;font:300 30px/1 var(--mono);transition:.12s;
+}
+.st-close:hover{color:#fff6e2;transform:scale(1.1)}
+.st-rule{
+  flex:none;height:2px;margin:0 clamp(6px,1.4vw,16px);
+  background:linear-gradient(90deg,transparent,var(--lb-gold) 6%,var(--lb-gold) 94%,transparent);
+}
+.st-body{
+  flex:1;min-height:0;display:grid;gap:clamp(10px,2vw,26px);
+  grid-template-columns:minmax(0,1fr) minmax(0,1.04fr);
+  padding:clamp(12px,3vh,34px) clamp(12px,2.6vw,34px);
+}
+.st-rows{overflow-y:auto;display:flex;flex-direction:column;gap:clamp(6px,1.1vh,11px);padding-right:6px}
+.st-rows::-webkit-scrollbar{width:6px}
+.st-rows::-webkit-scrollbar-thumb{background:var(--lb-gold)}
+.st-row{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,auto);
+  align-items:center;gap:clamp(8px,1.6vw,22px);
+}
+.st-name{
+  padding:clamp(5px,1vh,10px) 12px;cursor:pointer;text-align:left;
+  border:2px solid var(--lb-gold);background:linear-gradient(180deg,#131821,#0b0f16);
+  color:#f0e4c6;font:400 clamp(11px,1.5vw,17px)/1.15 var(--serif);
+  letter-spacing:.05em;text-transform:uppercase;transition:.12s;
+}
+.st-name:hover{background:linear-gradient(180deg,#1d2430,#11161e)}
+.st-row.sel .st-name{box-shadow:0 0 0 1px var(--lb-gold),0 0 14px rgba(232,194,114,.3);color:#fff6e2}
+.st-ctrl{display:flex;align-items:center;gap:7px;justify-content:flex-end}
+.st-sw{
+  min-width:clamp(44px,5.4vw,66px);padding:clamp(4px,.9vh,8px) 6px;cursor:pointer;
+  border:1px solid #3c4452;background:#171b22;color:#7f8794;
+  font:700 clamp(8.5px,1.1vw,12px)/1.2 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  transition:.12s;
+}
+.st-sw:hover{border-color:#8d7338;color:#cdbb92}
+.st-sw.on{
+  background:linear-gradient(180deg,#f0d593,#c79f49);border-color:#f0d593;color:#140e04;
+  box-shadow:0 0 11px rgba(232,194,114,.35);
+}
+.st-range{
+  -webkit-appearance:none;appearance:none;width:clamp(96px,13vw,190px);height:16px;
+  background:transparent;cursor:pointer;
+}
+.st-range::-webkit-slider-runnable-track{height:12px;border:1px solid var(--lb-gold);background:#0d1117}
+.st-range::-moz-range-track{height:12px;border:1px solid var(--lb-gold);background:#0d1117}
+.st-range::-webkit-slider-thumb{
+  -webkit-appearance:none;width:17px;height:17px;border-radius:50%;margin-top:-3px;
+  background:#15110a;border:2px solid var(--lb-gold);box-shadow:0 0 9px rgba(232,194,114,.5);
+}
+.st-range::-moz-range-thumb{
+  width:15px;height:15px;border-radius:50%;
+  background:#15110a;border:2px solid var(--lb-gold);box-shadow:0 0 9px rgba(232,194,114,.5);
+}
+.st-key{
+  min-width:clamp(46px,5.4vw,70px);padding:clamp(4px,.9vh,8px) 10px;cursor:pointer;
+  border:1px solid #7d8794;background:#d9dde3;color:#141922;
+  font:700 clamp(9px,1.2vw,13px)/1.2 var(--mono);letter-spacing:.06em;
+  transition:.12s;
+}
+.st-key:hover{background:#fff;border-color:var(--lb-gold)}
+.st-key.binding{background:var(--lb-gold);color:#140e04;border-color:#fff6e2}
+.st-panel{
+  border:2px solid var(--lb-gold);background:#05070b;min-height:0;overflow-y:auto;
+  padding:clamp(13px,2.4vw,26px);box-shadow:0 10px 32px rgba(0,0,0,.6);
+}
+.st-panel h3{
+  margin:0 0 clamp(8px,1.4vh,14px);
+  font:400 clamp(17px,2.8vw,32px)/1 var(--serif);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--lb-gold);
+}
+.st-panel p{margin:0;font:400 clamp(12px,1.5vw,16px)/1.55 var(--serif);color:#e4e9ee}
+.st-soon{
+  display:inline-block;margin-top:clamp(10px,1.8vh,18px);padding:4px 9px;
+  border:1px solid #5d6470;color:#8d97a3;
+  font:700 8.5px/1.5 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+}
+.st-reset{
+  margin-top:clamp(10px,1.8vh,16px);align-self:flex-end;padding:7px 20px;cursor:pointer;
+  border:2px solid var(--lb-gold);background:var(--lb-gold);color:#140e04;
+  font:700 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+}
+.st-reset:hover{background:#fff0c8}
+@media(max-width:760px){
+  .st-body{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1.25fr) minmax(0,1fr)}
+  .st-title{font-size:16px}
+  .st-head{gap:6px;padding:10px 12px 8px}
+  .st-tabs{gap:4px}
+}
+
+/* the old settings drawer is superseded by the settings screen; it stays
+   in the DOM because the simulation's own pref code binds to its inputs */
+#game-settings{display:none!important}
+#gear-btn{
+  position:fixed;right:12px;top:10px;z-index:50;width:36px;height:36px;cursor:pointer;
+  display:grid;place-items:center;
+  border:2px solid #52718a;background:#102238;color:#cdd8e2;
+  font-size:16px;line-height:1;box-shadow:3px 3px 0 #02060b;
+}
+#gear-btn:hover{border-color:var(--lb-gold);color:var(--lb-gold)}
+body:has(#boot) #gear-btn,body:has(.lobby) #gear-btn,
+body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
+.mz-rw.exp{border-color:#8f6fd0}
+.mz-rw i.exp{display:grid;place-items:center;font:700 9px/1 var(--mono);letter-spacing:.04em;color:#bda4f2}
+
 /* ══ MODE SELECT (after PLAY) ═════════════════════════════════ */
 .modesel{
   position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;
@@ -2405,6 +2536,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
 }
 </style>
 <body data-phase="title">
+<button id="gear-btn" type="button" aria-label="Settings" onclick="openSettings()">⚙</button>
 <div id="boot">
 <div class="boot-mark">Inside the<span class="bm2">Impact</span></div>
 <div class="boot-rule"></div>
@@ -3245,14 +3377,14 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
          the economy has to agree with what the game is teaching, or the
          player learns the opposite of the lesson. */
       const REWARDS = {
-        win:     { share: 1,    xp: 80,  label: "Win" },
-        lose:    { share: .4,   xp: 50,  label: "Loss" },
-        towel:   { share: 1,    xp: 130, label: "Corner stoppage" },
-        medstop: { share: 1,    xp: 130, label: "Medical stoppage" },
-        sdh:     { share: .25,  xp: 70,  label: "Catastrophic outcome" },
-        ko:      { share: .25,  xp: 70,  label: "Knockout" },
-        champ:   { share: 2,    xp: 450, label: "Title won" },
-        ret:     { share: .5,   xp: 60,  label: "Retirement" },
+        win:     { share: 1,   xpShare: 1,    label: "Win" },
+        lose:    { share: .4,  xpShare: .62,  label: "Loss" },
+        towel:   { share: 1,   xpShare: 1.6,  label: "Corner stoppage" },
+        medstop: { share: 1,   xpShare: 1.6,  label: "Medical stoppage" },
+        sdh:     { share: .25, xpShare: .85,  label: "Catastrophic outcome" },
+        ko:      { share: .25, xpShare: .85,  label: "Knockout" },
+        champ:   { share: 2,   xpShare: 2.4,  label: "Title won" },
+        ret:     { share: .5,  xpShare: .75,  label: "Retirement" },
       };
       const xpNeed = (lv) => 200 + lv * 140;
       let P = null;
@@ -3275,6 +3407,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         const r = Object.assign({}, base, {
           gold: Math.round(d.gold * base.share * mult),
           gems: Math.round(d.gems * base.share),
+          xp: Math.round((d.xp || 120) * base.xpShare),
           diff: d.name,
         });
         P.gold += r.gold; P.gems += r.gems; P.xp += r.xp; P.bouts++;
@@ -3767,11 +3900,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         if (id === "play") return openModeSelect();
         if (id === "gear") return;
         if (id === "guide") return instructions();
-        if (id === "settings") {
-          const s = $("#game-settings");
-          if (s) { s.open = true; s.scrollIntoView({ block: "nearest" }); }
-          return;
-        }
+        if (id === "settings") return openSettings();
         maintenance(id);
       }
       function maintenance(id) {
@@ -3882,6 +4011,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         cancelAnimationFrame(lobbyRAF);
         lobbyT = 0; lobbyLast = 0;
         const reduced = document.body.dataset.reduceMotion === "1"
+          || document.body.dataset.lowDetail === "1"
           || matchMedia("(prefers-reduced-motion: reduce)").matches;
         const paint = () => drawPunchScene(actx, AW, AH, lobbyT);
         if (reduced) { lobbyT = .49; paint(); }
@@ -4153,16 +4283,16 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
          for now. */
       const DIFFS = [
         { id: "novice",    name: "Novice",     grade: "E+ GRADE", col: "#6fcf5e",
-          gold: 400,   gems: 1,  lv: 1,
+          gold: 400,   gems: 1,  xp: 120,  lv: 1,
           blurb: "Four rounds, a light puncher. Room to read the signs before they matter." },
         { id: "club",      name: "Club Show",  grade: "D+ GRADE", col: "#e8c272",
-          gold: 1100,  gems: 3,  lv: 1,
+          gold: 1100,  gems: 3,  xp: 300,  lv: 1,
           blurb: "Six rounds on a small-hall card. He can hurt you if you let it run." },
         { id: "contender", name: "Contender",  grade: "B- GRADE", col: "#b17ae0",
-          gold: 3200,  gems: 8,  lv: 4,
+          gold: 3200,  gems: 8,  xp: 700,  lv: 4,
           blurb: "Eight rounds against someone ranked. Damage accumulates faster than you expect." },
         { id: "title",     name: "Title Fight", grade: "A- GRADE", col: "#e8453a",
-          gold: 9000,  gems: 25, lv: 8,
+          gold: 9000,  gems: 25, xp: 1800, lv: 8,
           blurb: "Twelve rounds, a champion, and every reason in the world not to stop it." },
       ];
       let selGym = 0, selDiff = 1;
@@ -4227,6 +4357,7 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
           drawGym(c, 132, 62, g.k, i * 7 + 3);
           btn.addEventListener("click", () => {
             selGym = i;
+            selDiff = 0;                       /* a new room starts back at E+ */
             list.querySelectorAll(".mz-map").forEach((n, j) => n.classList.toggle("sel", j === i));
             paint();
           });
@@ -4243,7 +4374,8 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
           const mult = 1 + P.lv * 0.01;
           $("#mz-rewards").innerHTML =
             `<div class="mz-rw">${COIN}<b>${Math.round(d.gold * mult).toLocaleString()}</b><s>Coins</s></div>
-             <div class="mz-rw gem">${GEM}<b>${d.gems}</b><s>Gem${d.gems === 1 ? "" : "s"}</s></div>`;
+             <div class="mz-rw gem">${GEM}<b>${d.gems}</b><s>Gem${d.gems === 1 ? "" : "s"}</s></div>
+             <div class="mz-rw exp"><i class="exp">EXP</i><b>${d.xp.toLocaleString()}</b><s>Exp</s></div>`;
           $("#mz-note").textContent = locked
             ? `Locked until level ${d.lv}. You are level ${P.lv}.`
             : "Paid out when the bout ends — a stoppage to protect the fighter pays the full amount.";
@@ -4264,6 +4396,219 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
           if (e.key === "Escape") { closeMissionSetup(); document.removeEventListener("keydown", esc); }
         });
         paint();
+      }
+
+      /* ── SETTINGS ────────────────────────────────────────────────
+         Five tabs. Name on the left, its control beside it, and the
+         description of whatever you last touched on the right.
+         `live:false` rows are honest: the switch remembers your choice
+         but nothing reads it yet, and the panel says so. */
+      const ST_ICONS = {
+        display: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="5" width="19" height="14" rx="1.5"/><circle cx="8" cy="10" r="1.6" fill="currentColor" stroke="none"/><path d="M3.5 17l5-4.5 3.5 3 3-2.5 5 4"/></svg>`,
+        gameplay: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 3.2 22 8l-10 4.8L2 8z" fill="currentColor" fill-opacity=".3"/><path d="M2 12.4 12 17.2 22 12.4"/><path d="M2 16.6 12 21.4 22 16.6"/></svg>`,
+        audio: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 9.5h3.5L12.5 5v14L7.5 14.5H4z" fill="currentColor" fill-opacity=".35"/><path d="M16 9a4.5 4.5 0 0 1 0 6"/><path d="M18.8 6.4a8.5 8.5 0 0 1 0 11.2"/></svg>`,
+        controls: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="4.5" width="9" height="7" rx="1" fill="currentColor" fill-opacity=".35"/><rect x="13.5" y="4.5" width="8" height="15" rx="1"/><rect x="2.5" y="13.5" width="9" height="6" rx="1" fill="currentColor" fill-opacity=".35"/></svg>`,
+        trading: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 20V4.6M7.5 4.6 3.6 8.6M7.5 4.6l3.9 4"/><path d="M16.5 4v15.4M16.5 19.4l3.9-4M16.5 19.4l-3.9-4"/></svg>`,
+      };
+      const SETTINGS = [
+        { id: "display", label: "Display", rows: [
+          { id: "blur", name: "Blur", type: "toggle", def: true, live: true,
+            desc: "Blurs the ring for a moment when your fighter takes a shot to the head." },
+          { id: "dmgnum", name: "Damage Indicator", type: "toggle", def: true, live: false,
+            desc: "Shows the damage numbers that appear when a punch lands directly." },
+          { id: "lowdetail", name: "Low Detail", type: "toggle", def: false, live: true,
+            desc: "Removes certain effects to reduce strain on less powerful devices." },
+          { id: "playerfx", name: "Player Effects", type: "toggle", def: true, live: false,
+            desc: "Enables or disables the visual effects of other players' skills." },
+          { id: "shadows", name: "Shadows", type: "toggle", def: true, live: false,
+            desc: "Enables or disables shadows. Turning them off improves performance." },
+          { id: "motion", name: "Reduced Motion", type: "toggle", def: false, live: true,
+            desc: "Stops the lobby animation and the screen shake. Useful if motion makes you unwell." },
+          { id: "textsize", name: "Text Size", type: "choice", def: "normal", live: true,
+            choices: [["small", "S"], ["normal", "M"], ["large", "L"]],
+            desc: "Sets the size of the text across the whole game." },
+        ]},
+        { id: "gameplay", label: "Gameplay", rows: [
+          { id: "autoskip", name: "Auto Skip", type: "toggle", def: false, live: false,
+            desc: "Skips dialogue and story beats instead of showing them." },
+          { id: "camerashake", name: "Camera Shake", type: "toggle", def: true, live: true,
+            desc: "Shakes the screen when a punch lands — on your fighter or on his opponent." },
+          { id: "invites", name: "Invites", type: "toggle", def: true, live: false,
+            desc: "Enables or disables receiving party invites from other players." },
+        ]},
+        { id: "audio", label: "Audio", rows: [
+          { id: "fxvol", name: "Effects", type: "range", def: 70, live: true,
+            desc: "Changes the volume of ambient sounds such as footsteps, punches and the crowd." },
+          { id: "musicvol", name: "Music", type: "range", def: 60, live: false,
+            desc: "Changes the volume of the music within the game." },
+        ]},
+        { id: "controls", label: "Controls", rows: [
+          { id: "k_fwd",  name: "Forward",  type: "key", def: "W", live: false, desc: "Move your fighter forward." },
+          { id: "k_back", name: "Backward", type: "key", def: "S", live: false, desc: "Move your fighter backward." },
+          { id: "k_left", name: "Left",     type: "key", def: "A", live: false, desc: "Circle to the left." },
+          { id: "k_right",name: "Right",    type: "key", def: "D", live: false, desc: "Circle to the right." },
+        ]},
+        { id: "trading", label: "Trading", rows: [
+          { id: "tradehist", name: "History", type: "toggle", def: false, live: false,
+            desc: "Enables or disables other players being able to see your recent trades." },
+        ]},
+      ];
+      const ST_KEY = "iti.settings.v1";
+      let ST = null, stTab = "display", stSel = null;
+      function stDefaults() {
+        const o = {};
+        SETTINGS.forEach((g) => g.rows.forEach((r) => { o[r.id] = r.def; }));
+        return o;
+      }
+      function loadSettings() {
+        const base = stDefaults();
+        try {
+          const raw = localStorage.getItem(ST_KEY);
+          ST = raw ? Object.assign(base, JSON.parse(raw)) : base;
+        } catch (e) { ST = base; }
+        return ST;
+      }
+      function saveSettings() {
+        try { localStorage.setItem(ST_KEY, JSON.stringify(ST)); } catch (e) {}
+        applySettings();
+      }
+      /* the settings that actually drive something */
+      function applySettings() {
+        if (!ST) return;
+        document.body.dataset.lowDetail = ST.lowdetail ? "1" : "0";
+        document.body.dataset.reduceMotion = ST.motion ? "1" : "0";
+        document.body.classList.toggle("reduce-motion", !!ST.motion);
+        /* keep the simulation's own preference object in step */
+        if (typeof uiPrefs === "object" && uiPrefs) {
+          uiPrefs.shake = !!ST.camerashake && !ST.motion;
+          uiPrefs.motion = !!ST.motion;
+          uiPrefs.sound = Number(ST.fxvol) > 0;
+          uiPrefs.text = ST.textsize || "normal";
+          document.body.classList.toggle("has-shake", uiPrefs.shake);
+          document.body.classList.toggle("no-shake", !uiPrefs.shake);
+          document.documentElement.dataset.textSize = uiPrefs.text;
+          try { localStorage.setItem(PREF_KEY, JSON.stringify(uiPrefs)); } catch (e) {}
+          const a = $("#pref-motion"), b = $("#pref-shake"), c = $("#pref-sound"), d = $("#pref-text");
+          if (a) a.checked = uiPrefs.motion;
+          if (b) b.checked = uiPrefs.shake;
+          if (c) c.checked = uiPrefs.sound;
+          if (d) d.value = uiPrefs.text;
+          if (uiPrefs.sound) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) { uiAudio = uiAudio || new AC(); if (uiAudio.state !== "running") uiAudio.resume(); }
+          }
+        }
+      }
+      function closeSettings() {
+        document.querySelectorAll(".settings").forEach((n) => n.remove());
+      }
+      function openSettings(tab) {
+        if (!ST) loadSettings();
+        closeSettings();
+        stTab = tab || stTab || "display";
+        const el = document.createElement("div");
+        el.className = "settings";
+        el.setAttribute("role", "dialog");
+        el.setAttribute("aria-label", "Settings");
+        el.innerHTML = `
+          <div class="st-head">
+            <div class="st-title" id="st-title"></div>
+            <div class="st-tabs" role="tablist">
+              ${SETTINGS.map((g) => `<button class="st-tab" data-tab="${g.id}" role="tab" title="${g.label}" aria-label="${g.label}">${ST_ICONS[g.id]}</button>`).join("")}
+            </div>
+            <button class="st-close" type="button" aria-label="Close settings">&times;</button>
+          </div>
+          <div class="st-rule"></div>
+          <div class="st-body">
+            <div class="st-rows" id="st-rows"></div>
+            <div class="st-panel" id="st-panel"></div>
+          </div>`;
+        document.body.appendChild(el);
+
+        const panel = $("#st-panel"), rowsHost = $("#st-rows");
+        function describe(r) {
+          stSel = r.id;
+          panel.innerHTML = `<h3>${escapeUI(r.name)}</h3><p>${escapeUI(r.desc)}</p>` +
+            (r.live ? "" : `<span class="st-soon">Not wired up yet</span>`);
+          rowsHost.querySelectorAll(".st-row").forEach((n) =>
+            n.classList.toggle("sel", n.dataset.row === r.id));
+        }
+        function renderTab() {
+          const grp = SETTINGS.find((g) => g.id === stTab) || SETTINGS[0];
+          $("#st-title").textContent = grp.label;
+          el.querySelectorAll(".st-tab").forEach((t) => t.classList.toggle("on", t.dataset.tab === grp.id));
+          rowsHost.innerHTML = "";
+          grp.rows.forEach((r) => {
+            const row = document.createElement("div");
+            row.className = "st-row";
+            row.dataset.row = r.id;
+            let ctrl = "";
+            if (r.type === "toggle") {
+              ctrl = `<button class="st-sw ${ST[r.id] ? "on" : ""}" data-v="1" type="button">On</button>
+                      <button class="st-sw ${ST[r.id] ? "" : "on"}" data-v="0" type="button">Off</button>`;
+            } else if (r.type === "range") {
+              ctrl = `<input class="st-range" type="range" min="0" max="100" step="5" value="${Number(ST[r.id])}" aria-label="${r.name}">`;
+            } else if (r.type === "key") {
+              ctrl = `<button class="st-key" type="button">${escapeUI(String(ST[r.id]))}</button>`;
+            } else if (r.type === "choice") {
+              ctrl = r.choices.map(([v, lbl]) =>
+                `<button class="st-sw ${ST[r.id] === v ? "on" : ""}" data-c="${v}" type="button">${lbl}</button>`).join("");
+            }
+            const nameLabel = r.type === "range" ? `${r.name} (${Number(ST[r.id])}%)` : r.name;
+            row.innerHTML = `<button class="st-name" type="button">${escapeUI(nameLabel)}</button><div class="st-ctrl">${ctrl}</div>`;
+            row.querySelector(".st-name").addEventListener("click", () => describe(r));
+
+            if (r.type === "toggle") {
+              row.querySelectorAll(".st-sw").forEach((b) =>
+                b.addEventListener("click", () => {
+                  ST[r.id] = b.dataset.v === "1";
+                  saveSettings(); renderTab(); describe(r);
+                }));
+            } else if (r.type === "choice") {
+              row.querySelectorAll(".st-sw").forEach((b) =>
+                b.addEventListener("click", () => {
+                  ST[r.id] = b.dataset.c;
+                  saveSettings(); renderTab(); describe(r);
+                }));
+            } else if (r.type === "range") {
+              const inp = row.querySelector(".st-range");
+              inp.addEventListener("input", () => {
+                ST[r.id] = Number(inp.value);
+                row.querySelector(".st-name").textContent = `${r.name} (${ST[r.id]}%)`;
+                saveSettings();
+              });
+              inp.addEventListener("pointerdown", () => describe(r));
+            } else if (r.type === "key") {
+              const kb = row.querySelector(".st-key");
+              kb.addEventListener("click", () => {
+                describe(r);
+                kb.classList.add("binding");
+                kb.textContent = "Press…";
+                const grab = (ev) => {
+                  ev.preventDefault();
+                  const k = ev.key === " " ? "Space" : ev.key.length === 1 ? ev.key.toUpperCase() : ev.key;
+                  if (k !== "Escape") ST[r.id] = k;
+                  saveSettings();
+                  window.removeEventListener("keydown", grab, true);
+                  renderTab(); describe(r);
+                };
+                window.addEventListener("keydown", grab, true);
+              });
+            }
+            rowsHost.appendChild(row);
+          });
+          const keep = grp.rows.find((r) => r.id === stSel) || grp.rows[0];
+          if (keep) describe(keep);
+        }
+        el.querySelectorAll(".st-tab").forEach((t) =>
+          t.addEventListener("click", () => { stTab = t.dataset.tab; stSel = null; renderTab(); }));
+        el.querySelector(".st-close").addEventListener("click", closeSettings);
+        document.addEventListener("keydown", function esc(e) {
+          if (e.key === "Escape" && !document.querySelector(".st-key.binding")) {
+            closeSettings(); document.removeEventListener("keydown", esc);
+          }
+        });
+        renderTab();
       }
 
       /* ── REWARD HOOK ─────────────────────────────────────────────
@@ -5900,6 +6245,8 @@ body:has(#boot) #game-settings,body:has(#gymload) #game-settings{display:none}
         requestAnimationFrame(L);
       })();
       loadProfile();
+      loadSettings();
+      applySettings();
       newGame();
       installRewards();
       bootUp();
