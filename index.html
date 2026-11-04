@@ -1892,6 +1892,126 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
 @media(max-width:760px){body[data-phase="camp"] #w,body[data-phase="pre-bout"] #w{display:flex!important;flex-direction:column;gap:0}body[data-phase="camp"] #w>#arena-layout,body[data-phase="pre-bout"] #w>#arena-layout{display:flex!important;flex-direction:column;gap:11px;width:100%}}
 </style>
 </head>
+<style id="lobby-style">
+/* ── LOBBY / MAIN MENU ──────────────────────────────────────────
+   Prototype. Full-bleed game menu rather than a web page: the first
+   screen should read as something you play, not something you study. */
+.lobby{
+  position:fixed;inset:0;z-index:40;overflow-y:auto;overflow-x:hidden;
+  display:flex;flex-direction:column;align-items:center;
+  background:#060a11;
+  font-family:"Arial Black","Courier New",monospace;
+  -webkit-user-select:none;user-select:none;
+}
+/* arena backdrop: dark house, hot ring lights from below */
+.lobby-bg{position:absolute;inset:0;z-index:0}
+.lobby-bg::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 120% 70% at 50% 108%, rgba(255,138,46,.55) 0%, rgba(176,58,30,.28) 30%, transparent 62%),
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(70,120,170,.30), transparent 65%),
+    linear-gradient(180deg,#05080e 0%,#0a1420 45%,#160f0c 100%);
+}
+/* crowd */
+.lobby-bg::after{
+  content:"";position:absolute;left:0;right:0;top:18%;height:26%;
+  background-image:radial-gradient(circle,rgba(255,196,120,.22) 1px,transparent 1.4px);
+  background-size:13px 11px;opacity:.75;
+  mask-image:linear-gradient(180deg,transparent,#000 40%,transparent);
+}
+.lobby-ropes{position:absolute;left:0;right:0;bottom:0;height:34%;z-index:1;opacity:.55}
+.lobby-ropes i{position:absolute;left:-5%;width:110%;height:3px;display:block}
+.lobby-ropes i:nth-child(1){bottom:76%;background:#d94f3e;transform:rotate(-1.1deg)}
+.lobby-ropes i:nth-child(2){bottom:58%;background:#e8e2d0;transform:rotate(-.7deg)}
+.lobby-ropes i:nth-child(3){bottom:40%;background:#3e94e6;transform:rotate(-.3deg)}
+.lobby-floor{position:absolute;left:0;right:0;bottom:0;height:22%;z-index:1;
+  background:linear-gradient(180deg,rgba(140,88,46,.55),rgba(60,34,18,.9));
+  box-shadow:inset 0 3px 0 rgba(255,210,150,.25)}
+/* embers */
+.ember{position:absolute;bottom:-12px;width:3px;height:3px;background:#ffb347;z-index:2;
+  box-shadow:0 0 6px 2px rgba(255,150,60,.55);animation:rise linear infinite}
+@keyframes rise{
+  0%{transform:translateY(0) translateX(0);opacity:0}
+  12%{opacity:.95}
+  100%{transform:translateY(-78vh) translateX(var(--dx,14px));opacity:0}
+}
+.lobby-vignette{position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:radial-gradient(ellipse 85% 70% at 50% 45%,transparent 35%,rgba(0,0,0,.72) 100%)}
+
+/* top bar */
+.lobby-top{position:relative;z-index:6;width:100%;display:flex;align-items:center;gap:8px;
+  padding:9px 11px;font:700 10px/1 "Courier New",monospace;letter-spacing:.08em}
+.lobby-icon{width:30px;height:30px;display:grid;place-items:center;flex:none;cursor:pointer;
+  border:2px solid #44627d;background:rgba(12,24,38,.86);color:#cfe0ee;font-size:13px;
+  box-shadow:2px 2px 0 #02060b}
+.lobby-icon:hover{border-color:var(--wn);color:var(--wn)}
+.lobby-ticker{flex:1;text-align:center;color:#ffd98a;text-transform:uppercase;opacity:.9}
+
+/* logo */
+.lobby-mid{position:relative;z-index:6;flex:1;width:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:clamp(8px,2.2vh,18px);padding:4px 12px}
+.lobby-logo{text-align:center;line-height:.92}
+.lobby-logo .l1{
+  font-size:clamp(19px,5.2vw,32px);letter-spacing:.1em;color:#ffe9b0;
+  text-shadow:0 2px 0 #7a2b1c,0 4px 0 #3a1109,0 7px 16px rgba(0,0,0,.8)}
+.lobby-logo .l2{
+  font-size:clamp(34px,10.5vw,64px);letter-spacing:.03em;
+  background:linear-gradient(180deg,#fff6d2 0%,#ffcf59 42%,#c8831f 70%,#8a4a12 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 3px 0 #5e1d10) drop-shadow(0 7px 14px rgba(0,0,0,.75))}
+.lobby-logo .l3{
+  margin-top:7px;font:700 clamp(8px,2.3vw,11px)/1.4 "Courier New",monospace;
+  letter-spacing:.34em;color:#ffcf8a;text-transform:uppercase;opacity:.92}
+
+/* guide pill, like the boxed button in the reference */
+.lobby-guide{
+  padding:7px 15px;border:2px solid #f4e3bb;background:rgba(12,22,34,.9);color:#fff4d5;
+  font:900 11px/1.2 "Courier New",monospace;letter-spacing:.12em;text-transform:uppercase;
+  cursor:pointer;box-shadow:3px 3px 0 #02060b}
+.lobby-guide:hover{background:#e4a939;color:#1a1208;border-color:#fff3cf}
+
+/* menu */
+.lobby-menu{display:flex;flex-direction:column;align-items:center;gap:clamp(1px,.7vh,6px);width:100%}
+.lobby-item{
+  position:relative;background:none;border:0;cursor:pointer;padding:4px 30px;
+  color:#e9f1f7;font:900 clamp(13px,3.5vw,19px)/1.25 "Arial Black","Courier New",monospace;
+  letter-spacing:.11em;text-transform:uppercase;
+  text-shadow:0 2px 0 rgba(0,0,0,.85),0 0 14px rgba(0,0,0,.6);
+  transition:color .1s,transform .1s,text-shadow .1s}
+.lobby-item:hover,.lobby-item:focus-visible{color:#ffd14f;transform:scale(1.06);outline:none;
+  text-shadow:0 2px 0 #3a1109,0 0 18px rgba(255,180,60,.75)}
+.lobby-item:hover::before,.lobby-item:focus-visible::before{content:"◀";position:absolute;left:2px;font-size:.62em;color:#ffb347}
+.lobby-item:hover::after,.lobby-item:focus-visible::after{content:"▶";position:absolute;right:2px;font-size:.62em;color:#ffb347}
+.lobby-item.primary{color:#ffe9b0;font-size:clamp(16px,4.4vw,23px)}
+.lobby-item.soon{color:#9fb0c2}
+.lobby-item.soon:hover{color:#cfd9e4}
+
+/* footer */
+.lobby-foot{position:relative;z-index:6;width:100%;padding:7px 12px 10px;text-align:center}
+.lobby-credit{font:700 10px/1.5 "Courier New",monospace;letter-spacing:.14em;color:#c9a96a;text-transform:uppercase}
+.lobby-disclaim{margin-top:3px;font:400 9px/1.45 Arial,sans-serif;color:#8ea2b4;max-width:430px;
+  margin-left:auto;margin-right:auto}
+
+/* maintenance modal */
+.maint-wrap{position:fixed;inset:0;z-index:70;display:grid;place-items:center;
+  background:rgba(3,7,12,.8);padding:16px;animation:fadein .12s steps(2,end)}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.maint{width:min(380px,100%);border:3px solid var(--wn);background:#15202f;
+  box-shadow:6px 6px 0 #02060b;padding:18px;text-align:center}
+.maint h3{margin:0 0 8px;font:900 15px/1.2 "Arial Black",monospace;letter-spacing:.07em;color:#ffd14f;text-transform:uppercase}
+.maint p{margin:0 0 14px;font:12px/1.6 Arial,sans-serif;color:#cfdbe6}
+.maint .tagname{color:#ffd14f;font-weight:700}
+.maint button{width:100%;padding:11px;border:3px solid #52718a;background:#162739;color:#fff3cf;
+  font:900 12px/1 "Courier New",monospace;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  box-shadow:3px 3px 0 #02060b}
+.maint button:hover{border-color:var(--wn);color:var(--wn)}
+
+@media(max-height:560px){
+  .lobby-logo .l2{font-size:clamp(34px,11vw,56px)}
+  .lobby-item{padding:3px 26px}
+  .lobby-mid{gap:6px}
+}
+</style>
 <body data-phase="title">
 <details class="game-settings" id="game-settings">
 <summary aria-label="Game settings">⚙ Settings</summary>
@@ -2695,7 +2815,60 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
         const startFreshGame = instructionReturnState === "title";
         const dialog = $("#instruction-guide");
         if (dialog.open) dialog.close("start");
+        if (typeof closeLobby === "function") closeLobby();
         if (startFreshGame) hub();
+      }
+      /* ── LOBBY ──────────────────────────────────────────────────
+         Main menu. PLAY and SETTINGS are live; the rest are stubs that
+         say so, so the shape of the game is visible before it is built. */
+      const LOBBY_MENU = [
+        { id: "play", label: "Play", live: true, cls: "primary" },
+        { id: "customization", label: "Customization" },
+        { id: "afk", label: "AFK Zone" },
+        { id: "codes", label: "Codes" },
+        { id: "friends", label: "Friends" },
+        { id: "settings", label: "Settings", live: true },
+      ];
+      const MAINT_COPY = {
+        customization:
+          "Pick your fighter’s look, stance and corner team. Not built yet.",
+        afk: "Somewhere to idle between fights and read the Codex. Not built yet.",
+        codes: "Redeem codes for cosmetics. Not built yet.",
+        friends:
+          "Coach against a friend — one of you in each corner, same fighter, different calls. Not built yet.",
+      };
+      function lobbyGo(id) {
+        if (id === "play") return instructions();
+        if (id === "settings") {
+          const s = $("#game-settings");
+          if (s) {
+            s.open = true;
+            s.scrollIntoView({ block: "nearest" });
+          }
+          return;
+        }
+        maintenance(id);
+      }
+      function maintenance(id) {
+        const label = (LOBBY_MENU.find((x) => x.id === id) || {}).label || id;
+        const wrap = document.createElement("div");
+        wrap.className = "maint-wrap";
+        wrap.innerHTML = `<div class="maint" role="dialog" aria-modal="true">
+          <h3>🚧 Under maintenance</h3>
+          <p><span class="tagname">${escapeUI(label)}</span> isn’t in the build yet.</p>
+          <p class="mu" style="font-size:11px">${escapeUI(MAINT_COPY[id] || "")}</p>
+          <button type="button">Back to menu</button></div>`;
+        const close = () => wrap.remove();
+        wrap.querySelector("button").addEventListener("click", close);
+        wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+        document.addEventListener(
+          "keydown",
+          function esc(e) {
+            if (e.key === "Escape") { close(); document.removeEventListener("keydown", esc); }
+          },
+        );
+        document.body.appendChild(wrap);
+        wrap.querySelector("button").focus();
       }
       function intro() {
         setLandingChrome(false);
@@ -2703,9 +2876,65 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
         document.body.dataset.s = "title";
         $("#cv").style.display = "none";
         $("#sub").textContent = "";
-        $("#m").innerHTML =
-          `<section class="title-screen landing-screen"><div class="title-kicker">A BOXING DECISION SIMULATION</div><h1>INSIDE THE IMPACT</h1><button class="b p title-start" onclick="instructions()">START COACHING ▶<small>Take a short visual briefing before the first bout</small></button><div class="title-credit">Created by Joohyun Lee</div></section>`;
+        document.querySelectorAll(".lobby,.maint-wrap").forEach((n) => n.remove());
+
+        const embers = Array.from({ length: 14 }, () => {
+          const l = Math.round(Math.random() * 100),
+            d = (6 + Math.random() * 7).toFixed(1),
+            delay = (Math.random() * 7).toFixed(1),
+            dx = Math.round(Math.random() * 60 - 30);
+          return `<i class="ember" style="left:${l}%;--dx:${dx}px;animation-duration:${d}s;animation-delay:-${delay}s"></i>`;
+        }).join("");
+
+        const el = document.createElement("div");
+        el.className = "lobby";
+        el.innerHTML = `
+          <div class="lobby-bg"></div>
+          <div class="lobby-ropes"><i></i><i></i><i></i></div>
+          <div class="lobby-floor"></div>
+          ${embers}
+          <div class="lobby-vignette"></div>
+
+          <div class="lobby-top">
+            <button class="lobby-icon" data-lobby="codes" title="Codes">▣</button>
+            <button class="lobby-icon" data-lobby="customization" title="Customization">☰</button>
+            <div class="lobby-ticker">Prototype build · menu mock-up</div>
+            <button class="lobby-icon" data-lobby="friends" title="Friends">👤</button>
+          </div>
+
+          <div class="lobby-mid">
+            <div class="lobby-logo">
+              <div class="l1">Inside the</div>
+              <div class="l2">Impact</div>
+              <div class="l3">Boxing Safety Simulation</div>
+            </div>
+            <button class="lobby-guide" data-lobby="guide">Newbie guide</button>
+            <nav class="lobby-menu" aria-label="Main menu">
+              ${LOBBY_MENU.map(
+                (m) =>
+                  `<button class="lobby-item ${m.cls || ""} ${m.live ? "" : "soon"}" data-lobby="${m.id}">${m.label}</button>`,
+              ).join("")}
+            </nav>
+          </div>
+
+          <div class="lobby-foot">
+            <div class="lobby-credit">Created by Joohyun Lee</div>
+            <div class="lobby-disclaim">Fictional teaching simulation — not a medical device, examination or clearance tool. Emergency in South Korea: 119.</div>
+          </div>`;
+
+        el.querySelectorAll("[data-lobby]").forEach((b) =>
+          b.addEventListener("click", () => {
+            const id = b.dataset.lobby;
+            if (id === "guide") return instructions();
+            lobbyGo(id);
+          }),
+        );
+        document.body.appendChild(el);
         window.scrollTo(0, 0);
+      }
+      /* the lobby is an overlay, so it has to come down when play starts */
+      function closeLobby() {
+        document.querySelectorAll(".lobby,.maint-wrap").forEach((n) => n.remove());
       }
       const M = (m) => G.me,
         bar = (l, v, mx, c) =>
@@ -3887,7 +4116,17 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
         const W = t == "win";
         if (W) G.w++;
         else if (t == "lose") G.l++;
+        /* Counted before the title-fight branch returns: the championship
+           round is exactly where a stoppage matters most, and it used to
+           be the one bout that recorded neither the concussion nor the
+           counterfactual. */
+        if (m.conc) m.boutsConcussed++;
+        if (t === "towel" || t === "medstop")
+          (G.stopLog = G.stopLog || []).push(
+            !!(m.conc || m.abd || m.sdh || m.head >= BAL.medical.headStop),
+          );
         if (G.champ) {
+          G.titleStop = t === "towel" || t === "medstop" ? !!m.conc : null;
           G.postBout = true;
           return end(W ? "champ" : t);
         }
@@ -3904,16 +4143,8 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
            you took the fight off him for nothing. Learning that this is
            STILL the right policy is the hardest idea in the subject, and
            no paragraph can teach it. A distribution of outcomes can. */
-        if (m.conc) m.boutsConcussed++;
         if (t === "towel" || t === "medstop") {
-          const trulyHurt = !!(
-            m.conc ||
-            m.abd ||
-            m.sdh ||
-            m.head >= BAL.medical.headStop ||
-            m.body >= BAL.medical.bodyStop
-          );
-          (G.stopLog = G.stopLog || []).push(trulyHurt);
+          const trulyHurt = G.stopLog[G.stopLog.length - 1];
           const left = 8 - G.k - 1,
             need = Math.max(0, 6 - G.w);
           G.counter =
@@ -4033,8 +4264,15 @@ body[data-phase="camp"] #coach-area .fb,body[data-phase="pre-bout"] #coach-area 
                 ".",
             ],
             towel: [
-              "A coach’s call",
-              "You stopped the fight to protect your fighter. A loss is recoverable; a brain injury may not be.",
+              G.champ ? "You stopped the title fight" : "A coach’s call",
+              (G.champ
+                ? "One round from the belt, and you took it off him. He will not thank you for it tonight. "
+                : "You stopped the fight to protect your fighter. ") +
+                (G.titleStop === true
+                  ? "He was concussed when you did it. Nobody will ever be able to show you the version where you left him in, which is the whole difficulty of this job."
+                  : G.titleStop === false
+                    ? "He was not concussed. He was exhausted, and he might well have survived the round. You will never be certain, and you made the call with what you had."
+                    : "A loss is recoverable; a brain injury may not be."),
             ],
             medstop: [
               "Doctor stoppage",
