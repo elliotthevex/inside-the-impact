@@ -2597,6 +2597,24 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .tr-bigbar{position:relative;height:clamp(20px,3.4vh,28px);margin:9px 0;
   border:2px solid var(--lb-gold);background:#0d1219;overflow:hidden}
 .tr-bigbar i{display:block;height:100%;width:0;transition:width .06s linear}
+.tr-load{position:absolute;right:0;top:0;padding:4px 10px;
+  background:rgba(5,7,11,.85);border-left:1px solid currentColor;border-bottom:1px solid currentColor;
+  font:700 clamp(9px,1.3vw,11px)/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.tr-gauge{display:flex;align-items:center;gap:9px;margin:9px 0 6px}
+.tr-gauge u{flex:none;text-decoration:none;font:700 8.5px/1.4 var(--mono);
+  letter-spacing:.16em;text-transform:uppercase;color:#9aa5b1}
+.tr-gauge .tr-bigbar{flex:1;margin:0;height:clamp(14px,2.4vh,20px)}
+.tr-tally{display:flex;justify-content:space-between;margin-bottom:9px;
+  font:700 clamp(11px,1.5vw,14px)/1 var(--mono);color:#ffeec4;font-variant-numeric:tabular-nums}
+.tr-tally span:last-child{color:#8ad17e}
+.tr-stop{width:100%;margin-top:8px;padding:8px;cursor:pointer;
+  border:1px solid #3c4452;background:transparent;color:#9aa5b1;
+  font:700 9.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.tr-stop:hover{border-color:var(--lb-gold);color:var(--lb-gold)}
+.tr-diff em{display:block;margin-top:3px;font:400 9px/1.3 Arial,sans-serif;color:#9aa5b1;font-style:normal}
+.tr-diff.hard{border-color:#e8883a}
+.tr-diff.crazy{border-color:#e8453a}
+.tr-note b{color:#ffeec4}
 .tr-bigbar span{position:absolute;inset:0;display:grid;place-items:center;
   font:700 11px/1 var(--mono);color:#fff6e2;text-shadow:0 1px 3px #000}
 .tr-smash{
@@ -3841,7 +3859,6 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           gold: 1 + (lv - 1) * 0.01,
           luck: 1 + (lv - 1) * 0.01,
           exp: 1 + (lv - 1) * 0.02,
-          sta: 1 + (typeof gymBonus === "function" ? gymBonus("stamina") : 0),
           str: 1.05 + (lv - 1) * 0.01 + (typeof gymBonus === 'function' ? gymBonus('strength') : 0),
         };
         /* a running boost multiplies its own number */
@@ -3858,7 +3875,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       };
       let P = null;
       function loadProfile() {
-        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {}, up: null, gymStat: { strength: 0, stamina: 0 } };
+        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {}, up: null, gymStat: { strength: 0 } };
         try {
           const raw = localStorage.getItem(PROFILE_KEY);
           P = raw ? Object.assign(base, JSON.parse(raw)) : base;
@@ -4428,7 +4445,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         el.className = "lobby";
         el.innerHTML = `
           <canvas class="lb-art" id="lobby-art" role="img"
-            aria-label="${lobbyView === 'gym' ? 'A gym floor you walk around with WASD: treadmill, bench, squat rack and dumbbells' : lobbyView === 'plaza' ? 'Pixel art of a town square at dusk with a gilded statue of a boxer on a plinth' : 'Pixel art: a boxer taking a straight right flush on the cheek, head twisting off the impact'}"></canvas>
+            aria-label="${lobbyView === 'gym' ? 'A weights room you walk around with WASD: bench, squat rack, dumbbells and a press' : lobbyView === 'plaza' ? 'Pixel art of a town square at dusk with a gilded statue of a boxer on a plinth' : 'Pixel art: a boxer taking a straight right flush on the cheek, head twisting off the impact'}"></canvas>
           <div class="lb-shade"></div>
 
           <div class="lb-top">
@@ -4471,15 +4488,14 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             ` : lobbyView === "gym" ? `
             <div class="lb-tagline">
               <b>Training Arena</b>
-              <i>Weights for strength, the treadmill for stamina. Judgement is built in the corner.</i>
+              <i>Strength is built under the bar. Judgement is built in the corner.</i>
             </div>
             <div class="gym-hud">
-              ${Object.keys(GYM_STATS).map((k) => `
-                <div class="gym-stat">
-                  <div class="r"><u>${GYM_STATS[k].name}</u><b>Lv ${gymLevel(k)} &middot; +${gymBonus(k).toFixed(1)}x</b></div>
-                  <div class="t"><i style="width:${gymInto(k)}%;background:${GYM_STATS[k].col}"></i></div>
-                  <s>${gymInto(k)} / ${GYM_PER_LEVEL} to the next level</s>
-                </div>`).join("")}
+              <div class="gym-stat">
+                <div class="r"><u>Strength</u><b>Lv ${gymLevel("strength")} &middot; +${gymBonus("strength").toFixed(1)}x</b></div>
+                <div class="t"><i style="width:${gymInto("strength")}%;background:${GYM_STATS.strength.col}"></i></div>
+                <s>${gymInto("strength")} / ${GYM_PER_LEVEL} to the next level &middot; you can carry about ${strCap()} kg</s>
+              </div>
             </div>
             <div class="gym-prompt" id="gym-prompt" hidden></div>
             <div class="gym-help">WASD to walk &middot; E to occupy a machine</div>` : `
@@ -5253,13 +5269,12 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       }
 
       /* ── THE GYM FLOOR ───────────────────────────────────────────
-         A room you walk around with WASD. Stand on a machine, press E,
-         pick how hard you want it, then earn it. Weights build
-         strength; the treadmill builds stamina. Every level on either
-         is worth +0.1x on your card. */
+         A room you walk around with WASD. Stand on a bar, press E, pick
+         your load, then rep until you stop or until it drops you.
+         Everything in here builds strength, and every level is worth
+         +0.1x on your card. */
       const GYM_STATS = {
         strength: { name: "Strength", col: "#e8453a", key: "str" },
-        stamina:  { name: "Stamina",  col: "#5fa8e8", key: "sta" },
       };
       const GYM_PER_LEVEL = 100;
       const gymPoints = (k) => (P && P.gymStat && P.gymStat[k]) || 0;
@@ -5268,9 +5283,9 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       const gymBonus = (k) => gymLevel(k) * 0.1;
 
       const GYM_MACHINES = [
-        { id: "treadmill", name: "Treadmill", stat: "stamina", kind: "tread",
-          x: .18, y: .58, w: .15, h: .20, unit: "st/s",
-          diffs: [10, 15, 20, 25] },
+        { id: "press", name: "Overhead Press", stat: "strength", kind: "rack",
+          x: .17, y: .60, w: .15, h: .20, unit: "kg",
+          diffs: [30, 50, 75, 110] },
         { id: "bench", name: "Bench Press", stat: "strength", kind: "bench",
           x: .42, y: .70, w: .18, h: .16, unit: "kg",
           diffs: [40, 70, 100, 140] },
@@ -5285,8 +5300,6 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           x: .50, y: .53, w: .20, h: .24 },
       ];
       /* how many clicks a setting asks for, and what it pays */
-      const mgTarget = (m, d) => Math.max(8, Math.round(m.kind === "tread" ? d * 1.8 : d / 2.6));
-      const mgReward = (m, d) => Math.max(6, Math.round(m.kind === "tread" ? d * 1.6 : d / 2.4));
 
       const gymKeys = new Set();
       let gymPlayer = { x: .5, y: .78, face: 1, step: 0 };
@@ -5387,14 +5400,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           ctx.lineWidth = Math.max(1, H * .007);
           ctx.strokeRect(Math.round(x - w / 2) + .5, Math.round(y - h * .78) + .5, Math.round(w), Math.round(h));
         }
-        if (m.kind === "tread") {
-          b(x - w * .42, y - h * .10, w * .84, h * .34, "#232c38");
-          b(x - w * .34, y - h * .04, w * .68, h * .22, "#0f141c");
-          b(x - w * .40, y - h * .78, w * .10, h * .70, "#2a3340");
-          b(x + w * .30, y - h * .78, w * .10, h * .70, "#2a3340");
-          b(x - w * .40, y - h * .86, w * .80, h * .16, "#2f3a48");
-          b(x - w * .30, y - h * .80, w * .60, h * .07, "#5fa8e8");
-        } else if (m.kind === "bench") {
+        if (m.kind === "bench") {
           b(x - w * .46, y - h * .34, w * .92, h * .16, "#2a3240");
           b(x - w * .38, y - h * .30, w * .76, h * .09, "#3a4454");
           b(x - w * .30, y - h * .18, w * .10, h * .20, "#20262f");
@@ -5475,10 +5481,11 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
          click drives one rep and the figure actually performs it:
          the squat sinks and stands, the bench bar comes to the chest
          and back, the curls close, the runner's legs turn over. */
-      function drawExercise(ctx, W, H, kind, phase, drive, rate) {
+      function drawExercise(ctx, W, H, kind, phase, drive, rate, faint) {
         const b = artBlock(ctx);
         /* bend: 0 at the top of the rep, 1 at the bottom */
-        const bend = Math.sin(Math.max(0, Math.min(1, phase)) * Math.PI);
+        const fk = Math.max(0, Math.min(1, faint || 0));
+        const bend = fk > 0 ? 1 : Math.sin(Math.max(0, Math.min(1, phase)) * Math.PI);
         const BAR = "#c9ced6", PL = "#2b3340", PL2 = "#3d4756", KIT = "#8a2820", KIT2 = "#b03a2c";
         const u = H / 100;                               /* one percent of height */
         const cx = W * .52, ground = H * .88;
@@ -5576,41 +5583,19 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             b(ax - W * .03, dy - u * 3, W * .035, u * 11, PL);
             b(ax + W * .055, dy - u * 3, W * .035, u * 11, PL);
           }
-        } else {
-          /* treadmill: the belt scrolls and the legs turn over */
-          const beltY = ground - u * 12;
-          b(cx - W * .40, beltY, W * .80, u * 12, "#232c38");
-          b(cx - W * .36, beltY + u * 2, W * .72, u * 7, "#0f141c");
-          const scroll = (rate * 26) % (W * .09);
-          for (let x = -W * .09; x < W * .78; x += W * .09) {
-            b(cx - W * .36 + x + scroll, beltY + u * 3, W * .035, u * 5, "#1d2630");
-          }
-          b(cx + W * .30, beltY - u * 38, W * .05, u * 38, "#2a3340");               /* console post */
-          b(cx + W * .22, beltY - u * 46, W * .20, u * 10, "#2f3a48");
-          b(cx + W * .25, beltY - u * 43, W * .14, u * 4, "#5fa8e8");
-          /* runner */
-          const cyc = phase * Math.PI * 2;
-          const bob = Math.abs(Math.sin(cyc)) * u * 3;
-          const hip = beltY - u * 24 - bob, sh = beltY - u * 44 - bob;
-          for (const s of [1, -1]) {
-            const th = Math.sin(cyc + (s > 0 ? 0 : Math.PI));
-            const kx = cx + th * W * .09, ky = hip + u * 12 - Math.abs(th) * u * 3;
-            b(cx - W * .03, hip, W * .06, ky - hip, s > 0 ? SKIN2 : SKIN3);
-            const fx2 = kx + th * W * .05;
-            b(kx - W * .028, ky, W * .056, beltY - ky, s > 0 ? SKIN2 : SKIN3);
-            b(fx2 - W * .035, beltY - u * 3, W * .08, u * 3, s > 0 ? "#2a3240" : "#1e252f");
-          }
-          b(cx - W * .09, hip - u * 4, W * .18, u * 8, PL);
-          b(cx - W * .10, sh, W * .20, u * 22, KIT);
-          b(cx - W * .075, sh + u * 3, W * .15, u * 16, KIT2);
-          b(cx - W * .07, sh - u * 12, W * .14, u * 13, SKIN2);
-          b(cx - W * .05, sh - u * 10, W * .10, u * 10, SKIN);
-          b(cx - W * .07, sh - u * 14, W * .14, u * 5, "#17120d");
-          for (const s of [1, -1]) {                                                 /* pumping arms */
-            const sw = Math.sin(cyc + (s > 0 ? Math.PI : 0));
-            b(cx + s * W * .09 - W * .025, sh + u * 2, W * .05, u * 13, SKIN2);
-            b(cx + s * W * .09 - W * .025 + sw * W * .035, sh + u * 13, W * .05, u * 11, SKIN2);
-          }
+        }
+        /* going down: the whole frame slumps and the bar lands */
+        if (fk > 0) {
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, fk * 1.4);
+          ctx.fillStyle = "rgba(8,6,10,.55)";
+          ctx.fillRect(0, 0, W, H);
+          const dy = fk * u * 30;
+          b(cx - W * .34, ground - u * 10 + dy * .2, W * .68, u * 8, "#7a2018");
+          b(cx - W * .40, ground - u * 4, W * .80, u * 4, BAR);
+          for (const px of [cx - W * .46, cx + W * .38]) b(px, ground - u * 12, W * .08, u * 12, PL);
+          b(cx - W * .13, ground - u * 18 + dy * .1, W * .26, u * 9, SKIN2);
+          ctx.restore();
         }
         /* effort tells: sweat flies and the frame shakes when you are working */
         if (drive > .15) {
@@ -5627,7 +5612,21 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
       }
 
-      /* ── the minigame ────────────────────────────────────────── */
+      /* ── the set ─────────────────────────────────────────────────
+         Continuous: you rep until you stop or until you go down. Every
+         rep banks immediately. Load above what your level can carry
+         builds fatigue fast and can drop you mid-lift, which costs you
+         a quarter of what the session earned. */
+      /* what he can carry now. Starts high enough that a fresh player has a
+         real choice of loads rather than one safe bar and three suicides. */
+      const strCap = () => 80 + gymLevel("strength") * 25;
+      function loadBand(w) {
+        const r = w / strCap();
+        return r <= .7 ? { k: "easy",  t: "Comfortable",      c: "#6fcf5e" }
+             : r <= 1   ? { k: "work",  t: "Working weight",   c: "#e8c272" }
+             : r <= 1.35 ? { k: "hard", t: "Over your limit",  c: "#e8883a" }
+             :             { k: "crazy", t: "You will go down", c: "#e8453a" };
+      }
       function closeTrainer() {
         document.querySelectorAll(".trainer").forEach((n) => n.remove());
         gymBusy = false;
@@ -5651,113 +5650,127 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           </div>`;
         document.body.appendChild(el);
         el.querySelector(".tr-close").addEventListener("click", closeTrainer);
-
         const stage = $("#tr-stage");
+
         function pick() {
+          const cap = strCap();
           stage.innerHTML = `
-            <p class="tr-note">Harder is more reps in the same ten seconds, and pays more.</p>
+            <p class="tr-note">You can carry about <b>${cap} kg</b> at level ${gymLevel("strength")}. Go heavier for more per rep, and risk going down.</p>
             <div class="tr-diffs">
-              ${m.diffs.map((d, i) => `
-                <button class="tr-diff" data-d="${d}" type="button">
+              ${m.diffs.map((d) => {
+                const band = loadBand(d);
+                return `<button class="tr-diff ${band.k}" data-d="${d}" type="button">
                   <b>${d}</b><u>${m.unit}</u>
-                  <s>${mgTarget(m, d)} clicks &middot; +${mgReward(m, d)} ${st.name.toLowerCase()}</s>
-                </button>`).join("")}
+                  <s style="color:${band.c}">${band.t}</s>
+                  <em>+${Math.max(1, Math.round(d / 8))} / rep</em>
+                </button>`;
+              }).join("")}
             </div>
             <div class="tr-prog">
-              <div class="tr-prow"><span>${st.name} level</span><b>${gymLevel(m.stat)}</b></div>
-              <div class="tr-bar"><i style="width:${gymInto(m.stat)}%;background:${st.col}"></i></div>
-              <div class="tr-prow small"><span>${gymInto(m.stat)} / ${GYM_PER_LEVEL} to next level</span><b>+${gymBonus(m.stat).toFixed(1)}x now</b></div>
+              <div class="tr-prow"><span>Strength level</span><b>${gymLevel("strength")}</b></div>
+              <div class="tr-bar"><i style="width:${gymInto("strength")}%;background:${st.col}"></i></div>
+              <div class="tr-prow small"><span>${gymInto("strength")} / ${GYM_PER_LEVEL} to the next</span><b>+${gymBonus("strength").toFixed(1)}x now</b></div>
             </div>`;
           stage.querySelectorAll("[data-d]").forEach((bn) =>
             bn.addEventListener("click", () => run(Number(bn.dataset.d))));
         }
-        function run(d) {
-          const target = mgTarget(m, d), reward = mgReward(m, d);
-          let clicks = 0, prog = 0, left = 10.0, done = false;
+
+        function run(w) {
+          const cap = strCap(), ratio = w / cap, band = loadBand(w);
+          const perRep = Math.max(1, Math.round(w / 8));
+          const fatPerRep = 5.5 * Math.pow(ratio, 2.3);
+          let reps = 0, earned = 0, fatigue = 0, done = false, faintK = 0;
           stage.innerHTML = `
             <div class="tr-run">
               <div class="tr-view"><canvas id="tr-canvas" aria-hidden="true"></canvas>
-                <span class="tr-setbadge">${d} ${m.unit}</span>
-                <span class="tr-timer" id="tr-time">10.0</span></div>
-              <div class="tr-bigbar"><i id="tr-fill" style="background:${st.col}"></i>
-                <span id="tr-clicks">0 / ${target}</span></div>
-              <button class="tr-smash" id="tr-smash" type="button">GO</button>
+                <span class="tr-setbadge">${w} ${m.unit}</span>
+                <span class="tr-load" style="color:${band.c}">${band.t}</span></div>
+              <div class="tr-gauge">
+                <u>Fatigue</u>
+                <div class="tr-bigbar"><i id="tr-fill"></i></div>
+              </div>
+              <div class="tr-tally"><span id="tr-reps">0 reps</span><span id="tr-earn">+0 strength</span></div>
+              <button class="tr-smash" id="tr-smash" type="button">LIFT</button>
+              <button class="tr-stop" id="tr-stop" type="button">Rack it &amp; stop</button>
             </div>`;
-          const fill = $("#tr-fill"),
-                cl = $("#tr-clicks"), tm = $("#tr-time"), smash = $("#tr-smash");
-          const pct = { textContent: "" };
-          /* the figure actually performs the lift, one rep per click */
+          const fill = $("#tr-fill"), rp = $("#tr-reps"), er = $("#tr-earn"), smash = $("#tr-smash");
           const cvx = $("#tr-canvas"), g2 = cvx.getContext("2d");
           let shownReps = 0, raf = 0;
-          const sizeIt = () => {
-            const r = cvx.parentElement.getBoundingClientRect();
-            const w = Math.max(120, Math.min(300, Math.round((r.width || 300) / 1.9)));
-            cvx.width = w;
-            cvx.height = Math.max(90, Math.round(w * ((r.height || 170) / Math.max(1, r.width || 300))));
-            g2.imageSmoothingEnabled = false;
+          const r0 = cvx.parentElement.getBoundingClientRect();
+          cvx.width = Math.max(120, Math.min(300, Math.round((r0.width || 300) / 1.9)));
+          cvx.height = Math.max(90, Math.round(cvx.width * ((r0.height || 170) / Math.max(1, r0.width || 300))));
+          g2.imageSmoothingEnabled = false;
+          const paintGauge = () => {
+            fill.style.width = Math.min(100, fatigue) + "%";
+            fill.style.background = fatigue > 75 ? "#e8453a" : fatigue > 45 ? "#e8883a" : "#6fcf5e";
+            rp.textContent = reps + (reps === 1 ? " rep" : " reps");
+            er.textContent = "+" + earned + " strength";
           };
-          sizeIt();
           const loop = () => {
-            if (done || !cvx.isConnected) return;
-            shownReps += (clicks - shownReps) * .22;        /* chases your clicking */
-            const drive = Math.min(1, Math.abs(clicks - shownReps) * .9);
-            drawExercise(g2, cvx.width, cvx.height, m.kind,
-                         shownReps % 1, drive, shownReps);
+            if (!cvx.isConnected) return;
+            if (faintK > 0 && faintK < 1) faintK = Math.min(1, faintK + .05);
+            shownReps += (reps - shownReps) * .22;
+            const drive = Math.min(1, Math.abs(reps - shownReps) * .9);
+            drawExercise(g2, cvx.width, cvx.height, m.kind, shownReps % 1, drive, shownReps, faintK);
             raf = requestAnimationFrame(loop);
           };
           loop();
           const hit = () => {
             if (done) return;
-            clicks++;
-            prog = Math.min(100, (clicks / target) * 100);
-            fill.style.width = prog + "%";
-            cl.textContent = clicks + " / " + target;
+            reps++;
+            earned += perRep;
+            P.gymStat = P.gymStat || { strength: 0 };
+            const before = gymLevel("strength");
+            P.gymStat.strength = (P.gymStat.strength || 0) + perRep;   /* banked as you go */
+            if (gymLevel("strength") > before) gateToast("Strength level " + gymLevel("strength") + " · +" + gymBonus("strength").toFixed(1) + "x");
+            saveProfile(); refreshLobbyCard();
+            fatigue += fatPerRep;
+            paintGauge();
             smash.classList.remove("pop"); void smash.offsetWidth; smash.classList.add("pop");
-            if (prog >= 100) finish(true);
+            /* too heavy: the bar can drop you outright */
+            if (ratio > 1 && Math.random() < (ratio - 1) * .20) return fall("The weight won. You went down under it.");
+            if (fatigue >= 100) return fall("Nothing left. Your legs gave out.");
           };
           smash.addEventListener("click", hit);
-          const keyHit = (e) => {
-            if (e.code === "Space" || e.key === " ") { e.preventDefault(); hit(); }
-          };
+          const keyHit = (e) => { if (e.code === "Space" || e.key === " ") { e.preventDefault(); hit(); } };
           window.addEventListener("keydown", keyHit);
+          /* fatigue bleeds off while you pause, so you can pace a set */
           const tick = setInterval(() => {
             if (done) return;
-            left -= .1;
-            /* the belt keeps moving: a little progress drains away */
-            prog = Math.max(0, prog - (m.kind === "tread" ? .55 : .35));
-            clicks = Math.round((prog / 100) * target);
-            fill.style.width = prog + "%";
-            cl.textContent = clicks + " / " + target;
-            tm.textContent = Math.max(0, left).toFixed(1);
-            if (left <= 0) finish(false);
-          }, 100);
-          function finish(won) {
+            fatigue = Math.max(0, fatigue - 1.1);
+            paintGauge();
+          }, 140);
+          $("#tr-stop").addEventListener("click", () => finish(false));
+
+          function fall(why) { faintK = 0.001; finish(true, why); }
+          function finish(fainted, why) {
             if (done) return;
             done = true;
             clearInterval(tick);
-            cancelAnimationFrame(raf);
             window.removeEventListener("keydown", keyHit);
-            const gained = won ? reward : Math.round(reward * (prog / 100) * .4);
-            P.gymStat = P.gymStat || { strength: 0, stamina: 0 };
-            const before = gymLevel(m.stat);
-            P.gymStat[m.stat] = (P.gymStat[m.stat] || 0) + gained;
-            const after = gymLevel(m.stat);
-            saveProfile();
-            refreshLobbyCard();
-            stage.innerHTML = `
-              <div class="tr-end ${won ? "win" : "fail"}">
-                <h4>${won ? "Set complete" : "Out of time"}</h4>
-                <p>+${gained} ${st.name.toLowerCase()}${after > before
-                  ? ` &middot; <b>level ${after}</b>, now +${gymBonus(m.stat).toFixed(1)}x` : ""}</p>
-                <div class="tr-bar"><i style="width:${gymInto(m.stat)}%;background:${st.col}"></i></div>
-                <div class="tr-again">
-                  <button class="tr-btn" id="tr-retry" type="button">Another set</button>
-                  <button class="tr-btn ghost" id="tr-leave" type="button">Leave</button>
-                </div>
-              </div>`;
-            $("#tr-retry").addEventListener("click", pick);
-            $("#tr-leave").addEventListener("click", closeTrainer);
+            let lost = 0;
+            if (fainted) {
+              lost = Math.round(earned * .25);
+              P.gymStat.strength = Math.max(0, (P.gymStat.strength || 0) - lost);
+              saveProfile(); refreshLobbyCard();
+            }
+            setTimeout(() => {
+              cancelAnimationFrame(raf);
+              stage.innerHTML = `
+                <div class="tr-end ${fainted ? "fail" : "win"}">
+                  <h4>${fainted ? "You went down" : "Racked"}</h4>
+                  <p>${fainted ? escapeUI(why) + "<br>" : ""}${reps} reps &middot; +${earned - lost} strength${lost ? ` <b style="color:#e8886a">(${lost} lost)</b>` : ""}</p>
+                  <div class="tr-bar"><i style="width:${gymInto("strength")}%;background:${st.col}"></i></div>
+                  <div class="tr-again">
+                    <button class="tr-btn" id="tr-retry" type="button">Load up again</button>
+                    <button class="tr-btn ghost" id="tr-leave" type="button">Leave</button>
+                  </div>
+                </div>`;
+              $("#tr-retry").addEventListener("click", pick);
+              $("#tr-leave").addEventListener("click", closeTrainer);
+            }, fainted ? 900 : 0);
           }
+          paintGauge();
         }
         pick();
       }

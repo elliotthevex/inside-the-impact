@@ -80,13 +80,37 @@
     if (successPct(15) >= 100 || successPct(17) >= successPct(16)) throw new Error("S-rank odds are wrong");
     if (upCost(10) <= upCost(2)) throw new Error("cost does not climb");
   });
+  /* the lifts must actually move. Sample several phases rather than two:
+     a running stride has the legs together at both 0 and 0.5, so those
+     two frames match even though the animation is fine. */
+  await tryIt("exercise animations render", async () => {
+    const c = document.createElement("canvas"); c.width = 180; c.height = 130;
+    const g = c.getContext("2d");
+    for (const k of ["squat", "bench", "rack"])
+      for (const ph of [0, .25, .5, .75, .99]) drawExercise(g, 180, 130, k, ph, .5, 3);
+  });
+  await tryIt("rep pose changes", async () => {
+    const c = document.createElement("canvas"); c.width = 180; c.height = 130;
+    const g = c.getContext("2d");
+    for (const k of ["squat", "bench", "rack"]) {
+      const frames = new Set();
+      for (const ph of [0, .25, .5, .75]) {
+        g.clearRect(0, 0, 180, 130);
+        drawExercise(g, 180, 130, k, ph, 0, 0);
+        frames.add(g.getImageData(0, 0, 180, 130).data.join(","));
+      }
+      if (frames.size < 3) throw new Error(k + " barely moves (" + frames.size + " distinct frames of 4)");
+    }
+  });
+
   await tryIt("gym levels sane", async () => {
     const before = gymBonus("strength");
     if (!isFinite(before)) throw new Error("strength bonus is " + before);
-    if (GYM_MACHINES.filter((m) => m.stat === "strength").length < 3)
-      throw new Error("weights should train strength");
-    if (!GYM_MACHINES.some((m) => m.id === "treadmill" && m.stat === "stamina"))
-      throw new Error("treadmill should train stamina");
+    const lifts = GYM_MACHINES.filter((m) => m.stat === "strength");
+    if (lifts.length < 4) throw new Error("expected four lifts, got " + lifts.length);
+    if (GYM_MACHINES.some((m) => m.stat && m.stat !== "strength"))
+      throw new Error("the gym should only train strength now");
+    if (typeof strCap !== "function" || strCap() <= 0) throw new Error("no carry capacity");
   });
 
   setLobbyView("ring");
