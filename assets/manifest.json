@@ -1,0 +1,50 @@
+{
+ "hdri:basement_boxing_ring": {
+  "authors": [
+   "Sergej Majboroda"
+  ],
+  "files": [
+   "assets/hdri/basement_boxing_ring.webp",
+   "assets/hdri/basement_boxing_ring_1k.hdr"
+  ],
+  "id": "basement_boxing_ring",
+  "kind": "hdri",
+  "license": "CC0 1.0",
+  "name": "Basement Boxing Ring",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/basement_boxing_ring"
+ },
+ "tex:crepe_satin": {
+  "authors": [
+   "colormass",
+   "Rico Cilliers"
+  ],
+  "files": [
+   "assets/tex/crepe_satin_diff.webp",
+   "assets/tex/crepe_satin_nor_gl.webp",
+   "assets/tex/crepe_satin_rough.webp"
+  ],
+  "id": "crepe_satin",
+  "kind": "tex",
+  "license": "CC0 1.0",
+  "name": "Crepe Satin",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/crepe_satin"
+ },
+ "tex:leather_white": {
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "files": [
+   "assets/tex/leather_white_diff.webp",
+   "assets/tex/leather_white_nor_gl.webp",
+   "assets/tex/leather_white_rough.webp"
+  ],
+  "id": "leather_white",
+  "kind": "tex",
+  "license": "CC0 1.0",
+  "name": "Leather White",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/leather_white"
+ }
+}
