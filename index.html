@@ -1752,7 +1752,7 @@ html{background:var(--bg);scroll-behavior:smooth}body{font-family:var(--font);le
 #arena-standby::before{top:25%;height:34%;background:repeating-linear-gradient(to bottom,transparent 0 24px,rgba(189,207,219,.5) 25px 27px,transparent 28px 42px);border-top:1px solid rgba(225,191,119,.25);border-bottom:1px solid rgba(225,191,119,.25);opacity:.58}
 #arena-standby::after{inset:auto 8% 8%;height:30%;border:1px solid rgba(225,191,119,.5);transform:perspective(360px) rotateX(58deg);background:linear-gradient(180deg,rgba(56,50,43,.3),rgba(121,86,57,.14));box-shadow:0 -58px 0 -57px rgba(221,230,233,.38),0 -114px 0 -113px rgba(221,230,233,.28)}
 .arena-standby-copy{position:relative;z-index:1;text-align:center;padding:22px}.arena-standby-copy strong{display:block;color:#e8edf0;font-size:clamp(15px,2vw,21px);letter-spacing:.12em}.arena-standby-copy span{display:block;margin-top:6px;color:#91a4b1;font-size:11px}.arena-corner-mark{display:inline-grid;place-items:center;width:52px;height:52px;margin-bottom:12px;border:1px solid rgba(231,185,87,.7);border-radius:50%;color:#e8bf68;font-size:22px}
-#cv{display:none;width:100%;height:auto;aspect-ratio:360/210;margin:0 0 10px;border:1px solid rgba(182,205,218,.38);border-radius:10px;box-shadow:none;image-rendering:pixelated;background:#080e16}
+#cv{display:none;width:100%;height:auto;aspect-ratio:360/210;margin:0 0 10px;border:1px solid rgba(182,205,218,.38);border-radius:10px;box-shadow:none;image-rendering:auto;background:#080e16}
 #injury-monitor{grid-column:auto;grid-row:auto;position:sticky;top:68px;align-self:start;display:block;width:100%;min-width:0;margin:0;padding:16px;border:1px solid rgba(171,196,212,.23);border-radius:14px;background:linear-gradient(155deg,rgba(18,34,49,.98),rgba(11,23,34,.98));box-shadow:0 16px 38px rgba(0,0,0,.18)}
 .injury-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px;padding:0 0 11px;border-bottom:1px solid var(--line)}.injury-title h2{margin:0;color:#e9f0f3;font:700 13px/1.2 var(--font);letter-spacing:.1em}.monitor-kicker{color:#8299a8;font-size:9px;letter-spacing:.12em}
 .monitor-block{margin:0;padding:10px 0;border-bottom:1px solid rgba(175,199,211,.11)}.monitor-label{margin-bottom:4px;color:#92a7b4;font-size:10px;font-weight:600;letter-spacing:.04em}.monitor-value{color:#e3eaf0;font-size:12px;line-height:1.35}.monitor-value small{display:block;color:#adbcc5;font-size:10px;margin-top:2px}.monitor-value.safe{color:#a5d9bb}.monitor-value.warn{color:#f5d17e}.monitor-value.danger{color:#ffac9b}
@@ -3330,7 +3330,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 <div class="score-side"><div class="score-team" id="score-opponent-name">OPPONENT</div><div class="score-cell"><small>SCORE</small><b id="score-opponent">0</b></div><div class="score-cell"><small>PUNCHES LANDED</small><b id="landed-opponent">0</b></div><div class="score-cell"><small>HEALTH</small><b id="score-opponent-health">100%</b></div></div>
 </div>
 
-<canvas aria-label="Animated boxing scene; round, score, and bout status are summarized in the game interface" height="210" id="cv" role="img" width="360"></canvas>
+<canvas aria-label="Animated boxing scene; round, score, and bout status are summarized in the game interface" height="630" id="cv" role="img" width="1080"></canvas>
 
 </main><aside aria-label="Current symptoms, simulated cumulative exposure, and response" id="injury-monitor">
 <div class="injury-title"><h2>FIGHTER STATUS</h2><span class="monitor-kicker">SIMULATED</span></div>
@@ -5147,15 +5147,38 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         set("neck", 0.05, 0.10, 0);
         set("head", 0.04 + breathe, 0.06, 0);
 
+        /* taking one: the head snaps off the shot and the spine follows,
+           fading over about a third of a second */
+        const hit = f.hitT || 0;
+        if (hit > 0) {
+          const dir = f.hitLow ? 0.5 : 1;
+          a3P[A3_BI.head * 3] += hit * 0.55 * dir;
+          a3P[A3_BI.head * 3 + 2] += hit * 0.30;
+          a3P[A3_BI.neck * 3] += hit * 0.26 * dir;
+          a3P[A3_BI.chest * 3] += hit * 0.20 * dir;
+          a3P[A3_BI.spine * 3] += hit * 0.12;
+        }
+        /* fatigue drops the hands and rounds the back — the tell is
+           performed, never pointed at */
+        const gassed = Math.max(0, Math.min(1, ((f.fat || 0) - 55) / 45));
+        const guard = (f.guard === undefined ? 1 : f.guard) - gassed * 0.42;
+
         /* guard up by the chin. Reach comes from the arm chain, never
            from translating the glove off the wrist. */
         const jab = f.lunge || 0;
-        set("clavR", 0, -0.10 - jab * 0.2, 0.06);
-        set("upperR", -0.55 - jab * 0.55, 0, 0.34);
-        set("foreR", -1.50 + jab * 1.30, 0, 0);
+        /* a sore right hand is a hand he will not throw */
+        const rt = f.sore ? 0 : 1;
+        set("clavR", 0, -0.10 - jab * 0.2 * rt, 0.06);
+        set("upperR", (-0.55 - jab * 0.55 * rt) * guard, 0, 0.34);
+        set("foreR", -1.50 * guard + jab * 1.30 * rt, 0, 0);
         set("clavL", 0, 0.14, -0.06);
-        set("upperL", -0.70, 0, -0.30);
-        set("foreL", -1.65, 0, 0);
+        set("upperL", -0.70 * guard, 0, -0.30);
+        set("foreL", -1.65 * guard, 0, 0);
+        /* guarding the ribs after body work */
+        if (f.guarded) {
+          a3P[A3_BI.upperR * 3 + 2] -= 0.22;
+          a3P[A3_BI.spine * 3 + 2] += 0.08;
+        }
 
         /* footwork. A boxer never walks: the feet shuffle, the lead stays
            lead, and he never turns his back. Gait is a small oscillation
@@ -5253,12 +5276,21 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         a3BoxM(out, B.neck, 0, 0.05, 0, 0.17, 0.12, 0.17, A3_SKIN_D, 0);
         a3BoxM(out, B.head, 0, 0.14, 0.01, 0.34, 0.34, 0.33, skin, 0);
         a3BoxM(out, B.head, 0, 0.07, 0.17, 0.16, 0.07, 0.03, "#5b2a26", 0.02);
+        if (f.bare) {
+          /* in the ring: cropped hair and a vest, no entrance robe */
+          a3BoxM(out, B.head, 0, 0.29, 0.01, 0.35, 0.10, 0.34, "#17202b", 0.01);
+          a3BoxM(out, B.head, 0, 0.20, -0.16, 0.33, 0.22, 0.06, "#17202b", 0.005);
+          a3BoxM(out, B.chest, 0, 0.09, -0.02, 0.46, 0.30, 0.27, kit.short1, 0.005);
+          a3BoxM(out, B.chest, 0.15, 0.22, -0.02, 0.10, 0.18, 0.28, kit.short1, 0.006);
+          a3BoxM(out, B.chest, -0.15, 0.22, -0.02, 0.10, 0.18, 0.28, kit.short1, 0.006);
+        } else {
         a3BoxM(out, B.hood, 0, 0.20, -0.04, 0.44, 0.40, 0.44, kit.robe1, 0.06);
         a3BoxM(out, B.hood, 0, 0.40, -0.02, 0.40, 0.10, 0.40, kit.robe2, 0.065);
         a3BoxM(out, B.hood, 0.19, 0.16, 0.12, 0.08, 0.34, 0.22, kit.robe1, 0.07);
         a3BoxM(out, B.hood, -0.19, 0.16, 0.12, 0.08, 0.34, 0.22, kit.robe1, 0.07);
         a3BoxM(out, B.hood, 0, 0.32, 0.14, 0.34, 0.06, 0.06, kit.trimR, 0.075);
         a3BoxM(out, B.hood, 0, -0.04, -0.17, 0.42, 0.30, 0.10, kit.robe2, 0.05);
+        }
 
         /* arms: shoulder yoke, upper, cuff, forearm, glove */
         for (const side of ["R", "L"]) {
@@ -5284,6 +5316,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           a3BoxM(out, bone, 0, -0.74, 0, w * 1.08, 0.28, 0.11, kit.robe1, bias);
           a3BoxM(out, bone, 0, -0.89, 0, w * 1.1, 0.05, 0.12, kit.trimW, bias + 0.005);
         };
+        if (!f.bare) {
         panel(B.robeR, 0.17, 0.05);
         panel(B.robeL, 0.17, 0.05);
         /* the back panel sorts BEHIND the body, or it draws over his spine */
@@ -5292,6 +5325,15 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         a3BoxM(out, B.robeB, 0, -0.64, 0, 0.53, 0.05, 0.12, kit.trimR, -0.035);
         a3BoxM(out, B.robeB, 0, -0.80, 0, 0.53, 0.28, 0.12, kit.robe2, -0.04);
         a3BoxM(out, B.robeB, 0, -0.95, 0, 0.54, 0.05, 0.13, kit.trimW, -0.035);
+        }
+        /* a cut over the eye, at the severity the sim is already tracking.
+           A clean mark and nothing more — no spray, no gore. */
+        if (f.cut > 0)
+          a3BoxM(out, B.head, -0.10, 0.22, 0.165, 0.09, 0.015 + f.cut * 0.012, 0.02,
+                 "rgb(150,36,30)", 0.03);
+        if (f.cut > 1)
+          a3BoxM(out, B.head, -0.10, 0.14, 0.165, 0.035, 0.10, 0.02,
+                 "rgb(126,28,24)", 0.03);
 
         /* contact shadow */
         a3Quad(out, a3V(f.x - .36, .02, f.z - .36), a3V(f.x + .36, .02, f.z - .36),
@@ -5427,7 +5469,6 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       /* ── render ───────────────────────────────────────────────── */
       function a3Render(cv, ctx) {
         const W = cv.width, H = cv.height, cam = A3.cam;
-        const B = a3Basis(cam);
         /* hall behind the ring */
         const g = ctx.createLinearGradient(0, 0, 0, H);
         g.addColorStop(0, "#0a0f18"); g.addColorStop(0.55, "#141d2b"); g.addColorStop(1, "#070a10");
@@ -5437,7 +5478,13 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         a3BuildArena(faces);
         a3BuildFighter(faces, A3.o, A3.o.hurt || 0);
         a3BuildFighter(faces, A3.p, A3.p.hurt || 0);
+        a3Draw(ctx, W, H, cam, faces);
+      }
 
+      /* the scene core, reusable: any camera, any face list, any canvas.
+         The arena and the career bout both go through here. */
+      function a3Draw(ctx, W, H, cam, faces) {
+        const B = a3Basis(cam);
         /* project, cull, depth sort — painter's algorithm */
         const draw = [];
         for (const f of faces) {
@@ -10111,7 +10158,129 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const pointsOverThreshold = Math.max(0, Math.min(70, Number(fatigue) - 30));
         return Math.round(100 - pointsOverThreshold);
       }
+      /* ══ BOUT SCENE ═══════════════════════════════════════════════
+         The career bout rendered with the same rig the 1v1 Arena uses,
+         on a side-on broadcast camera. This is a VIEW ONLY: it reads A,
+         F and G.me and never writes them, so the simulation — and the
+         parity signature — are untouched. The HUD and every piece of
+         copy over the top stay exactly as they were.                   */
+
+      const BOUT = {
+        cam: { x: 0, y: 1.95, z: -4.3, lx: 0, ly: 1.12, lz: 0, fov: 0.92 },
+        push: 0, shake: 0,
+        p: null, o: null, lastA: null,
+      };
+
+      function boutFighters() {
+        if (BOUT.p) return;
+        BOUT.p = a3Fighter(-1, "You", "#2f6fb0", "#1d4a78", "player");
+        BOUT.o = a3Fighter(1, "Opp", "#a8382c", "#75241b", "rival");
+        for (const f of [BOUT.p, BOUT.o]) {
+          f.bare = true;              /* in the ring, not in the entrance robe */
+          f.z = 0; f.y = 0; f.vx = 0; f.vz = 0;
+          f.hitT = 0; f.lunge = 0; f.guard = 1;
+        }
+        BOUT.p.x = -0.85; BOUT.p.yaw = Math.PI / 2;
+        BOUT.o.x = 0.85;  BOUT.o.yaw = -Math.PI / 2;
+      }
+
+      /* Everything here is derived from the exchange the sim already ran.
+         A is {who, tgt, t, hit}: who threw, head or body, how far through
+         the animation, and whether it landed. */
+      function boutDrive(dt) {
+        boutFighters();
+        const P = BOUT.p, O = BOUT.o;
+        P.dt = O.dt = dt;
+        const stance = F && typeof F.stance === "number" ? F.stance : 1;
+
+        for (const f of [P, O]) {
+          f.lunge = Math.max(0, f.lunge - dt * 4.5);
+          f.hitT = Math.max(0, f.hitT - dt * 3.2);
+          f.step += dt * 3.4;
+        }
+        /* guard rides the game plan: defend tucks up, attack drops and leans in */
+        P.guard = stance === 0 ? 1.25 : stance === 2 ? 0.72 : 1;
+        O.guard = 1;
+
+        if (A) {
+          const atk = A.who ? O : P, def = A.who ? P : O;
+          const swing = Math.sin(Math.min(1, A.t) * Math.PI);
+          atk.lunge = Math.max(atk.lunge, swing);
+          if (A.hit && A.t > 0.3) {
+            def.hitT = Math.max(def.hitT, 1 - (A.t - 0.3) / 0.7);
+            def.hitLow = A.tgt === "b";
+          }
+          /* a landed shot pushes the camera in and shakes it a little —
+             the Camera Shake setting still governs the screen-level shake */
+          if (A.hit && A !== BOUT.lastA) {
+            BOUT.push = A.tgt === "h" ? 0.5 : 0.3;
+            BOUT.shake = uiPrefs.shake ? 0 : (A.tgt === "h" ? 1 : 0.6);
+            BOUT.lastA = A;
+          }
+        }
+        BOUT.push = Math.max(0, BOUT.push - dt * 1.6);
+        BOUT.shake = Math.max(0, BOUT.shake - dt * 5);
+
+        /* fatigue and injury are read straight off the sim's own flags —
+           the body shows them, nothing highlights them */
+        const m = G && G.me ? G.me : null;
+        if (m) {
+          P.fat = m.fat;
+          P.cut = m.cut;
+          P.sore = m.hand ? 1 : 0;
+          P.guarded = m.body >= BAL.medical.bodyStop * 0.55 ? 1 : 0;
+        }
+        /* camera: side on, easing in on impact */
+        const c = BOUT.cam;
+        const wantZ = -4.3 + BOUT.push * 0.55;
+        c.z += (wantZ - c.z) * Math.min(1, dt * 4);
+        c.ly += (1.12 - c.ly) * Math.min(1, dt * 4);
+      }
+
+      function boutScene(ctx, W, H) {
+        boutFighters();
+        const faces = [];
+        a3BuildArena(faces);
+        /* far fighter first is irrelevant — the sort handles it — but
+           building the opponent first keeps the face list stable */
+        a3BuildFighter(faces, BOUT.o, BOUT.o.hitT > 0.5 ? 1 : 0);
+        a3BuildFighter(faces, BOUT.p, BOUT.p.hitT > 0.5 ? 1 : 0);
+
+        const c = BOUT.cam;
+        const sh = BOUT.shake;
+        const cam = sh > 0
+          ? { x: c.x + Math.sin(sh * 37) * sh * 0.06, y: c.y + Math.cos(sh * 29) * sh * 0.05,
+              z: c.z, lx: c.lx, ly: c.ly, lz: c.lz, fov: c.fov }
+          : c;
+
+        /* hall behind the ring */
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, "#070c15"); g.addColorStop(0.5, "#131d2c"); g.addColorStop(1, "#060a11");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        a3Draw(ctx, W, H, cam, faces);
+
+        /* the banner over the ring keeps its words */
+        ctx.save();
+        ctx.fillStyle = "#08101d";
+        /* below the HUD bar, which occupies the top 13%. In the pixel
+           build this banner was drawn under it and never once visible. */
+        ctx.fillRect(W * 0.31, H * 0.150, W * 0.38, H * 0.082);
+        ctx.fillStyle = "#203d59";
+        ctx.fillRect(W * 0.32, H * 0.160, W * 0.36, H * 0.062);
+        ctx.fillStyle = "#fff0bd";
+        ctx.textAlign = "center";
+        ctx.font = "bold " + Math.round(H * 0.042) + "px monospace";
+        ctx.fillText("INSIDE THE IMPACT", W * 0.5, H * 0.208);
+        ctx.restore();
+      }
+
+      /* The bout canvas renders the 3D scene at full backing resolution,
+         then the HUD draws in the original 360x210 space through a scale
+         transform — so every HUD coordinate, bar and word below is exactly
+         what it was, and none of it had to be retyped. */
+      let boutLast = 0;
       function draw() {
+        const S = cv.width / 360;
         const block = (x, y, w, h, col) => {
           cx.fillStyle = col;
           cx.fillRect(
@@ -10121,66 +10290,16 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             Math.round(h),
           );
         };
+        const now = performance.now();
+        const dt = boutLast ? Math.min(0.05, (now - boutLast) / 1000) : 0.016;
+        boutLast = now;
+        cx.setTransform(1, 0, 0, 1, 0, 0);
+        cx.imageSmoothingEnabled = true;
+        boutDrive(dt);
+        boutScene(cx, cv.width, cv.height);
+        /* back into 360x210 for the HUD, unchanged */
+        cx.setTransform(S, 0, 0, S, 0, 0);
         cx.imageSmoothingEnabled = false;
-        // dark arena and pixel crowd
-        block(0, 0, 360, 210, "#080d18");
-        block(0, 27, 360, 89, "#17243a");
-        block(0, 27, 360, 5, "#304b67");
-        block(0, 32, 360, 3, "#f2ba4e");
-        for (let y = 39; y < 112; y += 9) {
-          for (let x = y % 18 ? 2 : 10; x < 360; x += 13) {
-            const q = (x * 7 + y * 11) % 7;
-            block(
-              x,
-              y,
-              5,
-              6,
-              q < 2
-                ? "#343f57"
-                : q < 4
-                  ? "#5a4e5e"
-                  : q === 4
-                    ? "#7c5a46"
-                    : "#202a3b",
-            );
-            if (q === 1) block(x + 1, y + 1, 2, 2, "#f4d783");
-          }
-        }
-        // overhead billboard, ringposts and trapezoid mat
-        block(115, 8, 130, 16, "#08101d");
-        block(118, 10, 124, 12, "#203d59");
-        cx.fillStyle = "#fff0bd";
-        cx.font = "bold 8px monospace";
-        cx.fillText("INSIDE THE IMPACT", 131, 19);
-        block(0, 111, 360, 99, "#142033");
-        cx.fillStyle = "#5c3f36";
-        cx.beginPath();
-        cx.moveTo(50, 116);
-        cx.lineTo(310, 116);
-        cx.lineTo(360, 210);
-        cx.lineTo(0, 210);
-        cx.fill();
-        cx.fillStyle = "#765442";
-        cx.beginPath();
-        cx.moveTo(64, 126);
-        cx.lineTo(296, 126);
-        cx.lineTo(339, 205);
-        cx.lineTo(21, 205);
-        cx.fill();
-        for (let i = 0; i < 4; i++) {
-          cx.strokeStyle = i === 1 ? "#f7db90" : "#e7edf2";
-          cx.lineWidth = 2;
-          cx.beginPath();
-          cx.moveTo(34, 80 + i * 13);
-          cx.lineTo(326, 80 + i * 13);
-          cx.stroke();
-        }
-        block(31, 73, 7, 60, "#d9e4e5");
-        block(34, 76, 3, 53, "#d64d42");
-        block(322, 73, 7, 60, "#d9e4e5");
-        block(323, 76, 3, 53, "#357fd2");
-        bx(117, "#257bd0", 1, 0);
-        bx(243, "#be3b36", -1, 1);
         // black arcade HUD with score, energy bars, and round indicator
         block(0, 0, 360, 28, "#05080f");
         block(4, 4, 148, 20, "#152b40");
