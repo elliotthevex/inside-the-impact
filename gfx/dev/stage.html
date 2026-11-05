@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Stage test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;width:100vw;height:100vh}#s{position:fixed;left:8px;top:8px;color:#9c9;font:12px monospace;white-space:pre;pointer-events:none}</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three/build/three.module.js","three/addons/":"../../vendor/three/addons/"}}</script>
+</head><body><canvas id="c"></canvas><div id="s"></div>
+<script type="module">
+import * as THREE from 'three';
+import { Engine, PRESETS, detectQuality } from '../core/engine.js';
+import { createStage } from '../arena/stage.js';
+import { preloadFighter, Fighter } from '../people/fighter.js';
+
+const params = new URLSearchParams(location.search);
+const quality = params.get('q') || 'high';
+/* Profiling overrides, for example ?ao=0&msaa=0&dof=16&bulbs=2 */
+for (const k of ['msaa', 'dof', 'bulbs', 'shadow', 'hazeSteps', 'crowd', 'dust', 'aoSamples', 'maxPixels', 'aniso']) if (params.has(k)) PRESETS[quality][k] = +params.get(k);
+for (const k of ['ao', 'bloom', 'film', 'grain', 'halfDof']) if (params.has(k)) PRESETS[quality][k] = params.get(k) !== '0';
+if (params.has('main')) PRESETS[quality].mainFormat = params.get('main');
+const canvas = document.getElementById('c');
+const engine = new Engine(canvas, { quality, adaptive: false });
+const mgr = new THREE.LoadingManager();
+const t0 = performance.now();
+const stage = await createStage(engine, mgr);
+const loadMs = performance.now() - t0;
+engine.scene = stage.scene;
+
+/* Two fighters in a rough guard, posed by aiming bones. The rig module replaces all of this in the game. */
+let fighters = [];
+if (params.get('fighters') !== '0') {
+  await preloadFighter(engine.q, mgr);
+  const qa = new THREE.Quaternion(); const qp = new THREE.Quaternion(); const X = new THREE.Vector3(1, 0, 0);
+  function aim(bone, dir) { bone.updateWorldMatrix(true, false); bone.parent.getWorldQuaternion(qp); const cur = X.clone().applyQuaternion(bone.getWorldQuaternion(qa)); const d = qa.setFromUnitVectors(cur, dir.clone().normalize()); const w = bone.getWorldQuaternion(new THREE.Quaternion()); const nw = d.multiply(w); bone.quaternion.copy(qp.clone().invert().multiply(nw)); bone.updateWorldMatrix(false, true); }
+  const guard = (f) => {
+    f.root.updateWorldMatrix(true, true); const y = f.root.rotation.y; const fw = new THREE.Vector3(Math.sin(y), 0, Math.cos(y)); const left = new THREE.Vector3(Math.cos(y), 0, -Math.sin(y));
+    for (const [s, sgn] of [['L', 1], ['R', -1]]) {
+      const b = f.bones; const up = b[`Bip01_${s}_UpperArm`]; const fo = b[`Bip01_${s}_Forearm`]; const hand = b[`Bip01_${s}_Hand`];
+      aim(up, new THREE.Vector3(0, -0.92, 0).addScaledVector(left, sgn * 0.32).addScaledVector(fw, 0.28));
+      aim(fo, new THREE.Vector3(0, 0.82, 0).addScaledVector(left, -sgn * 0.18).addScaledVector(fw, 0.55));
+      if (hand) aim(hand, new THREE.Vector3(0, 0.75, 0).addScaledVector(fw, 0.6));
+    }
+  };
+  const blue = new Fighter({ corner: 'blue', build: 0.55 }); const red = new Fighter({ corner: 'red', build: 0.6 });
+  blue.root.position.set(-0.72, stage.canvasY, 0); blue.root.rotation.y = Math.PI / 2;
+  red.root.position.set(0.72, stage.canvasY, 0); red.root.rotation.y = -Math.PI / 2;
+  stage.scene.add(blue.root, red.root); stage.scene.updateMatrixWorld(true); guard(blue); guard(red); blue.setSweat(0.25); red.setSweat(0.25);
+  fighters = [blue, red];
+}
+
+const CAMS = {
+  fight: { p: [0.3, 1.72, 4.6], t: [0, 1.62, 0], fov: 38, focus: 4.6, ap: 0.016 },
+  low: { p: [2.3, 1.15, 3.4], t: [-0.2, 1.85, 0], fov: 42, focus: 4.1, ap: 0.03 },
+  wide: { p: [8.5, 2.45, -2.1], t: [0, 1.0, 0.3], fov: 60, focus: 8.5, ap: 0.0015 },
+  floor: { p: [6.2, 0.42, -3.9], t: [0, 1.6, 0.3], fov: 50, focus: 7, ap: 0.008 },
+  far: { p: [-1.6, 2.0, -2.4], t: [3.5, 1.5, 9], fov: 50, focus: 3.2, ap: 0.012 },
+  door: { p: [3.2, 1.6, 8.0], t: [-2.6, 1.8, -9], fov: 55, focus: 12, ap: 0.003 },
+  crowd: { p: [-2.4, 1.75, 2.0], t: [-8, 0.9, 2.6], fov: 50, focus: 3.5, ap: 0.003 },
+  corner: { p: [-5.0, 1.55, -4.9], t: [-3.1, 0.75, -2.9], fov: 52, focus: 3, ap: 0.002 },
+  lampc: { p: [1.4, 2.5, 2.2], t: [0, 3.85, 0], fov: 50, focus: 2.9, ap: 0.002 },
+  cage: { p: [-5.2, 2.0, -1.0], t: [-7.3, 3.4, -2.6], fov: 50, focus: 3, ap: 0.002 },
+  back: { p: [0, 2.3, 7.8], t: [0, 2.2, -9], fov: 62, focus: 9, ap: 0.002 },
+  wallx: { p: [5.6, 1.7, 1.2], t: [9, 1.9, 1.5], fov: 60, focus: 3.3, ap: 0.002 },
+  top: { p: [0, 3.9, 8.4], t: [0, 0.8, 0], fov: 48, focus: 9, ap: 0.004 },
+};
+function setCam(name) { const c = CAMS[name]; engine.camera.position.set(...c.p); engine.camera.fov = c.fov; engine.camera.updateProjectionMatrix(); engine.camera.lookAt(...c.t); engine.post.focus = c.focus; engine.post.aperture = c.ap; return name; }
+setCam('fight');
+
+engine.update = (dt) => stage.update(dt, engine.camera);
+const gl = engine.renderer.getContext();
+
+/* Real-time rAF fps over a few seconds, then sync-timed frames that say what a frame costs with no vsync cap. */
+async function measure(sec = 4) {
+  const ts = []; engine.start(); await new Promise((ok) => { const t0 = performance.now(); let last = t0; const f = (now) => { ts.push(now - last); last = now; if (now - t0 < sec * 1000) requestAnimationFrame(f); else ok(); }; requestAnimationFrame(f); }); engine.stop();
+  ts.shift(); const avg = ts.reduce((a, b) => a + b, 0) / ts.length; const sorted = [...ts].sort((a, b) => a - b);
+  const px = new Uint8Array(4); const cost = [];
+  for (let i = 0; i < 40; i++) { const t = performance.now(); engine.step(1, 1 / 60); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); cost.push(performance.now() - t); }
+  cost.shift(); cost.sort((a, b) => a - b);
+  /* Uncapped throughput: frames as fast as the browser will take them, CPU and GPU overlapping as they do in a live loop. */
+  const T0 = performance.now(); let N = 0; const chan = new MessageChannel(); await new Promise((ok) => { chan.port1.onmessage = () => { engine.step(1, 1 / 60); N++; if (performance.now() - T0 < 3000) chan.port2.postMessage(0); else ok(); }; chan.port2.postMessage(0); }); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const openFps = N / ((performance.now() - T0) / 1000);
+  return { quality: engine.quality, size: `${engine.stats.w}x${engine.stats.h}`, rafFps: +(1000 / avg).toFixed(1), rafP95Ms: +sorted[Math.floor(sorted.length * 0.95)].toFixed(1), frames: ts.length, syncMsMedian: +cost[Math.floor(cost.length / 2)].toFixed(1), syncMsP90: +cost[Math.floor(cost.length * 0.9)].toFixed(1), openFps: +openFps.toFixed(1), calls: engine.stats.calls, tris: engine.stats.tris, programs: engine.renderer.info.programs.length, textures: engine.renderer.info.memory.textures, geometries: engine.renderer.info.memory.geometries };
+}
+function shot(name, n = 6) { if (name) setCam(name); engine.step(n, 1 / 60); return { calls: engine.stats.calls, tris: engine.stats.tris }; }
+window.STAGE = { engine, stage, fighters, setCam, measure, shot, CAMS, loadMs, THREE };
+engine.step(4, 1 / 60);
+window.READY = true;
+if (params.get('live')) engine.start();
+</script></body></html>

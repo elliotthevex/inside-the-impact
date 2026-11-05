@@ -1,0 +1,42 @@
+{
+ "jab": 1.05,
+ "cross": 1.1,
+ "hook": 0.91,
+ "upper": 0.98,
+ "bodyL": 1.09,
+ "bodyR": 1.09,
+ "minSep": 0.72,
+ "measured": {
+  "jab": {
+   "reach": 1.06,
+   "gapAtReachMm": 0.4,
+   "elbowDeg": 169.9
+  },
+  "cross": {
+   "reach": 1.11,
+   "gapAtReachMm": 0.5,
+   "elbowDeg": 171.8
+  },
+  "hook": {
+   "reach": 0.92,
+   "gapAtReachMm": 2.3,
+   "elbowDeg": 127.5
+  },
+  "upper": {
+   "reach": 0.99,
+   "gapAtReachMm": 1.4,
+   "elbowDeg": 109.6
+  },
+  "bodyL": {
+   "reach": 1.17,
+   "gapAtReachMm": 7.3,
+   "elbowDeg": 129.8
+  },
+  "bodyR": {
+   "reach": 1.1,
+   "gapAtReachMm": 6.7,
+   "elbowDeg": 131.3
+  }
+ },
+ "how": "measured: largest centre-to-centre distance where the glove touches the real head or ribs with the rig IK (gap under 12 mm at punch.contact, both men in stance, three stance phases) and the elbow still looks like that punch (at most: jab, cross 172 deg; hook 128; upper 112; body 132). Top-level values are the measured reach minus 1 cm of margin, because a turned or moving man varies a little. The left body shot measures 1.17 because the lead shoulder is forward and he dips into it; it is set to the same value as the right so a body shot never outranges the cross. Anything nearer than the top-level value also touches: the elbow just bends. minSep .72: in stance every glove stays clear of the other man (at .72 glove to torso 7 to 11 cm and glove to glove about 4 cm, varying with the stance loop). Rerun with reachTable() in gfx/dev/rig-bench.js if the rig changes."
+}

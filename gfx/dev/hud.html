@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Arena HUD test bench</title>
+<style>
+  html,body{margin:0;background:#000;height:100%}
+  #bg{position:absolute;inset:0;background:#141210 url(ref/look-target.png) center/cover no-repeat}
+</style>
+</head>
+<body>
+<!-- Test bench only. The photo stands in for the 3D scene so the HUD can be judged over a realistic picture. -->
+<div class="arena-x" id="root"><div id="bg"></div></div>
+<script type="module">
+import { createHud } from '../arena/hud.js';
+
+const params = new URLSearchParams(location.search);
+if (params.get('text')) document.documentElement.dataset.textSize = params.get('text');
+if (params.get('rm')) document.body.classList.add('reduce-motion');
+const touch = params.get('touch') === '1';
+
+/* A fake Match that follows the sim contract in DESIGN.md. It holds state, the real sim is not involved. */
+function fighter(name, corner) {
+  return { x: 0, z: 0, vx: 0, vz: 0, yaw: 0, hp: 100, maxHp: 100, sta: 100, maxSta: 100, head: 13.37, guard: 0, punch: null, stun: 0, slip: 0, down: null,
+    knock: { x: 0, z: 0 }, landed: 0, taken: 0, clean: 0, fat: 0, name, corner };
+}
+function fakeMatch() {
+  return { state: 'intro', round: 1, rounds: 3, clock: 60, p: fighter('You', 'blue'), o: fighter('Marcus', 'red'), events: [], result: null, scores: [],
+    step() {} };
+}
+let match = fakeMatch();
+const log = { pause: 0, resume: 0, rematch: 0, exit: 0, input: [] };
+const hud = createHud(document.getElementById('root'), {
+  touch,
+  onPause: () => log.pause++, onResume: () => log.resume++, onExit: () => log.exit++,
+  onRematch: () => { log.rematch++; match = fakeMatch(); },
+  onInput: params.get('keys') === '1' ? undefined : (code, down) => log.input.push(code + (down ? '+' : '-')),
+});
+let running = true, last = performance.now();
+function frame(now) {
+  const dt = Math.min(.1, (now - last) / 1000); last = now;
+  if (running) {
+    for (const ev of match.events) hud.onEvent(ev);
+    match.events.length = 0;
+    hud.update(match, dt);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const ev = (type, o = {}) => match.events.push({ type, who: 'p', t: 0, ...o });
+/* Run the HUD's timers forward without waiting, so a state can be shot without the banner that led to it. */
+const settle = (sec = 3) => { for (let i = 0; i < sec / .25; i++) hud.update(match, .25); };
+const fightAt = (o) => { Object.assign(match, { state: 'fight', ...o }); hud.update(match, 0); };
+
+const scenes = {
+  async load0() { hud.showLoading(0.0, 'Loading the ring'); },
+  async load() { hud.showLoading(0.62, 'Loading the fighters'); },
+  async intro() { ev('round_start'); },
+  async intro3() { match.round = 3; ev('round_start'); },
+  async fightbanner() { match.state = 'fight'; ev('fight'); },
+  async fight() {
+    fightAt({ clock: 43 }); match.p.hp = 71; match.o.hp = 52; match.p.sta = 64; match.o.sta = 41;
+    settle();
+    match.o.hp = 38; ev('hit', { who: 'p', kind: 'hook', tgt: 'head', power: .7, dir: [1, 0] });
+  },
+  async combo() {
+    fightAt({ clock: 31, round: 2, scores: [{ p: 10, o: 9 }] }); match.p.hp = 83; match.o.hp = 61; match.p.sta = 52; match.o.sta = 60;
+    settle();
+    for (let i = 0; i < 4; i++) {
+      match.o.hp -= 5;
+      ev('hit', { who: 'p', kind: i === 3 ? 'hook' : 'jab', tgt: 'head', power: .5, counter: i === 3, dir: [1, 0] });
+      await sleep(70);
+    }
+  },
+  async low() {
+    fightAt({ clock: 7.4, round: 3, scores: [{ p: 10, o: 9 }, { p: 9, o: 10 }] }); match.p.hp = 27; match.o.hp = 12; match.p.sta = 18; match.o.sta = 9;
+    settle();
+    match.p.hp = 19; ev('hit', { who: 'o', kind: 'cross', tgt: 'head', power: .95, dir: [-1, 0] });
+    await sleep(70);
+  },
+  async downo() {
+    match.state = 'down'; match.clock = 22; match.p.hp = 66; match.o.hp = 14; match.o.down = { t: 4.2, count: 4, n: 2 };
+    ev('knockdown', { who: 'o', power: 1 });
+  },
+  async downp() {
+    match.state = 'down'; match.clock = 22; match.p.hp = 0; match.o.hp = 71; match.p.down = { t: 6.1, count: 6, n: 1 };
+    ev('knockdown', { who: 'p', power: 1 });
+  },
+  async time() {
+    match.state = 'break'; match.clock = 8; match.p.hp = 58; match.o.hp = 44; match.scores = [{ p: 10, o: 9 }];
+    ev('round_end');
+  },
+  async ko() {
+    match.state = 'over'; match.clock = 12; match.round = 2; match.p.hp = 40; match.o.hp = 0; match.scores = [{ p: 10, o: 9 }];
+    match.result = { winner: 'p', how: 'ko', round: 2 }; ev('ko', { who: 'o' });
+  },
+  async tko() {
+    match.state = 'over'; match.clock = 33; match.round = 1; match.p.hp = 12; match.o.hp = 61;
+    match.result = { winner: 'o', how: 'tko', round: 1 }; ev('tko', { who: 'p' });
+  },
+  async stopped() {
+    match.state = 'over'; match.clock = 12; match.round = 3; match.p.hp = 71; match.o.hp = 54; match.scores = [{ p: 10, o: 9 }, { p: 10, o: 9 }];
+    match.result = { winner: 'p', how: 'stopped', round: 3 }; ev('stopped', { who: 'o' });
+  },
+  async decision() {
+    match.state = 'over'; match.clock = 0; match.round = 3; match.p.hp = 41; match.o.hp = 33; match.scores = [{ p: 10, o: 9 }, { p: 9, o: 10 }, { p: 10, o: 9 }];
+    match.result = { winner: 'p', how: 'decision', round: 3 }; ev('decision', { who: 'p' });
+  },
+  async endstop() {
+    match.state = 'over'; match.clock = 12; match.round = 3; match.p.hp = 71; match.o.hp = 54; match.p.clean = 4; match.o.clean = 19; match.p.landed = 41; match.o.landed = 22;
+    match.scores = [{ p: 10, o: 9 }, { p: 10, o: 9 }];
+    match.result = { winner: 'p', how: 'stopped', round: 3 }; ev('stopped', { who: 'o' });
+    await sleep(60); settle(5);
+  },
+  async endko() {
+    match.state = 'over'; match.clock = 12; match.round = 2; match.p.hp = 0; match.o.hp = 61; match.p.clean = 15; match.o.clean = 6; match.p.landed = 18; match.o.landed = 33;
+    match.scores = [{ p: 9, o: 10 }];
+    match.result = { winner: 'o', how: 'ko', round: 2 }; ev('ko', { who: 'p' });
+    await sleep(60); settle(5);
+  },
+  async enddec() {
+    match.state = 'over'; match.clock = 0; match.round = 3; match.p.hp = 41; match.o.hp = 33; match.p.clean = 9; match.o.clean = 11; match.p.landed = 38; match.o.landed = 35;
+    match.scores = [{ p: 10, o: 9 }, { p: 9, o: 10 }, { p: 10, o: 8 }];
+    match.result = { winner: 'p', how: 'decision', round: 3 }; ev('decision', { who: 'p' });
+    await sleep(60); settle(5);
+  },
+  async pause() {
+    fightAt({ clock: 43 }); match.p.hp = 71; match.o.hp = 52;
+    settle();
+    q('.ax-pausebtn').click();
+  },
+};
+const q = (s) => document.querySelector(s);
+window.HUDTEST = {
+  hud, log, scenes,
+  get match() { return match; },
+  sleep,
+  /* Run a scene on a fresh fake match, then wait for its entrance animation to settle. */
+  async scene(name, wait = 700) {
+    match = fakeMatch();
+    await sleep(40);
+    await hud.ready;
+    await scenes[name]();
+    await sleep(wait);
+    return { name, overflowX: overflow() };
+  },
+  overflow,
+};
+/* Anything on screen that runs off the side of the viewport. */
+function overflow() {
+  const w = innerWidth, h = innerHeight, bad = [];
+  for (const el of document.querySelectorAll('.ax-hud *')) {
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    if (el.closest('.ax-bn-burst,.ax-bn-glow,.ax-bn-ghost,.ax-sr')) continue;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    if (el.closest('.ax-bn') && !el.closest('.is-on')) continue;
+    if (el.closest('.ax-panel') && !el.closest('.is-on')) continue;
+    if (el.closest('.ax-load') && !el.closest('.is-on')) continue;
+    if (el.closest('.ax-bars')) continue;
+    if (r.right > w + 1 || r.left < -1) bad.push((el.className.baseVal ?? el.className) + ' ' + Math.round(r.left) + '..' + Math.round(r.right));
+  }
+  return bad.slice(0, 8);
+}
+</script>
+</body>
+</html>

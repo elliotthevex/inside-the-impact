@@ -14,6 +14,224 @@
   "source": "Poly Haven",
   "url": "https://polyhaven.com/a/basement_boxing_ring"
  },
+ "model:barrel_03": {
+  "authors": [
+   "Serhii Khromov"
+  ],
+  "files": [
+   "assets/models/ph/barrel_03/barrel_03.bin",
+   "assets/models/ph/barrel_03/barrel_03_1k.gltf",
+   "assets/models/ph/barrel_03/textures/barrel_03_arm_1k.webp",
+   "assets/models/ph/barrel_03/textures/barrel_03_diff_1k.webp",
+   "assets/models/ph/barrel_03/textures/barrel_03_nor_gl_1k.webp"
+  ],
+  "id": "barrel_03",
+  "kind": "model",
+  "license": "CC0 1.0",
+  "name": "Barrel 03",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/barrel_03"
+ },
+ "model:caged_hanging_light": {
+  "authors": [
+   "Ulan Cabanilla"
+  ],
+  "files": [
+   "assets/models/ph/caged_hanging_light/caged_hanging_light.bin",
+   "assets/models/ph/caged_hanging_light/caged_hanging_light_1k.gltf",
+   "assets/models/ph/caged_hanging_light/textures/caged_hanging_light_arm_1k.webp",
+   "assets/models/ph/caged_hanging_light/textures/caged_hanging_light_diff_1k.webp",
+   "assets/models/ph/caged_hanging_light/textures/caged_hanging_light_emissive_1k.webp",
+   "assets/models/ph/caged_hanging_light/textures/caged_hanging_light_nor_gl_1k.webp"
+  ],
+  "id": "caged_hanging_light",
+  "kind": "model",
+  "license": "CC0 1.0",
+  "name": "Caged Hanging Light",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/caged_hanging_light"
+ },
+ "model:hanging_industrial_lamp": {
+  "authors": [
+   "Kuutti Siitonen"
+  ],
+  "files": [
+   "assets/models/ph/hanging_industrial_lamp/hanging_industrial_lamp.bin",
+   "assets/models/ph/hanging_industrial_lamp/hanging_industrial_lamp_1k.gltf",
+   "assets/models/ph/hanging_industrial_lamp/textures/hanging_industrial_lamp_arm_1k.webp",
+   "assets/models/ph/hanging_industrial_lamp/textures/hanging_industrial_lamp_diff_1k.webp",
+   "assets/models/ph/hanging_industrial_lamp/textures/hanging_industrial_lamp_emissive_1k.webp",
+   "assets/models/ph/hanging_industrial_lamp/textures/hanging_industrial_lamp_glass_nor_gl_1k.webp",
+   "assets/models/ph/hanging_industrial_lamp/textures/hanging_industrial_lamp_nor_gl_1k.webp"
+  ],
+  "id": "hanging_industrial_lamp",
+  "kind": "model",
+  "license": "CC0 1.0",
+  "name": "Hanging Industrial Lamp",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/hanging_industrial_lamp"
+ },
+ "model:metal_stool_01": {
+  "authors": [
+   "Ulan Cabanilla"
+  ],
+  "files": [
+   "assets/models/ph/metal_stool_01/metal_stool_01.bin",
+   "assets/models/ph/metal_stool_01/metal_stool_01_1k.gltf",
+   "assets/models/ph/metal_stool_01/textures/metal_stool_01_arm_1k.webp",
+   "assets/models/ph/metal_stool_01/textures/metal_stool_01_diff_1k.webp",
+   "assets/models/ph/metal_stool_01/textures/metal_stool_01_nor_gl_1k.webp"
+  ],
+  "id": "metal_stool_01",
+  "kind": "model",
+  "license": "CC0 1.0",
+  "name": "Metal Stool 01",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/metal_stool_01"
+ },
+ "model:modular_airduct_circular_01": {
+  "authors": [
+   "Riley Queen"
+  ],
+  "files": [
+   "assets/models/ph/modular_airduct_circular_01/modular_airduct_circular_01.bin",
+   "assets/models/ph/modular_airduct_circular_01/modular_airduct_circular_01_1k.gltf",
+   "assets/models/ph/modular_airduct_circular_01/textures/modular_airduct_circular_01_arm_1k.webp",
+   "assets/models/ph/modular_airduct_circular_01/textures/modular_airduct_circular_01_diff_1k.webp",
+   "assets/models/ph/modular_airduct_circular_01/textures/modular_airduct_circular_01_nor_gl_1k.webp"
+  ],
+  "id": "modular_airduct_circular_01",
+  "kind": "model",
+  "license": "CC0 1.0",
+  "name": "Modular Airduct Circular 01",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/modular_airduct_circular_01"
+ },
+ "model:modular_industrial_pipes_01": {
+  "authors": [
+   "Jorge Camacho"
+  ],
+  "files": [
+   "assets/models/ph/modular_industrial_pipes_01/modular_industrial_pipes_01.bin",
+   "assets/models/ph/modular_industrial_pipes_01/modular_industrial_pipes_01_1k.gltf",
+   "assets/models/ph/modular_industrial_pipes_01/textures/modular_industrial_pipes_01_group01_arm_1k.webp",
+   "assets/models/ph/modular_industrial_pipes_01/textures/modular_industrial_pipes_01_group01_diff_1k.webp",
+   "assets/models/ph/modular_industrial_pipes_01/textures/modular_industrial_pipes_01_group01_nor_gl_1k.webp"
+  ],
+  "id": "modular_industrial_pipes_01",
+  "kind": "model",
+  "license": "CC0 1.0",
+  "name": "Modular Industrial Pipes 01",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/modular_industrial_pipes_01"
+ },
+ "model:mounted_fluorescent_lights": {
+  "authors": [
+   "Ulan Cabanilla"
+  ],
+  "files": [
+   "assets/models/ph/mounted_fluorescent_lights/mounted_fluorescent_lights.bin",
+   "assets/models/ph/mounted_fluorescent_lights/mounted_fluorescent_lights_1k.gltf",
+   "assets/models/ph/mounted_fluorescent_lights/textures/mounted_fluorescent_lights_arm_1k.webp",
+   "assets/models/ph/mounted_fluorescent_lights/textures/mounted_fluorescent_lights_diff_1k.webp",
+   "assets/models/ph/mounted_fluorescent_lights/textures/mounted_fluorescent_lights_emission_1k.webp",
+   "assets/models/ph/mounted_fluorescent_lights/textures/mounted_fluorescent_lights_nor_gl_1k.webp"
+  ],
+  "id": "mounted_fluorescent_lights",
+  "kind": "model",
+  "license": "CC0 1.0",
+  "name": "Mounted Fluorescent Lights",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/mounted_fluorescent_lights"
+ },
+ "model:rollershutter_door": {
+  "authors": [
+   "MP"
+  ],
+  "files": [
+   "assets/models/ph/rollershutter_door/rollershutter_door.bin",
+   "assets/models/ph/rollershutter_door/rollershutter_door_1k.gltf",
+   "assets/models/ph/rollershutter_door/textures/rollershutter_door_arm_1k.webp",
+   "assets/models/ph/rollershutter_door/textures/rollershutter_door_diff_1k.webp",
+   "assets/models/ph/rollershutter_door/textures/rollershutter_door_graffiti_diff_1k.webp",
+   "assets/models/ph/rollershutter_door/textures/rollershutter_door_nor_gl_1k.webp"
+  ],
+  "id": "rollershutter_door",
+  "kind": "model",
+  "license": "CC0 1.0",
+  "name": "Rollershutter Door",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/rollershutter_door"
+ },
+ "model:utility_box_01": {
+  "authors": [
+   "James Ray Cock"
+  ],
+  "files": [
+   "assets/models/ph/utility_box_01/textures/utility_box_01_arm_1k.webp",
+   "assets/models/ph/utility_box_01/textures/utility_box_01_diff_1k.webp",
+   "assets/models/ph/utility_box_01/textures/utility_box_01_nor_gl_1k.webp",
+   "assets/models/ph/utility_box_01/utility_box_01.bin",
+   "assets/models/ph/utility_box_01/utility_box_01_1k.gltf"
+  ],
+  "id": "utility_box_01",
+  "kind": "model",
+  "license": "CC0 1.0",
+  "name": "Utility Box 01",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/utility_box_01"
+ },
+ "model:wooden_bucket_01": {
+  "authors": [
+   "James Ray Cock"
+  ],
+  "files": [
+   "assets/models/ph/wooden_bucket_01/textures/wooden_bucket_01_arm_1k.webp",
+   "assets/models/ph/wooden_bucket_01/textures/wooden_bucket_01_diff_1k.webp",
+   "assets/models/ph/wooden_bucket_01/textures/wooden_bucket_01_nor_gl_1k.webp",
+   "assets/models/ph/wooden_bucket_01/wooden_bucket_01.bin",
+   "assets/models/ph/wooden_bucket_01/wooden_bucket_01_1k.gltf"
+  ],
+  "id": "wooden_bucket_01",
+  "kind": "model",
+  "license": "CC0 1.0",
+  "name": "Wooden Bucket 01",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/wooden_bucket_01"
+ },
+ "tex:concrete_block_wall": {
+  "authors": [
+   "Charlotte Baglioni"
+  ],
+  "files": [
+   "assets/tex/concrete_block_wall_diff.webp",
+   "assets/tex/concrete_block_wall_nor_gl.webp",
+   "assets/tex/concrete_block_wall_rough.webp"
+  ],
+  "id": "concrete_block_wall",
+  "kind": "tex",
+  "license": "CC0 1.0",
+  "name": "Concrete Block Wall",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/concrete_block_wall"
+ },
+ "tex:concrete_floor_worn_001": {
+  "authors": [
+   "Dimitrios Savva",
+   "Rico Cilliers"
+  ],
+  "files": [
+   "assets/tex/concrete_floor_worn_001_diff.webp",
+   "assets/tex/concrete_floor_worn_001_nor_gl.webp",
+   "assets/tex/concrete_floor_worn_001_rough.webp"
+  ],
+  "id": "concrete_floor_worn_001",
+  "kind": "tex",
+  "license": "CC0 1.0",
+  "name": "Concrete Floor Worn 001",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/concrete_floor_worn_001"
+ },
  "tex:crepe_satin": {
   "authors": [
    "colormass",
@@ -46,5 +264,36 @@
   "name": "Leather White",
   "source": "Poly Haven",
   "url": "https://polyhaven.com/a/leather_white"
+ },
+ "tex:old_planks_02": {
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "files": [
+   "assets/tex/old_planks_02_diff.webp",
+   "assets/tex/old_planks_02_nor_gl.webp",
+   "assets/tex/old_planks_02_rough.webp"
+  ],
+  "id": "old_planks_02",
+  "kind": "tex",
+  "license": "CC0 1.0",
+  "name": "Old Planks 02",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/old_planks_02"
+ },
+ "tex:rough_linen": {
+  "authors": [
+   "colormass",
+   "Rico Cilliers"
+  ],
+  "files": [
+   "assets/tex/rough_linen_nor_gl.webp"
+  ],
+  "id": "rough_linen",
+  "kind": "tex",
+  "license": "CC0 1.0",
+  "name": "Rough Linen",
+  "source": "Poly Haven",
+  "url": "https://polyhaven.com/a/rough_linen"
  }
 }

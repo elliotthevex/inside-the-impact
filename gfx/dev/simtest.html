@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sim Test</title>
+<style>
+:root{--bg:#10141a;--fg:#e8e6df;--mute:#8c97a3;--line:#2a333d;--good:#7fd18c;--bad:#e8806e}
+body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:13px/1.4 ui-monospace,Menlo,Consolas,monospace}
+h1{font-size:16px;margin:0 0 8px} h2{font-size:13px;margin:16px 0 4px;color:var(--mute);font-weight:normal}
+table{border-collapse:collapse;margin:4px 0 12px} th,td{border:1px solid var(--line);padding:2px 7px;text-align:right} th:first-child,td:first-child{text-align:left}
+th{color:var(--mute);font-weight:normal} button{font:inherit;background:#222b35;color:var(--fg);border:1px solid var(--line);padding:4px 10px;cursor:pointer}
+#out{overflow-x:auto} .bad{color:var(--bad)} .good{color:var(--good)}
+</style></head><body>
+<h1>Street Fight 3D: rules and AI test</h1>
+<p>Plays seeded matches with no graphics. <button id="go">Run 200 per bot on normal</button> <span id="status"></span></p>
+<div id="out"></div>
+<script type="module">
+/* HARNESS START */
+import { createMatch, STEP, PUNCHES, RING, HEAD } from '../arena/sim.js';
+import { createAI, createBot, BOTS } from '../arena/ai.js';
+
+const KINDS = Object.keys(PUNCHES);
+const blankSide = () => ({ thrown: 0, hit: 0, block: 0, slip: 0, whiff: 0, clean: 0, counter: 0, kinds: Object.fromEntries(KINDS.map((k) => [k, { thrown: 0, hit: 0, block: 0, slip: 0, whiff: 0 }])) });
+
+/* Play one match. Returns everything the report needs and any rule the sim broke. */
+function playMatch(botName, { difficulty = 'normal', seed = 1, kind = 'jab', trace = false } = {}) {
+  const m = createMatch({ seed });
+  const bot = createBot(botName, { seed: seed * 7 + 1, kind }), ai = createAI({ difficulty, seed: seed * 13 + 5 });
+  const r = { seed, bot: botName, sides: { p: blankSide(), o: blankSide() }, kd: { p: 0, o: 0 }, stag: { p: 0, o: 0 }, viol: {}, hash: 0, ropes: 0, log: trace ? [] : null };
+  const viol = (k) => { r.viol[k] = (r.viol[k] || 0) + 1; };
+  const inRange = m.ring.limit + m.ring.give + 1e-6, minSep = m.ring.minSep - .004;
+  let guard = 0;
+  while (m.state !== 'over' && guard++ < 120 * 900) {
+    const ip = bot.decide(m, m.p, m.o, STEP), io = ai.decide(m, m.o, m.p, STEP);
+    m.step(STEP, ip, io);
+    for (const e of m.events) {
+      const a = r.sides[e.who];
+      switch (e.type) {
+        case 'throw': a.thrown++; a.kinds[e.kind].thrown++; break;
+        case 'hit': a.hit++; a.kinds[e.kind].hit++; if (e.clean) a.clean++; if (e.counter) a.counter++; break;
+        case 'block': a.block++; a.kinds[e.kind].block++; break;
+        case 'slipped': a.slip++; a.kinds[e.kind].slip++; break;
+        case 'whiff': a.whiff++; a.kinds[e.kind].whiff++; break;
+        case 'knockdown': r.kd[e.who]++; break;
+        case 'stagger': r.stag[e.who]++; break;
+        case 'rope': r.ropes++; break;
+      }
+      if (trace && e.type !== 'step') r.log.push(e);
+    }
+    m.events.length = 0;
+    /* invariants, every step */
+    const { p, o } = m, d = Math.hypot(p.x - o.x, p.z - o.z);
+    if (d < minSep) viol('overlap');
+    for (const f of [p, o]) {
+      if (Math.abs(f.x) > inRange || Math.abs(f.z) > inRange) viol('rope');
+      if (!(f.hp >= 0 && f.hp <= f.maxHp) || !(f.sta >= 0 && f.sta <= f.maxSta)) viol('range');
+      if (!(f.guard >= 0 && f.guard <= 1)) viol('guard');
+      if (!Number.isFinite(f.x + f.z + f.yaw + f.vx + f.vz + f.head)) viol('nan');
+      if (f.punch && f.punch.t > f.punch.dur + .1) viol('punch');
+    }
+  }
+  if (m.state !== 'over') viol('never ended');
+  r.result = m.result; r.round = m.round; r.time = m.time; r.pHp = m.p.hp; r.oHp = m.o.hp; r.pHead = m.p.head; r.oHead = m.o.head;
+  r.pClean = m.p.clean; r.oClean = m.o.clean; r.pKd = m.p.kdTotal; r.oKd = m.o.kdTotal;
+  r.hash = Math.round((m.p.hp * 31 + m.o.hp * 17 + m.time * 1000 + m.p.x * 991 + m.o.z * 577) * 1000);
+  return r;
+}
+
+const pct = (a, b) => (b ? +(100 * a / b).toFixed(1) : 0);
+const stats = (xs) => {
+  if (!xs.length) return null;
+  const a = xs.slice().sort((p, q) => p - q), q = (f) => +a[Math.min(a.length - 1, Math.floor(f * a.length))].toFixed(1);
+  return { n: a.length, mean: +(a.reduce((s, x) => s + x, 0) / a.length).toFixed(1), min: +a[0].toFixed(1), p25: q(.25), med: q(.5), p75: q(.75), max: +a[a.length - 1].toFixed(1) };
+};
+
+/* Many matches of one bot against one level. kinds: spam bot cycles its one button through the six punches. */
+function suite(botName, { n = 200, difficulty = 'normal', seed0 = 1000, kind = null } = {}) {
+  const T = { bot: botName, kind, difficulty, n, wins: 0, losses: 0, draws: 0, how: { ko: 0, tko: 0, stopped: 0, decision: 0 }, lossHow: { ko: 0, tko: 0, stopped: 0, decision: 0 }, rounds: 0, roundHist: [0, 0, 0, 0],
+    p: blankSide(), o: blankSide(), viol: {}, stopHp: [], stopHpP: [], stopHpO: [], stopHeadFromHooks: 0, pClean: 0, oClean: 0, pKd: 0, oKd: 0, finalHpWin: [], time: 0 };
+  const add = (A, B) => { for (const k of ['thrown', 'hit', 'block', 'slip', 'whiff', 'clean', 'counter']) A[k] += B[k]; for (const q of KINDS) for (const k of ['thrown', 'hit', 'block', 'slip', 'whiff']) A.kinds[q][k] += B.kinds[q][k]; };
+  for (let i = 0; i < n; i++) {
+    const k = kind ?? (botName === 'spam' ? KINDS[i % KINDS.length] : 'jab');
+    const r = playMatch(botName, { difficulty, seed: seed0 + i, kind: k });
+    const w = r.result ? r.result.winner : null, how = r.result ? r.result.how : 'decision';
+    if (w === 'p') T.wins++; else if (w === 'o') { T.losses++; T.lossHow[how]++; } else T.draws++;
+    T.how[how]++; T.rounds += r.round; T.roundHist[r.round]++;
+    add(T.p, r.sides.p); add(T.o, r.sides.o);
+    if (how === 'stopped') { const hp = r.result.loserHp; T.stopHp.push(hp); (w === 'p' ? T.stopHpO : T.stopHpP).push(hp); }
+    T.pClean += r.pClean; T.oClean += r.oClean; T.pKd += r.pKd; T.oKd += r.oKd; T.time += r.time;
+    for (const v in r.viol) T.viol[v] = (T.viol[v] || 0) + r.viol[v];
+  }
+  return T;
+}
+
+function rowOf(T) {
+  const n = T.n, H = (S) => ({ thrown: +(S.thrown / n).toFixed(1), land: pct(S.hit, S.thrown), block: pct(S.block, S.thrown), slip: pct(S.slip, S.thrown), whiff: pct(S.whiff, S.thrown) });
+  return { bot: T.bot + (T.kind ? ':' + T.kind : ''), lvl: T.difficulty, n, win: pct(T.wins, n), loss: pct(T.losses, n), draw: pct(T.draws, n), how: T.how, lossHow: T.lossHow, avgRounds: +(T.rounds / n).toFixed(2), roundHist: T.roundHist.slice(1), player: H(T.p), ai: H(T.o),
+    stopHp: stats(T.stopHp), stopHpPlayer: stats(T.stopHpP), stopHpAI: stats(T.stopHpO), cleanTakenPerMatch: { p: +(T.pClean / n).toFixed(1), o: +(T.oClean / n).toFixed(1) }, kdPerMatch: { p: +(T.pKd / n).toFixed(2), o: +(T.oKd / n).toFixed(2) }, secs: +(T.time / n).toFixed(0), viol: T.viol };
+}
+const kindTable = (S) => Object.fromEntries(KINDS.map((k) => { const c = S.kinds[k]; return [k, { thrown: c.thrown, hit: pct(c.hit, c.thrown), block: pct(c.block, c.thrown), slip: pct(c.slip, c.thrown), whiff: pct(c.whiff, c.thrown) }]; }));
+
+/* The whole report on normal, and a short look at the other two levels. */
+function fullReport({ n = 200, seed0 = 1000 } = {}) {
+  const rows = {}, kinds = {};
+  for (const b of BOTS) { const T = suite(b, { n, seed0 }); rows[b] = rowOf(T); kinds[b] = { player: kindTable(T.p), ai: kindTable(T.o) }; }
+  return { rows, kinds };
+}
+function spamByKind({ n = 60, seed0 = 3000, difficulty = 'normal' } = {}) { const out = {}; for (const k of KINDS) { const R = rowOf(suite('spam', { n, seed0, kind: k, difficulty })); out[k] = { win: R.win, how: R.how, avgRounds: R.avgRounds, land: R.player.land, block: R.player.block, slip: R.player.slip, whiff: R.player.whiff }; } return out; }
+function levels({ n = 100, seed0 = 5000 } = {}) { const out = {}; for (const d of ['easy', 'normal', 'hard']) { out[d] = {}; for (const b of ['mixed', 'skilled']) { const R = rowOf(suite(b, { n, difficulty: d, seed0 })); out[d][b] = { win: R.win, how: R.how, avgRounds: R.avgRounds, stopHp: R.stopHp }; } } return out; }
+/* Same seed, same fight. */
+function determinism(n = 8) { let same = 0; for (let i = 0; i < n; i++) { const a = playMatch('mixed', { seed: 77 + i }), b = playMatch('mixed', { seed: 77 + i }); if (a.hash === b.hash && a.time === b.time) same++; } return { same, of: n }; }
+/* HARNESS END */
+
+/* ---------- page ---------- */
+const out = document.getElementById('out'), status = document.getElementById('status');
+function tableOf(rows) {
+  const row = (R) => `<tr><td>${R.bot}</td><td>${R.n}</td><td>${R.win}</td><td>${R.how.ko}</td><td>${R.how.tko}</td><td>${R.how.stopped}</td><td>${R.how.decision}</td><td>${R.avgRounds}</td><td>${R.roundHist.join(' / ')}</td><td>${R.player.land} / ${R.player.block} / ${R.player.slip} / ${R.player.whiff}</td><td>${R.ai.land} / ${R.ai.block} / ${R.ai.slip} / ${R.ai.whiff}</td><td>${R.stopHp ? `${R.stopHp.n}: ${R.stopHp.p25} ${R.stopHp.med} ${R.stopHp.p75}` : '-'}</td><td>${R.cleanTakenPerMatch.p} / ${R.cleanTakenPerMatch.o}</td><td class="${Object.keys(R.viol).length ? 'bad' : 'good'}">${Object.keys(R.viol).length ? JSON.stringify(R.viol) : 'none'}</td></tr>`;
+  return `<table><tr><th>player bot</th><th>n</th><th>win %</th><th>KO</th><th>TKO</th><th>stopped</th><th>decision</th><th>avg rounds</th><th>ended in round 1/2/3</th><th>player land/block/slip/whiff %</th><th>AI land/block/slip/whiff %</th><th>stoppage HP n: p25 median p75</th><th>clean taken p/o</th><th>rule breaks</th></tr>${Object.values(rows).map(row).join('')}</table>`;
+}
+function kindsOf(kinds, who) {
+  const K = Object.keys(PUNCHES);
+  return Object.entries(kinds).map(([b, v]) => `<h2>${b}: ${who} by punch, hit / blocked / slipped / whiffed %</h2><table><tr><th>punch</th><th>thrown</th><th>hit</th><th>blocked</th><th>slipped</th><th>whiffed</th></tr>${K.map((k) => { const c = v[who][k]; return `<tr><td>${k}</td><td>${c.thrown}</td><td>${c.hit}</td><td>${c.block}</td><td>${c.slip}</td><td>${c.whiff}</td></tr>`; }).join('')}</table>`).join('');
+}
+const SIMTEST = { playMatch, suite, rowOf, fullReport, spamByKind, levels, determinism, tableOf,
+  /* The run the notes quote: returns a plain object, also drawn on the page. */
+  run({ n = 200, seed0 = 1000 } = {}) { const t0 = performance.now(); const R = fullReport({ n, seed0 }); out.innerHTML = tableOf(R.rows) + kindsOf(R.kinds, 'player') + kindsOf(R.kinds, 'ai'); status.textContent = `done in ${((performance.now() - t0) / 1000).toFixed(1)} s`; return R; } };
+window.SIMTEST = SIMTEST;
+document.getElementById('go').addEventListener('click', () => { status.textContent = 'running...'; setTimeout(() => SIMTEST.run(), 30); });
+</script>
+</body></html>

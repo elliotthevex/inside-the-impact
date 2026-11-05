@@ -69,4 +69,4 @@ def main():
         meta=dict(name=name,fps=round(1/(dt*step)),frames=len(Q),bones=names,source=os.path.basename(src),t0=t0,t1=t1)
         np.concatenate([Q.astype(np.float32).ravel(),rootc.astype(np.float32).ravel()]).tofile(os.path.join(outdir,name+'.bin'));json.dump(meta,open(os.path.join(outdir,name+'.json'),'w'))
         print(name,len(Q),'frames',round(len(Q)/meta['fps'],2),'s')
-main()
+if __name__=='__main__': main()

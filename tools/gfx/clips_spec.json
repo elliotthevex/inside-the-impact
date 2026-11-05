@@ -1,0 +1,116 @@
+[
+{
+"name": "stance",
+"src": "15_13",
+"t0": 69.1,
+"t1": 70.05,
+"aim": "pelvis",
+"blade": -28,
+"loop": true,
+"fade": 0.2,
+"calm": 0.5,
+"stretch": 3
+},
+{
+"name": "jab",
+"src": "14_01",
+"hand": "L",
+"t0": 40.7,
+"t1": 41.8,
+"tpeak": 41.18,
+"stroke": true,
+"pre": 0.34,
+"post": 0.3
+},
+{
+"name": "cross",
+"src": "14_01",
+"hand": "R",
+"t0": 27.2,
+"t1": 28.3,
+"tpeak": 27.7,
+"stroke": true,
+"pre": 0.36,
+"post": 0.32
+},
+{
+"name": "hook",
+"src": "14_03",
+"hand": "L",
+"t0": 16.6,
+"t1": 17.6,
+"tpeak": 17.08,
+"aim": "pelvis",
+"stroke": true,
+"pre": 0.34,
+"post": 0.26
+},
+{
+"name": "hookR",
+"src": "14_03",
+"hand": "R",
+"t0": 38.8,
+"t1": 39.9,
+"tpeak": 39.32,
+"aim": "pelvis",
+"stroke": true,
+"pre": 0.36,
+"post": 0.32
+},
+{
+"name": "upper",
+"src": "14_03",
+"hand": "R",
+"t0": 11.45,
+"t1": 12.5,
+"tpeak": 11.95,
+"stroke": true,
+"pre": 0.38,
+"post": 0.32
+},
+{
+"name": "bodyL",
+"src": "14_03",
+"hand": "L",
+"t0": 26.8,
+"t1": 27.7,
+"tpeak": 27.2,
+"stroke": true,
+"pre": 0.32,
+"post": 0.3
+},
+{
+"name": "bodyR",
+"src": "14_03",
+"hand": "R",
+"t0": 28.7,
+"t1": 29.6,
+"tpeak": 29.14,
+"stroke": true,
+"pre": 0.34,
+"post": 0.3
+},
+{
+"name": "knockdown",
+"src": "90_18",
+"t0": 0.62,
+"t1": 3.15,
+"aim": "pelvis",
+"blade": 0,
+"guard": false,
+"fps": 60,
+"floor": "lie",
+"lie": "end"
+},
+{
+"name": "getup",
+"src": "140_08",
+"t0": 0.05,
+"t1": 5.62,
+"aim": "lie",
+"guard": false,
+"fps": 30,
+"floor": "end",
+"lie": "start"
+}
+]
