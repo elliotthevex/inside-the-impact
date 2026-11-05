@@ -5029,10 +5029,11 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         if (Math.abs(d) < 0.004) return;                 /* no jitter */
         f.yaw += d * Math.min(1, dt * 9);
       }
-      function a3Drive(f, fwd, strafe, speed, dt) {
-        /* input is relative to where he is facing, like any fighter */
-        let dx = Math.sin(f.yaw) * fwd + Math.cos(f.yaw) * strafe;
-        let dz = Math.cos(f.yaw) * fwd - Math.sin(f.yaw) * strafe;
+      /* direction is WORLD space. The player feeds it camera-relative input
+         so W is always "away from the camera" whichever way the fight has
+         turned; the AI feeds its own approach vector. Facing is handled
+         separately by a3Face, so he stays bladed to his man either way. */
+      function a3Drive(f, dx, dz, speed, dt) {
         const l = Math.hypot(dx, dz);
         if (l > 1) { dx /= l; dz /= l; }                 /* diagonals are not faster */
         const tvx = dx * speed, tvz = dz * speed;
@@ -5063,20 +5064,24 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 
       /* ── the player ───────────────────────────────────────────── */
       function a3Player(dt) {
-        const p = A3.p, K = A3.keys;
+        const p = A3.p, K = A3.keys, cam = A3.cam;
         const fwd = (K.has("w") ? 1 : 0) - (K.has("s") ? 1 : 0);
         const str = (K.has("d") ? 1 : 0) - (K.has("a") ? 1 : 0);
-        const wantSprint = K.has("shift") && (fwd || str) && p.sta > 6;
-        let speed = 2.5;
-        if (wantSprint) { speed = 4.3; p.sta -= 22 * dt; p.sprint = 1; }
-        else p.sprint = Math.max(0, p.sprint - dt * 4);
-        if (p.sidestep > 0) {
-          p.sidestep -= dt;
-          speed = 6.4;
-        }
-        if (!wantSprint && p.sidestep <= 0) p.sta = Math.min(p.maxSta, p.sta + 15 * dt);
+        /* camera-relative: flatten the camera's forward onto the floor and
+           take right as a quarter turn from it, so W is always into the
+           screen no matter where the camera has swung to */
+        let cfx = cam.lx - cam.x, cfz = cam.lz - cam.z;
+        const cl = Math.hypot(cfx, cfz) || 1;
+        cfx /= cl; cfz /= cl;
+        const crx = cfz, crz = -cfx;
+        const dx = cfx * fwd + crx * str;
+        const dz = cfz * fwd + crz * str;
+        /* walking is free; only the sidestep costs anything */
+        let speed = 2.6;
+        if (p.sidestep > 0) { p.sidestep -= dt; speed = 6.4; }
+        else p.sta = Math.min(p.maxSta, p.sta + 16 * dt);
         p.sta = a3Clamp(p.sta, 0, p.maxSta);
-        a3Drive(p, fwd, str, speed, dt);
+        a3Drive(p, dx, dz, speed, dt);
         a3Face(p, A3.o.x, A3.o.z, dt);
       }
       function a3Sidestep() {
@@ -5099,11 +5104,21 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         /* close the gap, back off when crowded, and never just stand */
         const fwd = d > o.ai.want + 0.25 ? 1 : d < o.ai.want - 0.35 ? -1 : 0;
         const str = o.ai.strafe * (d < 3.2 ? 1 : 0.35);
-        let speed = 2.2;
-        if (fwd > 0 && d > 3.4 && o.sta > 12) { speed = 3.5; o.sta -= 14 * dt; }
-        else o.sta = Math.min(o.maxSta, o.sta + 13 * dt);
+        /* its intent is relative to the man in front of it; turn that into
+           world space so it shares one movement path with the player */
+        const dx = Math.sin(o.yaw) * fwd + Math.cos(o.yaw) * str;
+        const dz = Math.cos(o.yaw) * fwd - Math.sin(o.yaw) * str;
+        let speed = 2.3;
+        if (o.sidestep > 0) { o.sidestep -= dt; speed = 6.0; }
+        else {
+          /* it buys angles with the same stamina the player spends */
+          if (d < 2.2 && o.sta > 30 && o.ai.t > 0.7 && o.ai.t < 0.78) {
+            o.sidestep = 0.2; o.sta -= 18;
+          }
+          o.sta = Math.min(o.maxSta, o.sta + 14 * dt);
+        }
         o.sta = a3Clamp(o.sta, 0, o.maxSta);
-        a3Drive(o, fwd, str, speed, dt);
+        a3Drive(o, dx, dz, speed, dt);
         a3Face(o, p.x, p.z, dt);
       }
 
@@ -5247,7 +5262,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             "</div>" +
           "</div>" +
           '<div class="a3-banner" id="a3-banner">READY</div>' +
-          '<div class="a3-keys">WASD move · Shift sprint · Space sidestep · Esc exit</div>' +
+          '<div class="a3-keys">WASD move (camera-relative) · Space sidestep · Esc exit</div>' +
           '<button class="a3-exit" id="a3-exit" type="button">Exit</button>' +
           '<button class="a3-restart" id="a3-restart" type="button" hidden>Fight again</button>';
         document.body.appendChild(el);
@@ -5292,7 +5307,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         if (!a3Open()) return;
         const k = e.key.toLowerCase();
         if (k === "escape") { e.preventDefault(); return closeArena3D(); }
-        if (["w", "a", "s", "d", "shift"].includes(k)) { A3.keys.add(k); e.preventDefault(); }
+        if (["w", "a", "s", "d"].includes(k)) { A3.keys.add(k); e.preventDefault(); }
         if (k === " ") { a3Sidestep(); e.preventDefault(); }
       });
       window.addEventListener("keyup", (e) => {
