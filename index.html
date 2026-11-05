@@ -4874,9 +4874,20 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       const A3_BOUND = 5.0;          /* half-width of the playable floor */
       const A3_SEP = 1.05;           /* fighters never share a spot      */
 
-      function a3Fighter(side, name, col, trim) {
+      const A3_KIT = {
+        player: { robe1:"#3a3f46", robe2:"#8e97a2", trimR:"rgb(190,48,44)", trimW:"rgb(232,232,228)",
+                  glove:"#2f5fa8", gloveT:"#4e83d4", cuff:"#9aa4b0", chain:"rgb(206,212,219)",
+                  short1:"#26438a", short2:"#7d8894", belt:"#1b2740", boot:"#1d2432", bootT:"#39424f" },
+        rival:  { robe1:"#45383a", robe2:"#9a8a86", trimR:"rgb(214,164,60)", trimW:"rgb(236,228,214)",
+                  glove:"#a8382c", gloveT:"#d2553f", cuff:"#b0a39a", chain:"rgb(214,198,150)",
+                  short1:"#7a2320", short2:"#9d9188", belt:"#2c1a18", boot:"#241c1c", bootT:"#4a3b38" },
+      };
+      function a3Fighter(side, name, col, trim, kit) {
         return {
           name, col, trim,
+          kit: A3_KIT[kit] || A3_KIT.player,
+          dt: 0.016,
+          robe: { rx:[0,0,0], rz:[0,0,0], vx:[0,0,0], vz:[0,0,0], pf:0, pl:0, py:0 },
           x: side * 2.4, y: 0, z: 0,
           vx: 0, vz: 0,                       /* velocity, for real accel */
           yaw: side > 0 ? -Math.PI / 2 : Math.PI / 2,
@@ -4963,37 +4974,328 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         }
       }
 
-      /* ── a blocky fighter, posed ──────────────────────────────── */
+      /* ══ RIGGED FIGHTER ═══════════════════════════════════════════
+         A real bone hierarchy, not a pile of boxes at hand-computed
+         world positions. Each bone holds a 3x4 matrix composed from its
+         parent, so a glove follows a forearm that follows an upper arm,
+         and elbows and knees actually bend.
+
+         Conventions, derived from a3Box's own matrix rather than assumed:
+           +X = the fighter's own right, +Y = up, +Z = forward (at his man)
+           M = Mparent · T(offset) · Ry · Rx · Rz
+           NEGATIVE rx flexes an elbow forward; POSITIVE rx folds a knee.
+           +rz abducts the right arm, -rz the left.
+           Mirroring a pose is (rx, -ry, -rz) with the x offset negated —
+           never a negative scale, which flips winding and breaks both the
+           backface test and the lambert, as both assume unit normals.      */
+
+      const A3_BONE = [
+        /* name,      parent,      offset            */
+        ["root",      -1, 0, 1.00, 0],
+        ["pelvis",     0, 0, 0.00, 0],
+        ["spine",      1, 0, 0.12, 0],
+        ["chest",      2, 0, 0.16, 0],
+        ["neck",       3, 0, 0.28, 0.02],
+        ["head",       4, 0, 0.10, 0],
+        ["hood",       5, 0, 0.04, -0.03],
+        ["clavR",      3, 0.09, 0.20, 0],
+        ["upperR",     7, 0.21, 0, 0],
+        ["foreR",      8, 0, -0.32, 0],
+        ["gloveR",     9, 0, -0.28, 0],
+        ["clavL",      3, -0.09, 0.20, 0],
+        ["upperL",    11, -0.21, 0, 0],
+        ["foreL",     12, 0, -0.32, 0],
+        ["gloveL",    13, 0, -0.28, 0],
+        ["hipR",       1, 0.17, -0.06, 0],
+        ["shinR",     15, 0, -0.44, 0],
+        ["footR",     16, 0, -0.40, 0],
+        ["hipL",       1, -0.17, -0.06, 0],
+        ["shinL",     18, 0, -0.44, 0],
+        ["footL",     19, 0, -0.40, 0],
+        ["robeR",      3, 0.20, 0.06, 0.28],
+        ["robeL",      3, -0.20, 0.06, 0.28],
+        ["robeB",      3, 0, 0.06, -0.28],
+      ];
+      const A3_NB = A3_BONE.length;
+      const A3_BI = {};
+      A3_BONE.forEach((b, i) => { A3_BI[b[0]] = i; });
+
+      /* one 12-float matrix per bone, and one pose triple per bone.
+         Module scope and reused, so a frame allocates nothing. */
+      const a3M = new Float32Array(A3_NB * 12);
+      const a3P = new Float32Array(A3_NB * 3);
+      const a3TmpR = new Float32Array(9);
+
+      function a3Local(rx, ry, rz, out) {
+        const cx = Math.cos(rx), sx = Math.sin(rx);
+        const cy = Math.cos(ry), sy = Math.sin(ry);
+        const cz = Math.cos(rz), sz = Math.sin(rz);
+        /* R = Ry · Rx · Rz, multiplied out once rather than symbolically,
+           because a hand-expanded version is where sign bugs hide */
+        out[0] = cy * cz + sy * sx * sz;
+        out[1] = -cy * sz + sy * sx * cz;
+        out[2] = sy * cx;
+        out[3] = cx * sz;
+        out[4] = cx * cz;
+        out[5] = -sx;
+        out[6] = -sy * cz + cy * sx * sz;
+        out[7] = sy * sz + cy * sx * cz;
+        out[8] = cy * cx;
+      }
+
+      /* resolve the whole skeleton in one flat forward pass — the bone
+         array is in topological order, so no recursion and no stack */
+      function a3Skeleton(f) {
+        for (let i = 0; i < A3_NB; i++) {
+          const B = A3_BONE[i], p = B[1], m = i * 12;
+          a3Local(a3P[i * 3], a3P[i * 3 + 1], a3P[i * 3 + 2], a3TmpR);
+          const ox = B[2], oy = B[3], oz = B[4];
+          if (p < 0) {
+            /* the root carries the fighter into the world: his yaw and
+               his position on the floor */
+            const c = Math.cos(f.yaw), s = Math.sin(f.yaw);
+            const r = [c, 0, s, 0, 1, 0, -s, 0, c];
+            for (let r0 = 0; r0 < 3; r0++)
+              for (let c0 = 0; c0 < 3; c0++) {
+                let v = 0;
+                for (let k = 0; k < 3; k++) v += r[r0 * 3 + k] * a3TmpR[k * 3 + c0];
+                a3M[m + r0 * 3 + c0] = v;
+              }
+            a3M[m + 9] = f.x;
+            a3M[m + 10] = f.y + oy + (f.bob || 0);
+            a3M[m + 11] = f.z;
+          } else {
+            const q = p * 12;
+            for (let r0 = 0; r0 < 3; r0++)
+              for (let c0 = 0; c0 < 3; c0++) {
+                let v = 0;
+                for (let k = 0; k < 3; k++) v += a3M[q + r0 * 3 + k] * a3TmpR[k * 3 + c0];
+                a3M[m + r0 * 3 + c0] = v;
+              }
+            a3M[m + 9] = a3M[q] * ox + a3M[q + 1] * oy + a3M[q + 2] * oz + a3M[q + 9];
+            a3M[m + 10] = a3M[q + 3] * ox + a3M[q + 4] * oy + a3M[q + 5] * oz + a3M[q + 10];
+            a3M[m + 11] = a3M[q + 6] * ox + a3M[q + 7] * oy + a3M[q + 8] * oz + a3M[q + 11];
+          }
+        }
+      }
+
+      /* a cuboid hung off a bone. The matrix origin IS the joint, and the
+         box sits at a local offset from it — rotating a forearm about its
+         own midpoint would pinwheel it instead of swinging it. bias pulls
+         a face forward in the depth sort without moving it. */
+      const A3_CORNER = [
+        [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+        [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1],
+      ];
+      const A3_FACE = [
+        [0, 1, 2, 3, 0, 0, -1], [5, 4, 7, 6, 0, 0, 1],
+        [4, 0, 3, 7, -1, 0, 0], [1, 5, 6, 2, 1, 0, 0],
+        [3, 2, 6, 7, 0, 1, 0], [4, 5, 1, 0, 0, -1, 0],
+      ];
+      const a3CV = Array.from({ length: 8 }, () => ({ x: 0, y: 0, z: 0 }));
+      function a3BoxM(out, bi, ox, oy, oz, sx, sy, sz, col, bias) {
+        const m = bi * 12;
+        const hx = sx / 2, hy = sy / 2, hz = sz / 2;
+        for (let i = 0; i < 8; i++) {
+          const c = A3_CORNER[i];
+          const lx = ox + c[0] * hx, ly = oy + c[1] * hy, lz = oz + c[2] * hz;
+          a3CV[i].x = a3M[m] * lx + a3M[m + 1] * ly + a3M[m + 2] * lz + a3M[m + 9];
+          a3CV[i].y = a3M[m + 3] * lx + a3M[m + 4] * ly + a3M[m + 5] * lz + a3M[m + 10];
+          a3CV[i].z = a3M[m + 6] * lx + a3M[m + 7] * ly + a3M[m + 8] * lz + a3M[m + 11];
+        }
+        for (const F of A3_FACE) {
+          const nx = F[4], ny = F[5], nz = F[6];
+          out.push({
+            v: [
+              { x: a3CV[F[0]].x, y: a3CV[F[0]].y, z: a3CV[F[0]].z },
+              { x: a3CV[F[1]].x, y: a3CV[F[1]].y, z: a3CV[F[1]].z },
+              { x: a3CV[F[2]].x, y: a3CV[F[2]].y, z: a3CV[F[2]].z },
+              { x: a3CV[F[3]].x, y: a3CV[F[3]].y, z: a3CV[F[3]].z },
+            ],
+            /* normals go through the upper 3x3 only, and it is a pure
+               rotation, so they stay unit length and the lambert holds */
+            nx: a3M[m] * nx + a3M[m + 1] * ny + a3M[m + 2] * nz,
+            ny: a3M[m + 3] * nx + a3M[m + 4] * ny + a3M[m + 5] * nz,
+            nz: a3M[m + 6] * nx + a3M[m + 7] * ny + a3M[m + 8] * nz,
+            col, bias: bias || 0,
+          });
+        }
+      }
+
+      /* ── POSE ──────────────────────────────────────────────────────
+         Procedural channels on top of a base boxing stance. Everything
+         reads the drivers that already tick: step, vx/vz, yaw, sidestep. */
+      function a3Pose(f) {
+        a3P.fill(0);
+        const set = (name, rx, ry, rz) => {
+          const i = A3_BI[name] * 3;
+          a3P[i] = rx; a3P[i + 1] = ry; a3P[i + 2] = rz;
+        };
+        const t = f.step;
+        const breathe = Math.sin(t * 0.8) * 0.02;
+
+        /* how fast and which way he is travelling, in his own frame */
+        const c = Math.cos(f.yaw), s = Math.sin(f.yaw);
+        const fwd = f.vx * s + f.vz * c;          /* + = advancing   */
+        const lat = f.vx * c - f.vz * s;          /* + = to his right */
+        const sp = Math.min(1, Math.hypot(f.vx, f.vz) / 2.6);
+
+        /* bladed stance: lead shoulder toward the opponent, hips squarer */
+        set("pelvis", 0, 0.26, 0);
+        set("spine", -0.04 + fwd * 0.03, -0.10, 0);
+        set("chest", -0.06 - fwd * 0.04, -0.16, 0);
+        set("neck", 0.05, 0.10, 0);
+        set("head", 0.04 + breathe, 0.06, 0);
+
+        /* guard up by the chin. Reach comes from the arm chain, never
+           from translating the glove off the wrist. */
+        const jab = f.lunge || 0;
+        set("clavR", 0, -0.10 - jab * 0.2, 0.06);
+        set("upperR", -0.55 - jab * 0.55, 0, 0.34);
+        set("foreR", -1.50 + jab * 1.30, 0, 0);
+        set("clavL", 0, 0.14, -0.06);
+        set("upperL", -0.70, 0, -0.30);
+        set("foreL", -1.65, 0, 0);
+
+        /* footwork. A boxer never walks: the feet shuffle, the lead stays
+           lead, and he never turns his back. Gait is a small oscillation
+           scaled by speed, not a stride cycle. */
+        const gait = Math.sin(t) * sp;
+        const lift = Math.max(0, Math.sin(t)) * sp;
+        /* hip rx swings the leg fore/aft; knee folds on POSITIVE rx */
+        set("hipR", -0.12 - gait * 0.30 + fwd * 0.10, 0.10, lat * 0.26);
+        set("shinR", 0.22 + lift * 0.40, 0, 0);
+        set("footR", 0.04, 0, 0);
+        set("hipL", -0.06 + gait * 0.30 - fwd * 0.10, -0.14, lat * 0.26);
+        set("shinL", 0.30 + Math.max(0, -Math.sin(t)) * sp * 0.40, 0, 0);
+        set("footL", 0.04, 0, 0);
+
+        /* sidestep: drop and lean into the step */
+        if (f.sidestep > 0) {
+          const k = f.sidestep / 0.22;
+          a3P[A3_BI.pelvis * 3 + 2] += lat * 0.18 * k;
+          a3P[A3_BI.spine * 3 + 2] += lat * 0.12 * k;
+        }
+
+        /* the robe trails. Spring-damper per panel, driven by how hard he
+           is accelerating and turning — bone-based secondary motion, which
+           is what this renderer can actually carry. */
+        const R = f.robe;
+        const dvx = fwd - R.pf, dvl = lat - R.pl;
+        R.pf = fwd; R.pl = lat;
+        let dyaw = f.yaw - R.py;
+        while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+        while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+        R.py = f.yaw;
+        for (let i = 0; i < 3; i++) {
+          const drive = (i === 2 ? -fwd * 0.16 : fwd * 0.10) - dvx * 0.9;
+          const side = (i === 0 ? 1 : i === 1 ? -1 : 0) * dyaw * 2.2 - dvl * 0.5;
+          /* critically damped-ish: stiff enough to settle, soft enough to lag */
+          R.vx[i] += (drive - R.rx[i]) * 26 * f.dt - R.vx[i] * 7.5 * f.dt;
+          R.vz[i] += (side - R.rz[i]) * 26 * f.dt - R.vz[i] * 7.5 * f.dt;
+          R.rx[i] += R.vx[i] * f.dt;
+          R.rz[i] += R.vz[i] * f.dt;
+          R.rx[i] = a3Clamp(R.rx[i], -0.55, 0.55);
+          R.rz[i] = a3Clamp(R.rz[i], -0.5, 0.5);
+        }
+        set("robeR", R.rx[0], 0, R.rz[0] + 0.05);
+        set("robeL", R.rx[1], 0, R.rz[1] - 0.05);
+        set("robeB", R.rx[2], 0, R.rz[2]);
+        /* the hood lags the head, at a fraction of it */
+        set("hood", a3P[A3_BI.head * 3] * 0.6, a3P[A3_BI.head * 3 + 1] * 0.6, 0);
+      }
+
+      /* ── COSTUME ───────────────────────────────────────────────────
+         ~50 cuboids. Two rules drive the whole thing. The light only ever
+         BRIGHTENS an up-facing surface (0.55x on every side, 1.08x on top),
+         so the costume is terraced — every tier presents a horizontal top
+         face to catch it. And a3Render shades only '#' colours, so the red
+         and white trim is rgb(), which bypasses the lighting entirely and
+         holds its value through every yaw. The trim carries the identity
+         more reliably than the geometry does at 150-300px.              */
+      const A3_SKIN = "#d9956e", A3_SKIN_D = "#b87a56";
       function a3BuildFighter(out, f, hurt) {
-        const sw = Math.sin(f.step) * 0.22;            /* leg swing       */
-        const bob = Math.sin(f.step * 2) * 0.03 + f.bob;
-        const y = f.y;
-        const skin = hurt > 0 ? "#e8a090" : "#d9956e";
-        /* legs swing along the facing axis */
-        a3Box(out, f.x + Math.sin(f.yaw) * sw, y + 0.42 + bob, f.z + Math.cos(f.yaw) * sw,
-              0.26, 0.84, 0.26, f.yaw, "#2a3444");
-        a3Box(out, f.x - Math.sin(f.yaw) * sw, y + 0.42 + bob, f.z - Math.cos(f.yaw) * sw,
-              0.26, 0.84, 0.26, f.yaw, "#222b38");
-        /* boots */
-        a3Box(out, f.x + Math.sin(f.yaw) * sw, y + 0.06, f.z + Math.cos(f.yaw) * sw,
-              0.3, 0.14, 0.34, f.yaw, "#14191f");
-        a3Box(out, f.x - Math.sin(f.yaw) * sw, y + 0.06, f.z - Math.cos(f.yaw) * sw,
-              0.3, 0.14, 0.34, f.yaw, "#14191f");
-        /* trunks + torso, leaning very slightly into the guard */
-        a3Box(out, f.x, y + 0.92 + bob, f.z, 0.62, 0.3, 0.42, f.yaw, f.trim);
-        a3Box(out, f.x, y + 1.32 + bob, f.z, 0.66, 0.6, 0.44, f.yaw, f.col);
-        /* head */
-        a3Box(out, f.x, y + 1.82 + bob, f.z, 0.4, 0.42, 0.4, f.yaw, skin);
-        a3Box(out, f.x, y + 2.0 + bob, f.z, 0.42, 0.12, 0.42, f.yaw, "#17202b");
-        /* gloves up by the chin — this is the bit that reads as boxing */
-        const gx = Math.cos(f.yaw) * 0.26, gz = -Math.sin(f.yaw) * 0.26;
-        const fwd = 0.24 + Math.sin(f.step * 2) * 0.02 + f.lunge;
-        const fx = Math.sin(f.yaw) * fwd, fz = Math.cos(f.yaw) * fwd;
-        a3Box(out, f.x + gx + fx, y + 1.62 + bob, f.z + gz + fz, 0.26, 0.26, 0.26, f.yaw, "#d94f3e");
-        a3Box(out, f.x - gx + fx, y + 1.58 + bob, f.z - gz + fz, 0.26, 0.26, 0.26, f.yaw, "#d94f3e");
-        /* contact shadow, flattened on the canvas */
-        a3Quad(out, a3V(f.x - .34, .02, f.z - .34), a3V(f.x + .34, .02, f.z - .34),
-                    a3V(f.x + .34, .02, f.z + .34), a3V(f.x - .34, .02, f.z + .34),
+        a3Pose(f);
+        a3Skeleton(f);
+        const B = A3_BI;
+        const kit = f.kit;
+        const skin = hurt > 0 ? "#e8a090" : A3_SKIN;
+
+        /* legs: boots terraced over shafts over shins */
+        for (const side of ["R", "L"]) {
+          const hip = B["hip" + side], shin = B["shin" + side], foot = B["foot" + side];
+          a3BoxM(out, hip, 0, -0.22, 0, 0.26, 0.44, 0.26, kit.short2, 0);
+          a3BoxM(out, hip, 0, -0.41, 0, 0.27, 0.06, 0.27, kit.trimW, 0);
+          a3BoxM(out, shin, 0, -0.20, 0, 0.22, 0.40, 0.22, skin, 0);
+          a3BoxM(out, shin, 0, -0.33, 0, 0.25, 0.20, 0.25, kit.boot, 0);
+          a3BoxM(out, shin, 0, -0.24, 0, 0.26, 0.04, 0.26, kit.trimW, 0.01);
+          a3BoxM(out, foot, 0, -0.03, 0.05, 0.26, 0.10, 0.34, kit.boot, 0);
+          a3BoxM(out, foot, 0, 0.02, 0.05, 0.27, 0.03, 0.35, kit.bootT, 0.01);
+        }
+
+        /* hips and trunks, with a waistband tier */
+        a3BoxM(out, B.pelvis, 0, -0.12, 0, 0.44, 0.26, 0.30, kit.short1, 0);
+        a3BoxM(out, B.pelvis, 0, 0.02, 0, 0.46, 0.10, 0.32, kit.short2, 0);
+        a3BoxM(out, B.pelvis, 0, 0.08, 0, 0.47, 0.05, 0.33, kit.belt, 0.01);
+
+        /* torso: bare chest, framed later by the robe plackets */
+        a3BoxM(out, B.spine, 0, 0.08, 0, 0.40, 0.22, 0.26, skin, 0);
+        a3BoxM(out, B.chest, 0, 0.10, 0, 0.50, 0.30, 0.30, skin, 0);
+        a3BoxM(out, B.chest, 0.12, 0.20, 0.13, 0.20, 0.10, 0.06, A3_SKIN_D, 0.015);
+        a3BoxM(out, B.chest, -0.12, 0.20, 0.13, 0.20, 0.10, 0.06, A3_SKIN_D, 0.015);
+        /* chain: unlit, so it keeps its glint on every face */
+        a3BoxM(out, B.chest, 0, 0.26, 0.14, 0.26, 0.03, 0.03, kit.chain, 0.03);
+        a3BoxM(out, B.chest, 0, 0.21, 0.15, 0.05, 0.07, 0.03, kit.chain, 0.03);
+
+        /* head, and the hood over it. The hood is the silhouette: a wedge
+           with side walls that project past the face, and an unlit void
+           behind so the face reads as recessed rather than painted on. */
+        a3BoxM(out, B.neck, 0, 0.05, 0, 0.17, 0.12, 0.17, A3_SKIN_D, 0);
+        a3BoxM(out, B.head, 0, 0.14, 0.01, 0.34, 0.34, 0.33, skin, 0);
+        a3BoxM(out, B.head, 0, 0.07, 0.17, 0.16, 0.07, 0.03, "#5b2a26", 0.02);
+        a3BoxM(out, B.hood, 0, 0.20, -0.04, 0.44, 0.40, 0.44, kit.robe1, 0.06);
+        a3BoxM(out, B.hood, 0, 0.40, -0.02, 0.40, 0.10, 0.40, kit.robe2, 0.065);
+        a3BoxM(out, B.hood, 0.19, 0.16, 0.12, 0.08, 0.34, 0.22, kit.robe1, 0.07);
+        a3BoxM(out, B.hood, -0.19, 0.16, 0.12, 0.08, 0.34, 0.22, kit.robe1, 0.07);
+        a3BoxM(out, B.hood, 0, 0.32, 0.14, 0.34, 0.06, 0.06, kit.trimR, 0.075);
+        a3BoxM(out, B.hood, 0, -0.04, -0.17, 0.42, 0.30, 0.10, kit.robe2, 0.05);
+
+        /* arms: shoulder yoke, upper, cuff, forearm, glove */
+        for (const side of ["R", "L"]) {
+          const cl = B["clav" + side], up = B["upper" + side];
+          const fo = B["fore" + side], gl = B["glove" + side];
+          a3BoxM(out, cl, 0.10 * (side === "R" ? 1 : -1), 0.02, 0, 0.22, 0.20, 0.26, kit.robe1, 0.02);
+          a3BoxM(out, cl, 0.10 * (side === "R" ? 1 : -1), 0.12, 0, 0.23, 0.05, 0.27, kit.trimR, 0.025);
+          a3BoxM(out, up, 0, -0.16, 0, 0.19, 0.32, 0.19, skin, 0);
+          a3BoxM(out, fo, 0, -0.12, 0, 0.17, 0.26, 0.17, skin, 0);
+          a3BoxM(out, fo, 0, -0.22, 0, 0.21, 0.09, 0.21, kit.cuff, 0.03);
+          a3BoxM(out, fo, 0, -0.17, 0, 0.22, 0.03, 0.22, kit.trimW, 0.035);
+          a3BoxM(out, gl, 0, -0.08, 0.02, 0.26, 0.26, 0.28, kit.glove, 0.10);
+          a3BoxM(out, gl, 0, 0.02, 0.02, 0.27, 0.05, 0.29, kit.gloveT, 0.105);
+        }
+
+        /* the robe. Three lagging panels: two open plackets framing the
+           bare chest, one long back. Each is tiered so the hem catches
+           light, and each sits clear of the body in the depth sort. */
+        const panel = (bone, w, bias) => {
+          a3BoxM(out, bone, 0, -0.16, 0, w, 0.34, 0.09, kit.robe1, bias);
+          a3BoxM(out, bone, 0, -0.44, 0, w * 1.04, 0.26, 0.10, kit.robe2, bias);
+          a3BoxM(out, bone, 0, -0.58, 0, w * 1.08, 0.05, 0.11, kit.trimR, bias + 0.005);
+          a3BoxM(out, bone, 0, -0.74, 0, w * 1.08, 0.28, 0.11, kit.robe1, bias);
+          a3BoxM(out, bone, 0, -0.89, 0, w * 1.1, 0.05, 0.12, kit.trimW, bias + 0.005);
+        };
+        panel(B.robeR, 0.17, 0.05);
+        panel(B.robeL, 0.17, 0.05);
+        /* the back panel sorts BEHIND the body, or it draws over his spine */
+        a3BoxM(out, B.robeB, 0, -0.18, 0, 0.50, 0.38, 0.10, kit.robe2, -0.04);
+        a3BoxM(out, B.robeB, 0, -0.48, 0, 0.52, 0.28, 0.11, kit.robe1, -0.04);
+        a3BoxM(out, B.robeB, 0, -0.64, 0, 0.53, 0.05, 0.12, kit.trimR, -0.035);
+        a3BoxM(out, B.robeB, 0, -0.80, 0, 0.53, 0.28, 0.12, kit.robe2, -0.04);
+        a3BoxM(out, B.robeB, 0, -0.95, 0, 0.54, 0.05, 0.13, kit.trimW, -0.035);
+
+        /* contact shadow */
+        a3Quad(out, a3V(f.x - .36, .02, f.z - .36), a3V(f.x + .36, .02, f.z - .36),
+                    a3V(f.x + .36, .02, f.z + .36), a3V(f.x - .36, .02, f.z + .36),
                0, 1, 0, "rgba(0,0,0,.45)");
       }
 
@@ -5152,8 +5454,12 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           const cyp = (f.v[0].y + f.v[2].y) / 2 - cam.y;
           const czp = (f.v[0].z + f.v[2].z) / 2 - cam.z;
           if (f.nx * cxp + f.ny * cyp + f.nz * czp > 0) continue;
-          draw.push({ pts, z: zsum / f.v.length, nx: f.nx, ny: f.ny, nz: f.nz, col: f.col });
+          draw.push({ pts, z: zsum / f.v.length - (f.bias || 0),
+                      nx: f.nx, ny: f.ny, nz: f.nz, col: f.col });
         }
+        /* painter's algorithm keyed on mean depth, less each face's bias.
+           A mean-of-four-corners key cannot order near-coplanar parts on
+           its own, so the costume declares its own layering. */
         draw.sort((a, b) => b.z - a.z);
 
         /* one directional light, plus a little ambient */
@@ -5195,8 +5501,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       /* ── match lifecycle ──────────────────────────────────────── */
       function a3Reset() {
         A3.state = "intro"; A3.t = 0; A3.intro = 3.2; A3.left = 90;
-        A3.p = a3Fighter(-1, "You", "#2f6fb0", "#1d4a78");
-        A3.o = a3Fighter(1, "Rival", "#a8382c", "#75241b");
+        A3.p = a3Fighter(-1, "You", "#2f6fb0", "#1d4a78", "player");
+        A3.o = a3Fighter(1, "Rival", "#a8382c", "#75241b", "rival");
         A3.cam = { x: 0, y: 4, z: -9, lx: 0, ly: 1.15, lz: 0, fov: 1.02 };
         A3.keys.clear();
         const b = document.querySelector("#a3-banner");
@@ -5214,6 +5520,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       function a3Step(dt) {
         if (A3.state === "intro") {
           A3.intro -= dt;
+          A3.p.dt = dt; A3.o.dt = dt;
           const b = document.querySelector("#a3-banner");
           if (b) b.textContent = A3.intro > 2.1 ? "READY" : A3.intro > 0.9 ? "SET" : "FIGHT";
           a3Face(A3.p, A3.o.x, A3.o.z, dt);
@@ -5225,6 +5532,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           }
         } else if (A3.state === "fight") {
           A3.left -= dt;
+          A3.p.dt = dt; A3.o.dt = dt;
           a3Player(dt);
           a3AI(dt);
           a3Collide();
