@@ -4897,12 +4897,11 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
          sweep steps over. */
       const A3_BODY = 0.96;
       const A3_BOUND = A3_RING - A3_BODY;  /* so nothing crosses a rope   */
-      /* How close two fighters may stand, centre to centre. The guard
-         gloves sit 0.42 in front of a fighter's centre, so 0.92 is the
-         tightest that keeps two guards from interpenetrating — and it has
-         to be this tight, because the rig's arm is only 0.60 long. At the
-         old 1.05 they stood permanently outside their own punching range
-         and nothing could ever land. */
+      /* How close two fighters may stand, centre to centre. This does NOT
+         keep the guards apart: measured, two idle guards touch at 1.20, so
+         they overlap by 0.28 here. Every punch is solved against this
+         number, and a3Tick keeps the arm bent at this range so the glove
+         stops on the man instead of inside him. */
       const A3_SEP = 0.92;
 
       const A3_KIT = {
@@ -4929,15 +4928,15 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
              fired   contact already tested for this punch
              block   1 while the guard is up
              spent   post-punch pause before stamina comes back
-             lock    brief interrupt immunity, so a jab cannot stun-lock
              stag    staggering, in seconds
+             hurt    seconds left of the skin flash from a shot that got in
              head    HIDDEN head-exposure load. Never drawn, anywhere.
                      This is the quantity the whole mode is about: it is
                      NOT the HP bar, it rises mostly from rotational
                      shots, and it decays far slower than it accrues.
              clean / landed  solid head shots taken and given, for the
                      one honest line at the end                        */
-          punch: null, fired: 0, block: 0, spent: 0, lock: 0, stag: 0,
+          punch: null, fired: 0, block: 0, spent: 0, stag: 0,
           head: 0, clean: 0, landed: 0, bodyN: 0, bodyT: 0,
         };
       }
@@ -5176,40 +5175,41 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
          Procedural channels on top of a base boxing stance. Everything
          reads the drivers that already tick: step, vx/vz, yaw, sidestep. */
       /* The punch table. Each entry is the pose at FULL EXTENSION in the
-         fighter's own frame. Every number here was measured against the
-         built geometry rather than guessed — "reach" is where the glove
-         centre actually lands, forward of his own centre line.
+         fighter's own frame, and every number was solved against the built
+         geometry: where the glove lands, and the separation at which its box
+         first touches the target's box.
 
-         The left-hand entries are the right-hand ones put through the
-         rig's own mirror rule, (rx, -ry, -rz); the L bones already carry
-         negated x offsets, so no negative scale is involved. Verified:
-         a jab mirrored from a cross lands at the mirrored position to
-         within a millimetre.
+         Two rig facts the numbers depend on. The head sits 0.30 ABOVE the
+         shoulder, and a down-pointing bone only rises once |rx| > pi/2, so
+         a straight needs upper rx past -1.57: at -1.45 the glove stops at
+         his own shoulder height, 0.14 under the other man's chin. And
+         pelvis + spine leave 0.16 of yaw that no punch cancels, so the left
+         and right entries are NOT mirrors. Each is solved on its own.
 
-         Note how short the arms are. The chain from shoulder to glove is
-         foreR 0.32 + gloveR 0.28 = 0.60, so straightening the elbow buys
-         almost nothing. The reach in a straight comes from the CHEST
-         turning into the shot, which is also what really happens. */
+         reach sits just inside the distance where the glove first touches
+         him, so a shot that lands has really arrived. close is how much of
+         the pose a fighter gets out at A3_SEP: inside his full reach the
+         arm stays bent, or the glove would finish inside the man's skull. */
       const A3_PUNCH = {
         /* name:  hand, head/body, seconds, reach+cone for the hit test,
                   HP damage, BRAIN load, stamina cost, then the pose.
            dmg and brain are two SEPARATE quantities and keeping them
-           separate is the whole point — see a3Hurt. Note the hook: only
-           2 more HP than the cross but nearly twice the brain load,
-           because it is rotational. That is the real mechanism of
-           concussion, and here it is a number a player can feel. */
-        jab:    { hand: "L", high: 1, dur: 0.26, dmg: 1.8, brain: 0.37, sta: 5,  reach: 1.18, cone: 0.62,
-                  chest: [0,  0.10, 0], clav: [0,  0.40, -0.06], upper: [-1.45, 0, -0.20], fore: [-0.05, 0, 0] },
-        cross:  { hand: "R", high: 1, dur: 0.38, dmg: 4.2, brain: 0.88, sta: 11, reach: 1.22, cone: 0.62,
-                  chest: [0, -0.30, 0], clav: [0, -0.40,  0.06], upper: [-1.45, 0,  0.20], fore: [-0.05, 0, 0] },
-        hookL:  { hand: "L", high: 1, dur: 0.50, dmg: 5.0, brain: 1.50, sta: 14, reach: 1.12, cone: 0.52,
-                  chest: [0,  0.30, 0], clav: [0,  0.45, -0.06], upper: [-1.25, 0, -1.15], fore: [-1.35, 0, 0] },
-        hookR:  { hand: "R", high: 1, dur: 0.50, dmg: 5.4, brain: 1.68, sta: 15, reach: 1.12, cone: 0.52,
-                  chest: [0, -0.55, 0], clav: [0, -0.45,  0.06], upper: [-1.25, 0,  1.15], fore: [-1.35, 0, 0] },
-        bodyL:  { hand: "L", high: 0, dur: 0.42, dmg: 3.2, brain: 0,    sta: 12, reach: 1.16, cone: 0.62,
-                  chest: [0.30,  0.18, 0], clav: [0,  0.34, -0.06], upper: [-1.05, 0, -0.26], fore: [-0.22, 0, 0] },
-        bodyR:  { hand: "R", high: 0, dur: 0.44, dmg: 3.6, brain: 0,    sta: 13, reach: 1.16, cone: 0.62,
-                  chest: [0.30, -0.34, 0], clav: [0, -0.34,  0.06], upper: [-1.05, 0,  0.26], fore: [-0.22, 0, 0] },
+           separate is the whole point — see a3Hurt. Note the hook: little
+           more HP than the cross but nearly twice the brain load, because
+           it is rotational. That is the real mechanism of concussion, and
+           here it is a number a player can feel. */
+        jab:    { hand: "L", high: 1, dur: 0.26, dmg: 0.6, brain: 0.37, sta: 5,  reach: 1.18, cone: 0.62, close: 0.43,
+                  chest: [0.24,  0.60, 0], clav: [0,  0.16, -0.06], upper: [-2.05, -0.35, -0.36], fore: [-0.05, 0, 0] },
+        cross:  { hand: "R", high: 1, dur: 0.38, dmg: 1.4, brain: 0.88, sta: 11, reach: 1.22, cone: 0.62, close: 0.39,
+                  chest: [0.24, -0.80, 0], clav: [0, -0.41,  0.06], upper: [-2.01,  0.35,  0.50], fore: [-0.22, 0, 0] },
+        hookL:  { hand: "L", high: 1, dur: 0.50, dmg: 1.7, brain: 1.50, sta: 14, reach: 1.12, cone: 0.52, close: 0.53,
+                  chest: [0.17,  0.66, 0], clav: [0,  0.25, -0.06], upper: [-1.32, -0.10, -1.25], fore: [-1.00, 0, 0] },
+        hookR:  { hand: "R", high: 1, dur: 0.50, dmg: 1.9, brain: 1.68, sta: 15, reach: 1.12, cone: 0.52, close: 0.58,
+                  chest: [0.18, -0.90, 0], clav: [0, -0.31,  0.06], upper: [-1.26,  0.16,  1.25], fore: [-1.14, 0, 0] },
+        bodyL:  { hand: "L", high: 0, dur: 0.42, dmg: 2.4, brain: 0,    sta: 12, reach: 1.16, cone: 0.62, close: 0.40,
+                  chest: [0.29,  0.46, 0], clav: [0,  0.13, -0.06], upper: [-1.51, -0.35, -0.20], fore: [-0.02, 0, 0] },
+        bodyR:  { hand: "R", high: 0, dur: 0.44, dmg: 2.7, brain: 0,    sta: 13, reach: 1.16, cone: 0.62, close: 0.40,
+                  chest: [0.32, -0.60, 0], clav: [0, -0.34,  0.06], upper: [-1.58,  0.35,  0.24], fore: [-0.02, 0, 0] },
       };
       /* The contact frame sits at 0.32 of the punch, which is exactly where
          a3Pose's envelope peaks — so a shot registers at the instant the arm
@@ -5220,6 +5220,11 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
          stays wholly outside the career simulation and the parity signature
          cannot move. */
       const A3_MED = { warn: 7, bad: 13, stop: 20, fade: 0.10 };
+      /* How long the AI needs to see a punch before his hands move, rolled
+         once per punch. The window sits across the contact times (jab 83 ms
+         to hook 160 ms), so the faster the punch the less often he covers
+         it, and he covers none of them every time. */
+      const A3_REACT = [0.05, 0.18];
 
       function a3Pose(f) {
         a3P.fill(0);
@@ -5247,12 +5252,16 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
            fading over about a third of a second */
         const hit = f.hitT || 0;
         if (hit > 0) {
-          const dir = f.hitLow ? 0.5 : 1;
+          /* POSITIVE rx leans an up-pointing bone FORWARD. That folds him
+             over a body shot, but on a head shot it would drive his face
+             into the glove, so the arena sets f.hitBack to reverse it.
+             Career fighters never set it and keep the look they have. */
+          const dir = f.hitBack ? -1 : f.hitLow ? 0.5 : 1;
           a3P[A3_BI.head * 3] += hit * 0.55 * dir;
           a3P[A3_BI.head * 3 + 2] += hit * 0.30;
           a3P[A3_BI.neck * 3] += hit * 0.26 * dir;
           a3P[A3_BI.chest * 3] += hit * 0.20 * dir;
-          a3P[A3_BI.spine * 3] += hit * 0.12;
+          a3P[A3_BI.spine * 3] += hit * 0.12 * (f.hitBack ? -1 : 1);
         }
         /* fatigue drops the hands and rounds the back — the tell is
            performed, never pointed at */
@@ -5288,7 +5297,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const pk = f.punch && A3_PUNCH[f.punch.k];
         if (pk) {
           const pt = f.punch.t;
-          const ext = pt < 0.32 ? pt / 0.32 : Math.max(0, 1 - (pt - 0.32) / 0.68);
+          const ext = (pt < A3_LAND ? pt / A3_LAND : Math.max(0, 1 - (pt - A3_LAND) / (1 - A3_LAND)))
+                    * (f.punch.fit || 1);
           const mix = (name, v) => {
             const i = A3_BI[name] * 3;
             a3P[i]     += (v[0] - a3P[i])     * ext;
@@ -5298,8 +5308,11 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           /* the chest turn is most of the reach, so it is blended first
              and the arm chain hangs off the turned chest */
           const ci = A3_BI.chest * 3;
+          const turn = (pk.chest[1] - a3P[ci + 1]) * ext;
           a3P[ci]     += (pk.chest[0] - a3P[ci])     * ext;
-          a3P[ci + 1] += (pk.chest[1] - a3P[ci + 1]) * ext;
+          a3P[ci + 1] += turn;
+          /* the shoulders turn into the shot, his eyes stay on his man */
+          a3P[A3_BI.neck * 3 + 1] -= turn;
           mix("clav"  + pk.hand, pk.clav);
           mix("upper" + pk.hand, pk.upper);
           mix("fore"  + pk.hand, pk.fore);
@@ -5592,7 +5605,9 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         while (d > Math.PI) d -= Math.PI * 2;
         while (d < -Math.PI) d += Math.PI * 2;
         if (Math.abs(d) < 0.004) return;                 /* no jitter */
-        f.yaw += d * Math.min(1, dt * 9);
+        /* he turns into a punch he is throwing, or a man circling him would
+           be "hit" by a glove that visibly passes beside his head */
+        f.yaw += d * Math.min(1, dt * (f.punch && !f.fired ? 27 : 9));
       }
       /* direction is WORLD space. The player feeds it camera-relative input
          so W is always "away from the camera" whichever way the fight has
@@ -5670,7 +5685,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         if (o.ai.t <= 0) {                               /* re-think now and then */
           /* He commits and breaks off like a fighter rather than drifting.
              The preferred range MUST sit inside punching distance: the
-             longest reach is 1.32, so the old 1.5-3.4 band meant he could
+             longest reach is 1.22, so the old 1.5-3.4 band meant he could
              never have landed anything even if he had tried. */
           o.ai.t = 0.35 + Math.random() * 0.45;
           o.ai.strafe = Math.random() < 0.5 ? -1 : 1;
@@ -5718,18 +5733,26 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
            He can only cover a punch he has had time to see, so he is
            beatable, and the reaction window is the one difficulty knob. */
         if (!o.punch && o.stag <= 0) {
-          const inc = p.punch && p.punch.t < A3_LAND && d < 1.5;
-          o.ai.saw = inc ? (o.ai.saw || 0) + dt : 0;
-          o.block = (o.ai.saw > 0.10 && o.sta > 14) ? 1 : 0;
+          /* p.fired is what ends it: a3AI runs before a3Tick, so the guard
+             he has up on the contact frame is the guard that gets tested */
+          const inc = p.punch && !p.fired && d < 1.5 ? p.punch : null;
+          if (inc !== o.ai.seen) {
+            o.ai.seen = inc;
+            o.ai.saw = 0;
+            o.ai.react = A3_REACT[0] + Math.random() * (A3_REACT[1] - A3_REACT[0]);
+          }
+          if (inc) o.ai.saw += dt;
+          o.block = (inc && o.ai.saw > o.ai.react && o.sta > 14) ? 1 : 0;
         } else o.block = 0;
       }
 
       /* ══ COMBAT ═══════════════════════════════════════════════════
          Two quantities, and keeping them apart is the entire design.
 
-         hp    is on screen. It falls from everything, body shots included.
+         hp    is on screen. It falls from everything, but mostly from the
+               body: a head shot costs little of it.
          head  is NOT on screen, anywhere, ever. It rises only from head
-               contact, weighted by rotation, and it sheds at 0.07/sec —
+               contact, weighted by rotation, and it sheds at 0.10/sec —
                far slower than it builds. A fighter can be in real trouble
                while his bar still looks healthy, which is the true thing
                this mode exists to teach. Drawing it would destroy it.
@@ -5759,10 +5782,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       /* The contact test. Analytic from (x, z, yaw) only — no bone
          sampling. a3M is one shared scratch buffer that a3BuildFighter
          overwrites per fighter per frame, so reading it here would make
-         the result depend on render order. Range and a facing cone is
-         also simply what the geometry allows: the rig's arm is 0.60 long
-         against a 1.05 minimum separation, so a glove can never actually
-         touch an opponent. The animation sells the punch; this decides it. */
+         the result depend on render order. It agrees with the picture
+         because the poses and reach column were solved against each other. */
       function a3Contact(a, d) {
         const P = A3_PUNCH[a.punch.k];
         const dx = d.x - a.x, dz = d.z - a.z;
@@ -5776,9 +5797,9 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 
       /* Land one. Returns what happened, for the cue. */
       function a3Hurt(a, d, P, dist) {
-        /* A slip beats a punch outright — but only at range. Inside 1.18
-           there is nowhere to go and you have to block instead. */
-        if (d.sidestep > 0 && dist > 1.18) return "slip";
+        /* A slip beats a punch outright — but only in the outer part of its
+           range. Any closer there is nowhere to go and you have to block. */
+        if (d.sidestep > 0 && dist > P.reach * 0.86) return "slip";
 
         const blocked = d.block && !d.punch && d.stag <= 0;
         let dmg = P.dmg, brain = P.brain;
@@ -5790,9 +5811,11 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 
         /* caught mid-throw: the whole risk of committing to a power shot */
         if (d.punch) { dmg *= 1.6; brain *= 1.6; }
-        /* a tired man hits softer, off the same curve that drops his hands */
+        /* a tired man hits softer on both counts: a slower fist also turns
+           the head less */
         const gas = Math.max(0, Math.min(1, ((100 - a.sta) - 50) / 50));
         dmg *= 1 - 0.35 * gas;
+        brain *= 1 - 0.35 * gas;
         /* and a tired NECK does not brace, so he takes more */
         if (d.sta < 30) brain *= 1.25;
 
@@ -5801,14 +5824,18 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
              is. a3Pose already sags a tired fighter's hands; this makes
              that sag cost him, so the picture and the maths are one
              thing rather than two. */
-          const hold = Math.max(0, Math.min(1, (d.guard - 0.6) / 0.65));
+          const sag = Math.max(0, Math.min(1, ((d.fat || 0) - 55) / 45)) * 0.42;
+          const hold = Math.max(0, Math.min(1, (d.guard - sag - 0.6) / 0.65));
           if (P.high) { dmg *= 0.25 + 0.6 * (1 - hold); brain *= 0.18 + 0.62 * (1 - hold); }
           else { dmg *= 0.9; d.sta = Math.max(0, d.sta - 6); }  /* the body is open */
         }
         d.hp = Math.max(0, d.hp - dmg);
-        d.hitT = 1;
+        /* a high guard really stops a head shot; the body is open anyway */
+        const covered = blocked && P.high;
+        d.hitT = covered ? 0.35 : graze ? 0.6 : 1;
         d.hitLow = !P.high;
-        d.lock = 0.16;
+        d.hitBack = P.high;
+        if (!covered && !graze) d.hurt = 0.18;   /* the flash of a shot that got in */
 
         if (P.high) {
           d.head += brain;
@@ -5827,16 +5854,16 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       /* Per-fighter timers. Everything the renderer already knows how to
          show is driven from here, so the tells cost no new geometry. */
       function a3Tick(f, dt) {
-        f.lock = Math.max(0, f.lock - dt);
         f.spent = Math.max(0, f.spent - dt);
         f.stag = Math.max(0, f.stag - dt);
         f.bodyT = Math.max(0, f.bodyT - dt);
         if (f.bodyT <= 0) f.bodyN = 0;
         f.hitT = Math.max(0, (f.hitT || 0) - dt * 3.2);
+        f.hurt = Math.max(0, (f.hurt || 0) - dt);
         if (f.guarded && f.bodyT <= 0) f.guarded = 0;
 
         /* head load sheds, slowly. Staying out of range is a tactic, not
-           an eraser: a whole round sheds about 6. */
+           an eraser: a whole round sheds 9. */
         f.head = Math.max(0, f.head - A3_MED.fade * dt);
 
         /* THE LOOP, closed: stamina becomes fatigue, and a3Pose already
@@ -5850,14 +5877,16 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         f.vacant = f.head >= A3_MED.bad ? 1 : f.head >= A3_MED.warn ? 0.6 : 0;
         f.unsteady = f.head >= A3_MED.bad ? 1 : 0;
         if (f.head >= A3_MED.warn && !f.cut && f.clean > 6) f.cut = 1;
-        f.hurt = f.head >= A3_MED.bad ? 1 : 0;
 
         if (f.punch) {
           const P = A3_PUNCH[f.punch.k];
+          const other = f === A3.p ? A3.o : A3.p;
           f.punch.t += dt / P.dur;
+          /* the arm gets out as far as the man in front of it allows */
+          const room = (Math.hypot(other.x - f.x, other.z - f.z) - A3_SEP) / (P.reach - A3_SEP);
+          f.punch.fit = P.close + (1 - P.close) * a3Clamp(room, 0, 1);
           if (!f.fired && f.punch.t >= A3_LAND) {
             f.fired = 1;
-            const other = f === A3.p ? A3.o : A3.p;
             const c = a3Contact(f, other);
             if (c) a3Hurt(f, other, c.P, c.dist);
             else A3.shake = Math.min(1, A3.shake + 0.05);
@@ -5883,7 +5912,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const W = cv.width, H = cv.height;
         /* a landed shot kicks the camera, exactly the way boutScene does.
            The Camera Shake setting still governs it. */
-        const sh = uiPrefs.shake ? 0 : A3.shake;
+        const sh = uiPrefs.shake && !uiPrefs.motion ? A3.shake : 0;
         const cam = sh > 0
           ? { x: A3.cam.x + Math.sin(sh * 37) * sh * 0.07,
               y: A3.cam.y + Math.cos(sh * 29) * sh * 0.05,
@@ -5997,6 +6026,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         A3.state = "over";
         A3.p.punch = null; A3.o.punch = null;
         A3.p.block = 0; A3.o.block = 0;
+        A3.p.hitT = 0; A3.o.hitT = 0;
+        A3.p.hurt = 0; A3.o.hurt = 0;
         /* The man it happened to stops standing to attention about it.
            a3Tick no longer runs once the state is "over", so this sticks:
            the stagger pose folds his knees and hangs his head, which is
