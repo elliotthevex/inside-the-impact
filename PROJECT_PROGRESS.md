@@ -4,53 +4,49 @@ Checkpoint file. Read this first when resuming. Design and interfaces are in `gf
 Work is on git branch `realistic-3d` in `site/`. Do not push or merge to `main`: a push to `main` deploys live, and the user decides that.
 
 ## Status
-Phase: joining the four parts into one playable match. The dev page runs a fight on the real rules, fighters, room and HUD. `index.html` now has the launch hook, but a full match through the arena card has not been confirmed.
-Usage rule: stop at 75% of the 5-hour window (`mcp__ccd_session_mgmt__get_usage`). Agents stop at 72. Last check 21:14 KST: 30%, resets 00:20 KST. Weekly 8%.
-Power: plugged in and charging since about 21:14 KST. It reached 2% first. It slept once already (15:14 to 18:47) and that killed a whole build run.
+Phase: balance and polish, both running. A whole match plays from the 1v1 Arena card on the real page.
+Usage rule: stop at 75% of the 5-hour window (`mcp__ccd_session_mgmt__get_usage`). Agents stop at 72. Last check 08:56 KST on 2026-11-06: 14%, resets 10:40 KST. Weekly 17%.
+Power: on battery at 73% at 08:56 KST, and the user has been asked to plug in. The lid was closed from 22:29 to 08:55, which paused everything overnight. A closed lid sleeps the Mac even on the charger.
 
 ## Scope note
-The user's latest brief is Street Fight 3D, a complete 1v1 arena game. It takes priority over the earlier whole-game overhaul brief (20 screens to realistic 3D).
-That overhaul is parked, not cancelled. Its reference notes are partly done: `scratchpad/notes/` has css1-5, js01-03, js05; the rest was stopped to save usage.
+The user's latest brief is Street Fight 3D, a complete 1v1 arena game. It takes priority over the earlier whole-game overhaul brief, which is parked, not cancelled, and saved at `gfx/dev/overhaul-brief.md`.
 
-## Built and tested alone, not yet in the game
-- World: engine, quality presets, room, ring, lamps, crowd (`gfx/core/engine.js`, `gfx/world/kit.js`, `gfx/arena/stage.js`). Rendered on low, medium and high with no shader, console or GL errors. Real 60 Hz not seen, because headless Chrome caps frame timing.
-- Fighters: two distinct men, 10 clips, arm IK, foot planting, reactions (`gfx/people/rig.js`, `anim.js`, `fighter.js`, `glove.js`, `assets/anim/`). Checked on the real sim on its bench: no foot skate, glove reaches its target within 19 mm at contact, one 17 cm outlier on a round-bell tick.
-- Rules and AI (`gfx/arena/sim.js`, `ai.js`, `gfx/dev/simtest.html`). No rule breaks across 200 matches per bot on the code two tuning passes back. Final code run at 100 matches per bot. Balance targets missed, see Known bugs.
-- HUD (`gfx/arena/hud.js`, `arena.css`, fonts). Looked at in every state, but only against a fake match. Its buttons have never been clicked.
+## Done and tested
+- World, fighters, rules, AI, HUD, camera, effects and sound run as one game (commit `ad04b5b`).
+- 13 bot matches through real key events on the real page, on high, medium and low, with rematch, pause, touch emulation, settings and all four fallbacks to the old canvas arena. Numbers are in `gfx/dev/notes/integrate.md`.
+- Independently rerun at 22:26 KST on 2026-11-05: `jscheck.py` parses, parity `3bea3b59`, smoke passes.
+- `CREDITS.md`, `ASSET_LIST.md`.
 
 ## In progress
-- Integration agent `a404045a6c0629b59`, running on its own (not in a workflow): `fightcam.js`, `index.js`, `audio.js`, `fx.js`, HUD on the real sim, the arena card launch, `gfx/dev/arena.html`. Notes go to `gfx/dev/notes/integrate.md`. `audio.js` and `fx.js` were written at 20:32 and have not been run. The joined game has not been run to the end yet.
-- Balance pass (workflow run `wf_0ec0b835-a23`, started 21:15 KST): tunes `sim.js` and `ai.js` with the real reach table against the targets in its script, then an independent check on fresh seeds. Notes go to `gfx/dev/notes/balance.md` and `balance-verify.md`.
-- Workflow run `wf_15ea3fef-cb4` is stopped on purpose. A message to its integration agent started a second copy, and the two overwrote each other from 20:15 to 20:27 KST. The surviving copy owns everything. The stopped copy's versions are in `scratchpad/integrate/workflow-agent-copy/`.
+Both are workflows, so never message their agents (see memory `workflow-agents-have-no-inbox`).
+- Balance, run `wf_0ec0b835-a23`, owns `gfx/arena/sim.js`, `ai.js`, `gfx/dev/simtest.html`, `gfx/dev/notes/balance*.md`. Tuning, then an independent check on fresh seeds. Its files are uncommitted on purpose until it finishes.
+- Polish, run `wf_14dc4bd3-946`, owns the rest of `gfx/`. Fighter light, depth of field, exposure across presets, broadcast graphics that hide the fight, camera movement, low-preset crowd, get-up timing, folding the `engine.js` patches into `post.js`. Notes in `gfx/dev/notes/polish*.md`.
+- Both retry after a network error. To resume either after a stop: `Workflow({scriptPath: '<its script in the session workflows/scripts folder>', resumeFromRunId: '<run id>'})`.
 
 ## Remaining, in order
-1. Finish integration, then confirm a full match runs through the real arena card.
-2. Balance pass on `sim.js` and `ai.js`, with `setReach(reach.json)` applied. Targets are in Known bugs.
-3. Adversarial playtest and fix pass.
-4. Performance and low-end preset. Fold the `engine.js` patches into `post.js`, measure with fighters, HUD and effects on, and check a real window at 60 Hz (`?live=1`).
-5. `CREDITS.md`, `ASSET_LIST.md`, prune `vendor/` and unused assets, final checkpoint.
+1. Read the balance and polish results, look at frames, rerun the gates, commit.
+2. In-game medical notes and credits panel, reached from pause and the end panel. The user asked for "all the medical knowledge in credits or somewhere". Draw the entries from the game's live `CX` so the text cannot drift. Wait for polish to finish, because it owns `hud.js`.
+3. Adversarial playtest and fix pass on the final balance.
+4. Performance and low-end preset: measure with everything on, adaptive quality, GPU memory on low, missing-extension fallbacks.
+5. Prune `vendor/` and unused assets, final checkpoint.
 6. Remove the `.lab`, `.dl` and `.scratch` symlinks from the project root.
 7. Ask the user before anything goes to `main`. A release also has to sync `upload/` with the whole tree.
 
 ## Known bugs
-- Balance, measured before `setReach`, normal difficulty, 100 matches per bot: the mixed bot (a stand-in for a new player) loses every match in round 1, in about 39 s. Spam and turtle end in round 1 in 68% and 78% of matches. Skilled wins 61% against a target of about 65%. Whiff rates are about 50% on both sides. Slip works but rarely matters, about 0.5% of AI punches.
-- Get-up runs about 2.8x real speed at `TUNE.getUpTime` 1.2 s. The rig agent suggests 1.6 to 1.8 s, passed to both rigs as `getUpTime`.
-- HUD: small FIGHT banner shows 1.2 s early after a get-up, get-up progress bar missing, name cut off at 360 wide with large text and both Tired tags.
-- Rig: slip is procedural because no mocap slip was usable. Sweat wired but not tuned. Hard shadow stripes on skin in test lights, not yet judged under the real stage lights.
-- Crowd: one male base mesh, blank faces up close. Reads fine dark and out of focus.
+- Listed for the polish pass in its script. Anything it leaves goes here.
 - Tooling trap: rerunning `gear_tex.py` overwrites the new glove textures. Run `glove_tex.py` after it.
-- Old canvas arena: `reference/arena-combat-audit.json` lists measured combat defects. Session `arena-combat-fixes` is handling that on its own branch.
+- The old canvas arena has measured combat defects. Commit `c81903e` on branch `arena-combat-fixes` addresses them, unmerged until the user decides.
 
 ## Not verified
-- No human has played any of it. Nobody on this side can listen to the audio.
-- Never run on a phone GPU. Low was only checked at phone resolution on the M1.
+- No human has played it, and nobody on this side can listen to the sound. `gfx/dev/sound.html` is there for a person to judge it.
+- Never run on a phone or in Safari. Touch was emulated in desktop Chrome.
+- 60 Hz never seen on a real display. macOS Low Power Mode is on, which is the user's setting, so every fps number is lower than a normal Mac would give.
 
 ## Files changed
-New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `PROJECT_PROGRESS.md`. `index.html` now has the launch hook: a head loader with an injected import map, the launch line and `hotkeysBlocked`. Its original is saved at `scratchpad/integrate/index.html.orig`.
+New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `CREDITS.md`, `ASSET_LIST.md`, `PROJECT_PROGRESS.md`. `index.html` has only the head loader with its injected import map, the launch line and the `hotkeysBlocked` selector.
 
 ## Last successful test
-20:28 KST, on the page with the launch hook but with placeholder effects and sound: all scripts parse, parity `3bea3b59`, smoke test passes, and `gfx/dev/arena.html` shows a fight on the real rules, fighters, room and HUD. No full match has been played through the joined game yet.
+22:26 KST on 2026-11-05: all scripts parse, parity `3bea3b59`, smoke passes. 22:23 KST: two more whole matches on the real page, KO and TKO.
 
 ## Next task
-Finish integration. If agent `a404045a6c0629b59` died, send it a message, which resumes it from its transcript, or start a new integration agent from `gfx/dev/notes/integrate.md`. Do not resume workflow run `wf_15ea3fef-cb4`: that starts another integrator. Only message an agent started by a workflow once that workflow has stopped.
-If the balance pass died, resume it with `Workflow({scriptPath: '~/.claude/projects/-Users-elliot-jeong-Downloads-Inside-the-Impact/a4d575ac-45f5-438b-a265-75fe753a2111/workflows/scripts/arena-balance-wf_0ec0b835-a23.js', resumeFromRunId: 'wf_0ec0b835-a23'})`. Its agents own `sim.js`, `ai.js` and `simtest.html`.
+Wait for the balance and polish workflows. If the Mac slept, check `pmset -g log` and their transcripts before assuming they are alive.
