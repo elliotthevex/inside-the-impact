@@ -4871,7 +4871,21 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         cam: { x: 0, y: 4, z: -9, lx: 0, ly: 1, lz: 0, fov: 1.02 },
         p: null, o: null, shake: 0,
       };
-      const A3_BOUND = 5.0;          /* half-width of the playable floor */
+      /* The rope line is the one real boundary; everything else is derived
+         from it. A3_BODY is the fighter's worst half-extent measured over a
+         full turn of yaw with the guard out — not a guess, so a fighter
+         backed into the ropes stops with his gloves at the rope rather than
+         a quarter of a metre through it. */
+      const A3_RING = 5.6;           /* where the ropes and posts stand   */
+      /* Measured, not guessed: the widest the STANDING rig gets, swept over
+         24 yaws x 16 stride phases x every guard height. Lunging gloves are
+         deliberately not counted — a glove crossing the rope plane while he
+         throws is what really happens and it reads fine; a fighter stood
+         with his shoulder through the rope does not. 0.88 is the measured
+         figure; the rest is margin, since the live pose settles on yaws the
+         sweep steps over. */
+      const A3_BODY = 0.96;
+      const A3_BOUND = A3_RING - A3_BODY;  /* so nothing crosses a rope   */
       const A3_SEP = 1.05;           /* fighters never share a spot      */
 
       const A3_KIT = {
@@ -4945,7 +4959,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 
       /* ── the arena itself ─────────────────────────────────────── */
       function a3BuildArena(out) {
-        const R = A3_BOUND + 0.6;
+        const R = A3_RING;
         /* canvas */
         a3Quad(out, a3V(-R, 0, -R), a3V(R, 0, -R), a3V(R, 0, R), a3V(-R, 0, R),
                0, 1, 0, "#6d5468");
@@ -4957,8 +4971,12 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           a3Quad(out, a3V(-R, .01, t - .04), a3V(R, .01, t - .04),
                       a3V(R, .01, t + .04), a3V(-R, .01, t + .04), 0, 1, 0, "#5d4659");
         }
-        /* apron skirt */
-        a3Box(out, 0, -0.35, 0, R * 2 + .5, .7, R * 2 + .5, 0, "#2a1d2a");
+        /* Apron skirt. Its top sits 0.02 BELOW the canvas on purpose: at
+           y=0 it was exactly coplanar with the canvas quad and wider than
+           it, and with no z-buffer the depth sort picked between the two
+           arbitrarily — the dark apron won over the far half of the ring
+           and the floor appeared to vanish behind the fighters. */
+        a3Box(out, 0, -0.37, 0, R * 2 + .5, .7, R * 2 + .5, 0, "#2a1d2a");
         /* corner posts and three ropes a side */
         const P = [[-R, -R], [R, -R], [R, R], [-R, R]];
         for (const [px, pz] of P) a3Box(out, px, 0.75, pz, .22, 1.5, .22, 0, "#cfd8e2");
@@ -5193,6 +5211,62 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         set("shinL", 0.30 + Math.max(0, -Math.sin(t)) * sp * 0.40, 0, 0);
         set("footL", 0.04, 0, 0);
 
+        /* ── ON THE STOOL ──────────────────────────────────────
+           Sat down between rounds. Everything here is a sign the sim is
+           already tracking, acted out. Nothing is highlighted. */
+        if (f.seated) {
+          const br = Math.sin(t) * (0.5 + (f.fat || 0) / 150);
+          const sway = f.unsteady ? Math.sin(t * 0.42) * 0.07 : 0;
+          /* folded onto the stool */
+          set("hipR", -1.45, 0.16, 0.10);
+          set("shinR", 1.52, 0, 0);
+          set("footR", 0.10, 0, 0);
+          set("hipL", -1.45, -0.16, -0.10);
+          set("shinL", 1.52, 0, 0);
+          set("footL", 0.10, 0, 0);
+          /* chest rises with the breathing rate; he sways if concussed */
+          set("pelvis", 0, 0, sway * 0.4);
+          set("spine", 0.20 + br * 0.05, 0, sway);
+          set("chest", 0.10 + br * 0.07, 0, sway * 0.6);
+          /* the head is the tell. A vacant fighter holds it still and
+             low and does not track you; a tired one just hangs it. */
+          /* he hangs his head when he is tired, but not so far that the
+             face leaves the shot — the face IS the tell, so it has to
+             stay readable at this camera */
+          const droop = 0.08 + (f.fat || 0) / 420 + (f.vacant || 0) * 0.16;
+          set("neck", droop * 0.45, (f.vacant || 0) * 0.22, sway * 0.8);
+          set("head", droop, (f.vacant ? Math.sin(t * 0.21) * 0.10 : Math.sin(t * 0.9) * 0.05), 0);
+          /* forearms on the thighs, or one hand up to a shut eye, or the
+             right hand cradled when it is sore */
+          set("clavR", 0, -0.20, 0.10);
+          set("clavL", 0, 0.20, -0.10);
+          /* elbows on the thighs. Measured, not guessed: at upper -0.35
+             and fore -0.95 the glove lands below the elbow and short of
+             the head in depth, so the forearms never mask the face. */
+          if (f.eyeShut) {
+            set("upperL", -1.45, 0.34, -0.26);
+            set("foreL", -1.75, 0, 0);
+          } else {
+            set("upperL", -0.35 - br * 0.03, 0.20, -0.14);
+            set("foreL", -0.95, 0, 0);
+          }
+          if (f.sore) {
+            /* cradling it, turned in toward his body */
+            set("upperR", -0.55, -0.55, 0.22);
+            set("foreR", -1.35, 0, 0);
+          } else {
+            set("upperR", -0.35 - br * 0.03, -0.20, 0.14);
+            set("foreR", -0.95, 0, 0);
+          }
+          /* body work: the elbow stays down over the ribs */
+          if (f.guarded) {
+            a3P[A3_BI.upperR * 3 + 2] -= 0.30;
+            a3P[A3_BI.spine * 3 + 2] += 0.12;
+            a3P[A3_BI.chest * 3] += 0.10;
+          }
+          return;
+        }
+
         /* sidestep: drop and lean into the step */
         if (f.sidestep > 0) {
           const k = f.sidestep / 0.22;
@@ -5276,6 +5350,21 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         a3BoxM(out, B.neck, 0, 0.05, 0, 0.17, 0.12, 0.17, A3_SKIN_D, 0);
         a3BoxM(out, B.head, 0, 0.14, 0.01, 0.34, 0.34, 0.33, skin, 0);
         a3BoxM(out, B.head, 0, 0.07, 0.17, 0.16, 0.07, 0.03, "#5b2a26", 0.02);
+        /* eyes. They only exist as two small blocks, but open vs swollen
+           shut vs not-tracking is the whole read, so they are drawn. */
+        {
+          const sh = f.eyeShut ? 0.012 : 0.034;
+          const drift = f.vacant ? Math.sin(f.step * 0.21) * 0.012 : 0;
+          a3BoxM(out, B.head, 0.075 + drift, 0.175, 0.168, 0.052, sh, 0.02, "#f4ead8", 0.022);
+          a3BoxM(out, B.head, -0.075 + drift, 0.175, 0.168, 0.052,
+                 f.eyeShut ? 0.012 : 0.034, 0.02, "#f4ead8", 0.022);
+          if (!f.eyeShut) {
+            a3BoxM(out, B.head, 0.075 + drift * 2, 0.173, 0.178, 0.022, 0.022, 0.015, "#1b1410", 0.024);
+            a3BoxM(out, B.head, -0.075 + drift * 2, 0.173, 0.178, 0.022, 0.022, 0.015, "#1b1410", 0.024);
+          }
+          a3BoxM(out, B.head, 0.078, 0.205, 0.168, 0.062, 0.016, 0.02, "#2a1d16", 0.023);
+          a3BoxM(out, B.head, -0.078, 0.205, 0.168, 0.062, 0.016, 0.02, "#2a1d16", 0.023);
+        }
         if (f.bare) {
           /* in the ring: cropped hair and a vest, no entrance robe */
           a3BoxM(out, B.head, 0, 0.29, 0.01, 0.35, 0.10, 0.34, "#17202b", 0.01);
@@ -5483,7 +5572,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 
       /* the scene core, reusable: any camera, any face list, any canvas.
          The arena and the career bout both go through here. */
-      function a3Draw(ctx, W, H, cam, faces) {
+      function a3Draw(ctx, W, H, cam, faces, light) {
         const B = a3Basis(cam);
         /* project, cull, depth sort — painter's algorithm */
         const draw = [];
@@ -5509,8 +5598,13 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
            its own, so the costume declares its own layering. */
         draw.sort((a, b) => b.z - a.z);
 
-        /* one directional light, plus a little ambient */
-        const LX = -0.42, LY = 0.82, LZ = -0.38;
+        /* One directional light plus ambient. It is per-scene because a
+           fixed camera can end up staring into the shadow side: in the
+           corner the key sits over the camera's shoulder, or every
+           forward-facing surface — his whole face — renders at the 0.55
+           floor and he reads as a silhouette. */
+        const L = light || [-0.42, 0.82, -0.38];
+        const LX = L[0], LY = L[1], LZ = L[2];
         for (const f of draw) {
           let col = f.col;
           if (col.charAt(0) === "#") {
@@ -9855,6 +9949,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         window.scrollTo(0, y);
       }
       function wat() {
+        cornerAct("water");
         G.me.fat = Math.max(0, G.me.fat - 12);
         unl("hyd");
         F.ct = pick("water");
@@ -9863,9 +9958,11 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         rerender();
       }
       function dr() {
+        cornerAct("doctor");
         exam("corner");
       }
       function cutc() {
+        cornerAct("cut");
         G.me.cut--;
         F.used = true;
         unl("cut");
@@ -10158,6 +10255,148 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const pointsOverThreshold = Math.max(0, Math.min(70, Number(fatigue) - 30));
         return Math.round(100 - pointsOverThreshold);
       }
+      /* ══ CORNER SCENE ═════════════════════════════════════════════
+         The round break, seen over the coach's shoulder: the fighter on
+         the stool with the bucket, towel and bottle. This is the screen
+         the whole game is about, so the rule is strict — the warning
+         signs are PERFORMED by the body and nothing on screen points at
+         them. No outline, no tint, no zoom, no slow motion. If the player
+         misses a sign, they missed it.
+
+         Reads G.me, F and A3 state. Writes only CORNER, which is view
+         state, never game state.                                        */
+
+      const CORNER = {
+        /* far enough back that his whole upper body is readable — this
+           is the screen the player has to read, so framing is function */
+        cam: { x: 0.30, y: 1.46, z: 3.45, lx: -0.02, ly: 0.86, lz: 0, fov: 0.82 },
+        f: null, act: "", actT: 0, blink: 0, sway: 0, t: 0,
+      };
+      /* the corner actions set this purely so the scene can play a beat.
+         It is a render flag; the simulation never reads it. */
+      function cornerAct(name) { CORNER.act = name; CORNER.actT = 1; }
+
+      function cornerDrive(dt) {
+        if (!CORNER.f) {
+          CORNER.f = a3Fighter(-1, "You", "#2f6fb0", "#1d4a78", "player");
+          CORNER.f.bare = true;
+          CORNER.f.seated = true;
+          CORNER.f.x = 0; CORNER.f.z = 0; CORNER.f.yaw = 0;
+          CORNER.f.vx = 0; CORNER.f.vz = 0;
+        }
+        const f = CORNER.f, m = G && G.me ? G.me : null;
+        f.dt = dt;
+        f.y = -0.48;                       /* sat down on the stool */
+        CORNER.t += dt;
+        CORNER.actT = Math.max(0, CORNER.actT - dt * 0.9);
+        if (CORNER.actT <= 0) CORNER.act = "";
+
+        if (!m) return;
+        f.fat = m.fat;
+        f.cut = m.cut;
+        f.sore = m.hand ? 1 : 0;
+        f.guarded = m.body >= BAL.medical.bodyStop * 0.55 ? 1 : 0;
+        f.eyeShut = m.eye ? 1 : 0;
+        /* the brain signs. conc is the real thing; heavy head exposure
+           reads as the softer version of the same picture. */
+        f.vacant = m.conc ? 1 : (m.head >= BAL.medical.headWarn * 1.6 ? 0.6 : 0);
+        f.unsteady = m.conc ? 1 : 0;
+        /* breathing rate rides fatigue, and a concussed fighter sways */
+        f.breath = 0.6 + (m.fat / 100) * 1.6;
+        CORNER.sway = f.unsteady ? Math.sin(CORNER.t * 1.3) * 0.045 : 0;
+        f.step = CORNER.t * f.breath;
+      }
+
+      function cornerProps(out, f) {
+        /* stool, under him */
+        const b = (x, y, z, sx, sy, sz, c, bias) =>
+          a3BoxWorld(out, x, y, z, sx, sy, sz, c, bias);
+        b(0, 0.22, 0, 0.09, 0.44, 0.09, "#2b3340", 0);
+        b(0, 0.455, 0, 0.42, 0.07, 0.34, "#1d2430", 0);
+        b(0, 0.49, 0, 0.40, 0.02, 0.32, "#2f3a48", 0.005);
+        b(-0.18, 0.03, 0.02, 0.26, 0.06, 0.26, "#141a22", 0);
+        /* bucket and bottle beside it, towel over the rope behind */
+        b(0.56, 0.14, 0.18, 0.26, 0.28, 0.26, "#36414f", 0);
+        b(0.56, 0.29, 0.18, 0.28, 0.03, 0.28, "#4b5a6b", 0);
+        b(0.40, 0.11, 0.34, 0.07, 0.22, 0.07, "rgb(206,212,219)", 0.01);
+        b(-0.52, 0.62, -0.10, 0.30, 0.46, 0.05, "#d8d2c4", 0);
+      }
+      /* a cuboid straight in world space, for props that hang off no bone */
+      function a3BoxWorld(out, cx, cy, cz, sx, sy, sz, col, bias) {
+        const hx = sx / 2, hy = sy / 2, hz = sz / 2;
+        const V = A3_CORNER.map((c) => ({
+          x: cx + c[0] * hx, y: cy + c[1] * hy, z: cz + c[2] * hz,
+        }));
+        for (const F of A3_FACE)
+          out.push({
+            v: [V[F[0]], V[F[1]], V[F[2]], V[F[3]]],
+            nx: F[4], ny: F[5], nz: F[6], col, bias: bias || 0,
+          });
+      }
+
+      function cornerScene(ctx, W, H) {
+        const f = CORNER.f;
+        if (!f) return;
+        const faces = [];
+
+        /* the ring behind him, and the dark hall beyond it */
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, "#080d16"); g.addColorStop(0.6, "#121a28"); g.addColorStop(1, "#080b12");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+        /* corner post and the two ropes meeting behind the stool */
+        a3BoxWorld(faces, -0.95, 0.75, -0.95, 0.13, 1.5, 0.13, "#cfd8e2", 0);
+        for (let i = 0; i < 3; i++) {
+          const y = 0.42 + i * 0.42, c = ["#d94f3e", "#e8e2d0", "#3e94e6"][i];
+          a3BoxWorld(faces, -0.2, y, -0.95, 1.7, 0.05, 0.05, c, 0);
+          a3BoxWorld(faces, -0.95, y, -0.2, 0.05, 0.05, 1.7, c, 0);
+        }
+        a3BoxWorld(faces, 0, -0.01, 0, 4.2, 0.04, 4.2, "#6d5468", 0);
+
+        cornerProps(faces, f);
+        a3BuildFighter(faces, f, 0);
+
+        const cam = CORNER.cam;
+        a3Draw(ctx, W, H, cam, faces, [-0.30, 0.72, 0.62]);
+
+        /* the coach's shoulder and head, in the near foreground and out
+           of focus by virtue of being a flat dark mass */
+        ctx.save();
+        ctx.fillStyle = "rgba(6,9,14,.9)";
+        ctx.beginPath();
+        ctx.ellipse(W * 0.03, H * 1.16, W * 0.26, H * 0.42, 0, 0, 6.3);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(W * 0.045, H * 0.86, W * 0.075, H * 0.12, 0, 0, 6.3);
+        ctx.fill();
+        ctx.restore();
+
+        /* the cutman only appears when he is working, and the doctor only
+           when called — both are people in the frame, not UI */
+        if (CORNER.act === "cut" || CORNER.act === "doctor") {
+          const k = CORNER.actT;
+          ctx.save();
+          ctx.fillStyle = CORNER.act === "doctor" ? "rgba(214,222,232,.96)" : "rgba(28,36,48,.96)";
+          const hx = W * (0.93 - k * 0.05);
+          ctx.beginPath();
+          ctx.ellipse(hx, H * 1.02, W * 0.17, H * 0.36, 0, 0, 6.3);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.ellipse(hx - W * 0.015, H * 0.66, W * 0.062, H * 0.10, 0, 0, 6.3);
+          ctx.fill();
+          /* a swab pressed to the cut, or a penlight held to the eye */
+          ctx.fillStyle = CORNER.act === "doctor" ? "rgba(255,244,205,.92)" : "rgba(226,226,220,.95)";
+          ctx.fillRect(W * (0.70 - k * 0.07), H * 0.52, W * 0.055, H * 0.035);
+          ctx.restore();
+        }
+        if (CORNER.act === "water") {
+          ctx.save();
+          ctx.fillStyle = "rgba(150,210,245,.75)";
+          ctx.fillRect(W * 0.505, H * 0.47, W * 0.011, H * 0.09 * CORNER.actT);
+          ctx.restore();
+        }
+      }
+
       /* ══ BOUT SCENE ═══════════════════════════════════════════════
          The career bout rendered with the same rig the 1v1 Arena uses,
          on a side-on broadcast camera. This is a VIEW ONLY: it reads A,
@@ -10257,7 +10496,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const g = ctx.createLinearGradient(0, 0, 0, H);
         g.addColorStop(0, "#070c15"); g.addColorStop(0.5, "#131d2c"); g.addColorStop(1, "#060a11");
         ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-        a3Draw(ctx, W, H, cam, faces);
+        a3Draw(ctx, W, H, cam, faces, [-0.48, 0.74, 0.47]);
 
         /* the banner over the ring keeps its words */
         ctx.save();
@@ -10295,8 +10534,14 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         boutLast = now;
         cx.setTransform(1, 0, 0, 1, 0, 0);
         cx.imageSmoothingEnabled = true;
-        boutDrive(dt);
-        boutScene(cx, cv.width, cv.height);
+        /* between rounds he is on the stool, not stood in the middle */
+        if (document.body.dataset.s === "break") {
+          cornerDrive(dt);
+          cornerScene(cx, cv.width, cv.height);
+        } else {
+          boutDrive(dt);
+          boutScene(cx, cv.width, cv.height);
+        }
         /* back into 360x210 for the HUD, unchanged */
         cx.setTransform(S, 0, 0, S, 0, 0);
         cx.imageSmoothingEnabled = false;
