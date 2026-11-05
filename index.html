@@ -3157,6 +3157,41 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
 .gp-act b{display:inline-block;min-width:18px;padding:1px 5px;margin-right:6px;
   border:1px solid #e8c272;border-radius:3px;background:rgba(0,0,0,.45);
   color:#ffcf59!important;font-weight:900}
+
+/* ── 3D ARENA ──────────────────────────────────────────────── */
+.arena3{position:fixed;inset:0;z-index:69;background:#060910;overflow:hidden}
+.arena3 #a3-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.a3-hud{position:absolute;top:0;left:0;right:0;display:flex;align-items:flex-start;
+  gap:14px;padding:14px 16px;pointer-events:none;font-family:"Courier New",monospace}
+.a3-side{flex:1;min-width:0}
+.a3-side.right{text-align:right}
+.a3-name{font:900 12px/1.2 "Arial Black","Courier New",monospace;letter-spacing:.12em;
+  color:#fff3cf;text-shadow:0 2px 0 rgba(0,0,0,.8);margin-bottom:5px}
+.a3-name b{color:#ffd14f}
+.a3-bar{height:15px;background:rgba(4,8,14,.82);border:2px solid #55687e;overflow:hidden}
+.a3-bar i{display:block;height:100%;background:linear-gradient(180deg,#ff8a5c,#d2321f);
+  transition:width .16s linear}
+.a3-bar.sta{height:7px;margin-top:4px;border-color:#3d566e}
+.a3-bar.sta i{background:linear-gradient(180deg,#8fe3ff,#2f85d7)}
+.a3-side.right .a3-bar i{margin-left:auto}
+.a3-mid{flex:0 0 96px;text-align:center}
+.a3-mid b{display:block;font:900 30px/1 "Arial Black",monospace;color:#fff3cf;
+  text-shadow:0 2px 0 rgba(0,0,0,.85)}
+.a3-mid span{font:700 9px/1.4 "Courier New",monospace;letter-spacing:.18em;color:#9fb2bf}
+.a3-banner{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);
+  font:900 clamp(34px,8vw,68px)/1 "Arial Black",monospace;letter-spacing:.08em;
+  color:#ffd14f;text-shadow:0 4px 0 #5e1d10,0 8px 22px rgba(0,0,0,.8);pointer-events:none}
+.a3-banner[hidden]{display:none}
+.a3-keys{position:absolute;left:0;right:0;bottom:12px;text-align:center;pointer-events:none;
+  font:700 10px/1.4 "Courier New",monospace;letter-spacing:.1em;color:#8fa3b5}
+.a3-exit,.a3-restart{position:absolute;padding:9px 16px;border:2px solid #55687e;
+  background:rgba(10,18,28,.9);color:#e9f1f7;font:900 11px/1 "Courier New",monospace;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.a3-exit{right:14px;bottom:36px}
+.a3-exit:hover{border-color:#ff5542;color:#ff8a7a}
+.a3-restart{left:50%;top:54%;transform:translateX(-50%);border-color:#e8c272;color:#ffd14f;
+  padding:12px 22px;font-size:13px}
+.a3-restart[hidden]{display:none}
 </style>
 <body data-phase="title">
 <button id="gear-btn" type="button" aria-label="Settings" onclick="openSettings()">⚙</button>
@@ -4819,6 +4854,453 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         }, 230);
       }
 
+      /* ══ 3D ARENA · 1v1 ═══════════════════════════════════════════
+         A genuine 3D mode, not a side-on one rebadged. Both fighters
+         hold real x/y/z positions and move freely across the floor; the
+         camera is a true perspective camera that frames the pair. It is
+         software-rendered onto the same 2D canvas the rest of the game
+         uses — boxes, depth-sorted, lit by one directional light —
+         which keeps the build a single file with no dependencies and
+         suits the blocky look. The simulation is 3D; only the
+         rasteriser is hand-rolled.                                      */
+
+      const A3 = {
+        on: false, raf: 0, last: 0,
+        state: "intro", t: 0, intro: 3.2, left: 90, round: 1,
+        keys: new Set(), mouse: 0,
+        cam: { x: 0, y: 4, z: -9, lx: 0, ly: 1, lz: 0, fov: 1.02 },
+        p: null, o: null, shake: 0,
+      };
+      const A3_BOUND = 5.0;          /* half-width of the playable floor */
+      const A3_SEP = 1.05;           /* fighters never share a spot      */
+
+      function a3Fighter(side, name, col, trim) {
+        return {
+          name, col, trim,
+          x: side * 2.4, y: 0, z: 0,
+          vx: 0, vz: 0,                       /* velocity, for real accel */
+          yaw: side > 0 ? -Math.PI / 2 : Math.PI / 2,
+          hp: 100, maxHp: 100, sta: 100, maxSta: 100,
+          step: 0, bob: 0, sprint: 0, sidestep: 0, lunge: 0,
+        };
+      }
+
+      /* ── maths ────────────────────────────────────────────────── */
+      const a3Clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+      function a3Basis(cam) {
+        let fx = cam.lx - cam.x, fy = cam.ly - cam.y, fz = cam.lz - cam.z;
+        const fl = Math.hypot(fx, fy, fz) || 1;
+        fx /= fl; fy /= fl; fz /= fl;
+        /* right = up × forward, which stays in the XZ plane */
+        let rx = fz, rz = -fx;
+        const rl = Math.hypot(rx, rz) || 1;
+        rx /= rl; rz /= rl;
+        /* up = forward x right; the signs matter, a flipped one skews the whole view */
+        const ux = fy * rz, uy = fz * rx - fx * rz, uz = -fy * rx;
+        return { fx, fy, fz, rx, ry: 0, rz, ux, uy, uz };
+      }
+      function a3Project(px, py, pz, cam, B, W, H) {
+        const dx = px - cam.x, dy = py - cam.y, dz = pz - cam.z;
+        const cz = dx * B.fx + dy * B.fy + dz * B.fz;
+        if (cz < 0.12) return null;                      /* behind the eye */
+        const cx = dx * B.rx + dz * B.rz;
+        const cy = dx * B.ux + dy * B.uy + dz * B.uz;
+        const k = (Math.min(W, H) * 0.5) / Math.tan(cam.fov * 0.5) / cz;
+        return { sx: W * 0.5 + cx * k, sy: H * 0.5 - cy * k, z: cz };
+      }
+      /* a box, rotated about Y, pushed as six lit faces */
+      function a3Box(out, cx, cy, cz, sx, sy, sz, yaw, col) {
+        const c = Math.cos(yaw), s = Math.sin(yaw);
+        const hx = sx / 2, hy = sy / 2, hz = sz / 2;
+        const L = [[-hx, -hy, -hz], [hx, -hy, -hz], [hx, hy, -hz], [-hx, hy, -hz],
+                   [-hx, -hy, hz], [hx, -hy, hz], [hx, hy, hz], [-hx, hy, hz]];
+        const V = L.map((p) => ({
+          x: cx + p[0] * c + p[2] * s,
+          y: cy + p[1],
+          z: cz - p[0] * s + p[2] * c,
+        }));
+        const F = [[0, 1, 2, 3, 0, 0, -1], [5, 4, 7, 6, 0, 0, 1],
+                   [4, 0, 3, 7, -1, 0, 0], [1, 5, 6, 2, 1, 0, 0],
+                   [3, 2, 6, 7, 0, 1, 0], [4, 5, 1, 0, 0, -1, 0]];
+        for (const f of F) {
+          const nx = f[4] * c + f[6] * s, ny = f[5], nz = -f[4] * s + f[6] * c;
+          out.push({ v: [V[f[0]], V[f[1]], V[f[2]], V[f[3]]], nx, ny, nz, col });
+        }
+      }
+      function a3Quad(out, a, b, c, d, nx, ny, nz, col) {
+        out.push({ v: [a, b, c, d], nx, ny, nz, col });
+      }
+      const a3V = (x, y, z) => ({ x, y, z });
+
+      /* ── the arena itself ─────────────────────────────────────── */
+      function a3BuildArena(out) {
+        const R = A3_BOUND + 0.6;
+        /* canvas */
+        a3Quad(out, a3V(-R, 0, -R), a3V(R, 0, -R), a3V(R, 0, R), a3V(-R, 0, R),
+               0, 1, 0, "#6d5468");
+        /* mat seams, so movement across the floor is legible */
+        for (let i = -4; i <= 4; i++) {
+          const t = i * 1.2;
+          a3Quad(out, a3V(t - .04, .01, -R), a3V(t + .04, .01, -R),
+                      a3V(t + .04, .01, R), a3V(t - .04, .01, R), 0, 1, 0, "#5d4659");
+          a3Quad(out, a3V(-R, .01, t - .04), a3V(R, .01, t - .04),
+                      a3V(R, .01, t + .04), a3V(-R, .01, t + .04), 0, 1, 0, "#5d4659");
+        }
+        /* apron skirt */
+        a3Box(out, 0, -0.35, 0, R * 2 + .5, .7, R * 2 + .5, 0, "#2a1d2a");
+        /* corner posts and three ropes a side */
+        const P = [[-R, -R], [R, -R], [R, R], [-R, R]];
+        for (const [px, pz] of P) a3Box(out, px, 0.75, pz, .22, 1.5, .22, 0, "#cfd8e2");
+        const ropeCol = ["#d94f3e", "#e8e2d0", "#3e94e6"];
+        for (let i = 0; i < 3; i++) {
+          const y = 0.42 + i * 0.42, th = .07;
+          for (let s = 0; s < 4; s++) {
+            const a = P[s], b = P[(s + 1) % 4];
+            const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+            const horiz = Math.abs(b[0] - a[0]) > Math.abs(b[1] - a[1]);
+            a3Box(out, mx, y, mz, horiz ? R * 2 : th, th, horiz ? th : R * 2, 0, ropeCol[i]);
+          }
+        }
+      }
+
+      /* ── a blocky fighter, posed ──────────────────────────────── */
+      function a3BuildFighter(out, f, hurt) {
+        const sw = Math.sin(f.step) * 0.22;            /* leg swing       */
+        const bob = Math.sin(f.step * 2) * 0.03 + f.bob;
+        const y = f.y;
+        const skin = hurt > 0 ? "#e8a090" : "#d9956e";
+        /* legs swing along the facing axis */
+        a3Box(out, f.x + Math.sin(f.yaw) * sw, y + 0.42 + bob, f.z + Math.cos(f.yaw) * sw,
+              0.26, 0.84, 0.26, f.yaw, "#2a3444");
+        a3Box(out, f.x - Math.sin(f.yaw) * sw, y + 0.42 + bob, f.z - Math.cos(f.yaw) * sw,
+              0.26, 0.84, 0.26, f.yaw, "#222b38");
+        /* boots */
+        a3Box(out, f.x + Math.sin(f.yaw) * sw, y + 0.06, f.z + Math.cos(f.yaw) * sw,
+              0.3, 0.14, 0.34, f.yaw, "#14191f");
+        a3Box(out, f.x - Math.sin(f.yaw) * sw, y + 0.06, f.z - Math.cos(f.yaw) * sw,
+              0.3, 0.14, 0.34, f.yaw, "#14191f");
+        /* trunks + torso, leaning very slightly into the guard */
+        a3Box(out, f.x, y + 0.92 + bob, f.z, 0.62, 0.3, 0.42, f.yaw, f.trim);
+        a3Box(out, f.x, y + 1.32 + bob, f.z, 0.66, 0.6, 0.44, f.yaw, f.col);
+        /* head */
+        a3Box(out, f.x, y + 1.82 + bob, f.z, 0.4, 0.42, 0.4, f.yaw, skin);
+        a3Box(out, f.x, y + 2.0 + bob, f.z, 0.42, 0.12, 0.42, f.yaw, "#17202b");
+        /* gloves up by the chin — this is the bit that reads as boxing */
+        const gx = Math.cos(f.yaw) * 0.26, gz = -Math.sin(f.yaw) * 0.26;
+        const fwd = 0.24 + Math.sin(f.step * 2) * 0.02 + f.lunge;
+        const fx = Math.sin(f.yaw) * fwd, fz = Math.cos(f.yaw) * fwd;
+        a3Box(out, f.x + gx + fx, y + 1.62 + bob, f.z + gz + fz, 0.26, 0.26, 0.26, f.yaw, "#d94f3e");
+        a3Box(out, f.x - gx + fx, y + 1.58 + bob, f.z - gz + fz, 0.26, 0.26, 0.26, f.yaw, "#d94f3e");
+        /* contact shadow, flattened on the canvas */
+        a3Quad(out, a3V(f.x - .34, .02, f.z - .34), a3V(f.x + .34, .02, f.z - .34),
+                    a3V(f.x + .34, .02, f.z + .34), a3V(f.x - .34, .02, f.z + .34),
+               0, 1, 0, "rgba(0,0,0,.45)");
+      }
+
+      /* ── camera: frame both fighters, Tekken-ish ──────────────── */
+      function a3Camera(dt) {
+        const p = A3.p, o = A3.o, cam = A3.cam;
+        const mx = (p.x + o.x) / 2, mz = (p.z + o.z) / 2;
+        let ax = o.x - p.x, az = o.z - p.z;
+        const sep = Math.hypot(ax, az) || 1;
+        ax /= sep; az /= sep;
+        let perpX = -az, perpZ = ax;
+        /* stay on the side we are already on, or the view flips on a cross */
+        if (perpX * (cam.x - mx) + perpZ * (cam.z - mz) < 0) { perpX = -perpX; perpZ = -perpZ; }
+        const dist = a3Clamp(5.4 + sep * 0.8, 6.2, 12.5);
+        const wantX = mx + perpX * dist, wantZ = mz + perpZ * dist;
+        const wantY = 3.3 + sep * 0.1;
+        const k = Math.min(1, dt * 3.2);
+        cam.x += (wantX - cam.x) * k;
+        cam.y += (wantY - cam.y) * k;
+        cam.z += (wantZ - cam.z) * k;
+        cam.lx += (mx - cam.lx) * Math.min(1, dt * 5);
+        cam.ly += (1.45 - cam.ly) * Math.min(1, dt * 5);
+        cam.lz += (mz - cam.lz) * Math.min(1, dt * 5);
+        cam.fov += (a3Clamp(0.95 + sep * 0.012, 0.95, 1.12) - cam.fov) * Math.min(1, dt * 2);
+      }
+
+      /* ── shared movement rules ────────────────────────────────── */
+      function a3Face(f, tx, tz, dt) {
+        const want = Math.atan2(tx - f.x, tz - f.z);
+        let d = want - f.yaw;
+        while (d > Math.PI) d -= Math.PI * 2;
+        while (d < -Math.PI) d += Math.PI * 2;
+        if (Math.abs(d) < 0.004) return;                 /* no jitter */
+        f.yaw += d * Math.min(1, dt * 9);
+      }
+      function a3Drive(f, fwd, strafe, speed, dt) {
+        /* input is relative to where he is facing, like any fighter */
+        let dx = Math.sin(f.yaw) * fwd + Math.cos(f.yaw) * strafe;
+        let dz = Math.cos(f.yaw) * fwd - Math.sin(f.yaw) * strafe;
+        const l = Math.hypot(dx, dz);
+        if (l > 1) { dx /= l; dz /= l; }                 /* diagonals are not faster */
+        const tvx = dx * speed, tvz = dz * speed;
+        const a = Math.min(1, dt * (l > 0.01 ? 11 : 15)); /* accel in, brake harder */
+        f.vx += (tvx - f.vx) * a;
+        f.vz += (tvz - f.vz) * a;
+        f.x += f.vx * dt;
+        f.z += f.vz * dt;
+        const moving = Math.hypot(f.vx, f.vz);
+        f.step += dt * (3 + moving * 2.4);
+        return moving;
+      }
+      function a3Collide() {
+        for (const f of [A3.p, A3.o]) {
+          f.x = a3Clamp(f.x, -A3_BOUND, A3_BOUND);
+          f.z = a3Clamp(f.z, -A3_BOUND, A3_BOUND);
+        }
+        const p = A3.p, o = A3.o;
+        let dx = o.x - p.x, dz = o.z - p.z;
+        let d = Math.hypot(dx, dz);
+        if (d < 0.0001) { dx = 1; dz = 0; d = 1; }
+        if (d < A3_SEP) {
+          const push = (A3_SEP - d) / 2;
+          p.x -= (dx / d) * push; p.z -= (dz / d) * push;
+          o.x += (dx / d) * push; o.z += (dz / d) * push;
+        }
+      }
+
+      /* ── the player ───────────────────────────────────────────── */
+      function a3Player(dt) {
+        const p = A3.p, K = A3.keys;
+        const fwd = (K.has("w") ? 1 : 0) - (K.has("s") ? 1 : 0);
+        const str = (K.has("d") ? 1 : 0) - (K.has("a") ? 1 : 0);
+        const wantSprint = K.has("shift") && (fwd || str) && p.sta > 6;
+        let speed = 2.5;
+        if (wantSprint) { speed = 4.3; p.sta -= 22 * dt; p.sprint = 1; }
+        else p.sprint = Math.max(0, p.sprint - dt * 4);
+        if (p.sidestep > 0) {
+          p.sidestep -= dt;
+          speed = 6.4;
+        }
+        if (!wantSprint && p.sidestep <= 0) p.sta = Math.min(p.maxSta, p.sta + 15 * dt);
+        p.sta = a3Clamp(p.sta, 0, p.maxSta);
+        a3Drive(p, fwd, str, speed, dt);
+        a3Face(p, A3.o.x, A3.o.z, dt);
+      }
+      function a3Sidestep() {
+        const p = A3.p;
+        if (p.sidestep > 0 || p.sta < 18) return;
+        p.sta -= 18; p.sidestep = 0.22;
+      }
+
+      /* ── the opponent ─────────────────────────────────────────── */
+      function a3AI(dt) {
+        const o = A3.o, p = A3.p;
+        o.ai = o.ai || { t: 0, strafe: 1, want: 2.1 };
+        o.ai.t -= dt;
+        if (o.ai.t <= 0) {                               /* re-think now and then */
+          o.ai.t = 0.9 + Math.random() * 1.4;
+          o.ai.strafe = Math.random() < 0.5 ? -1 : 1;
+          o.ai.want = 1.5 + Math.random() * 1.9;
+        }
+        const d = Math.hypot(p.x - o.x, p.z - o.z);
+        /* close the gap, back off when crowded, and never just stand */
+        const fwd = d > o.ai.want + 0.25 ? 1 : d < o.ai.want - 0.35 ? -1 : 0;
+        const str = o.ai.strafe * (d < 3.2 ? 1 : 0.35);
+        let speed = 2.2;
+        if (fwd > 0 && d > 3.4 && o.sta > 12) { speed = 3.5; o.sta -= 14 * dt; }
+        else o.sta = Math.min(o.maxSta, o.sta + 13 * dt);
+        o.sta = a3Clamp(o.sta, 0, o.maxSta);
+        a3Drive(o, fwd, str, speed, dt);
+        a3Face(o, p.x, p.z, dt);
+      }
+
+      /* ── render ───────────────────────────────────────────────── */
+      function a3Render(cv, ctx) {
+        const W = cv.width, H = cv.height, cam = A3.cam;
+        const B = a3Basis(cam);
+        /* hall behind the ring */
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, "#0a0f18"); g.addColorStop(0.55, "#141d2b"); g.addColorStop(1, "#070a10");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+        const faces = [];
+        a3BuildArena(faces);
+        a3BuildFighter(faces, A3.o, A3.o.hurt || 0);
+        a3BuildFighter(faces, A3.p, A3.p.hurt || 0);
+
+        /* project, cull, depth sort — painter's algorithm */
+        const draw = [];
+        for (const f of faces) {
+          const pts = [];
+          let ok = true, zsum = 0;
+          for (const v of f.v) {
+            const q = a3Project(v.x, v.y, v.z, cam, B, W, H);
+            if (!q) { ok = false; break; }
+            pts.push(q); zsum += q.z;
+          }
+          if (!ok) continue;
+          /* backface: skip faces pointing away from the eye */
+          const cxp = (f.v[0].x + f.v[2].x) / 2 - cam.x;
+          const cyp = (f.v[0].y + f.v[2].y) / 2 - cam.y;
+          const czp = (f.v[0].z + f.v[2].z) / 2 - cam.z;
+          if (f.nx * cxp + f.ny * cyp + f.nz * czp > 0) continue;
+          draw.push({ pts, z: zsum / f.v.length, nx: f.nx, ny: f.ny, nz: f.nz, col: f.col });
+        }
+        draw.sort((a, b) => b.z - a.z);
+
+        /* one directional light, plus a little ambient */
+        const LX = -0.42, LY = 0.82, LZ = -0.38;
+        for (const f of draw) {
+          let col = f.col;
+          if (col.charAt(0) === "#") {
+            const lam = Math.max(0, f.nx * LX + f.ny * LY + f.nz * LZ);
+            const sh = 0.55 + lam * 0.65;
+            const n = parseInt(col.slice(1), 16);
+            const r = a3Clamp(((n >> 16) & 255) * sh, 0, 255) | 0;
+            const gg = a3Clamp(((n >> 8) & 255) * sh, 0, 255) | 0;
+            const b2 = a3Clamp((n & 255) * sh, 0, 255) | 0;
+            col = "rgb(" + r + "," + gg + "," + b2 + ")";
+          }
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.moveTo(f.pts[0].sx, f.pts[0].sy);
+          for (let i = 1; i < f.pts.length; i++) ctx.lineTo(f.pts[i].sx, f.pts[i].sy);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      /* ── HUD ──────────────────────────────────────────────────── */
+      function a3Hud() {
+        const set = (id, v) => { const n = document.querySelector(id); if (n) n.style.width = v + "%"; };
+        set("#a3-php", (A3.p.hp / A3.p.maxHp) * 100);
+        set("#a3-psta", (A3.p.sta / A3.p.maxSta) * 100);
+        set("#a3-ohp", (A3.o.hp / A3.o.maxHp) * 100);
+        set("#a3-osta", (A3.o.sta / A3.o.maxSta) * 100);
+        const t = document.querySelector("#a3-time");
+        if (t) t.textContent = Math.max(0, Math.ceil(A3.left));
+        const pv = document.querySelector("#a3-phpv"), ov = document.querySelector("#a3-ohpv");
+        if (pv) pv.textContent = Math.max(0, Math.round(A3.p.hp));
+        if (ov) ov.textContent = Math.max(0, Math.round(A3.o.hp));
+      }
+
+      /* ── match lifecycle ──────────────────────────────────────── */
+      function a3Reset() {
+        A3.state = "intro"; A3.t = 0; A3.intro = 3.2; A3.left = 90;
+        A3.p = a3Fighter(-1, "You", "#2f6fb0", "#1d4a78");
+        A3.o = a3Fighter(1, "Rival", "#a8382c", "#75241b");
+        A3.cam = { x: 0, y: 4, z: -9, lx: 0, ly: 1.15, lz: 0, fov: 1.02 };
+        A3.keys.clear();
+        const b = document.querySelector("#a3-banner");
+        if (b) { b.textContent = "READY"; b.hidden = false; }
+        const r = document.querySelector("#a3-restart");
+        if (r) r.hidden = true;
+      }
+      function a3End(msg) {
+        A3.state = "over";
+        const b = document.querySelector("#a3-banner");
+        if (b) { b.textContent = msg; b.hidden = false; }
+        const r = document.querySelector("#a3-restart");
+        if (r) r.hidden = false;
+      }
+      function a3Step(dt) {
+        if (A3.state === "intro") {
+          A3.intro -= dt;
+          const b = document.querySelector("#a3-banner");
+          if (b) b.textContent = A3.intro > 2.1 ? "READY" : A3.intro > 0.9 ? "SET" : "FIGHT";
+          a3Face(A3.p, A3.o.x, A3.o.z, dt);
+          a3Face(A3.o, A3.p.x, A3.p.z, dt);
+          if (A3.intro <= 0) {
+            A3.state = "fight";
+            const bb = document.querySelector("#a3-banner");
+            if (bb) bb.hidden = true;
+          }
+        } else if (A3.state === "fight") {
+          A3.left -= dt;
+          a3Player(dt);
+          a3AI(dt);
+          a3Collide();
+          if (A3.left <= 0) {
+            a3End(A3.p.hp === A3.o.hp ? "DRAW"
+                : A3.p.hp > A3.o.hp ? "TIME — YOU WIN" : "TIME — YOU LOSE");
+          }
+        } else {
+          /* keep facing one another while the result sits on screen */
+          a3Face(A3.p, A3.o.x, A3.o.z, dt);
+          a3Face(A3.o, A3.p.x, A3.p.z, dt);
+        }
+        a3Camera(dt);
+        a3Hud();
+      }
+
+      /* ── open / close ─────────────────────────────────────────── */
+      function openArena3D() {
+        document.querySelectorAll(".arena3").forEach((n) => n.remove());
+        const el = document.createElement("div");
+        el.className = "arena3";
+        el.innerHTML =
+          '<canvas id="a3-canvas"></canvas>' +
+          '<div class="a3-hud">' +
+            '<div class="a3-side">' +
+              '<div class="a3-name">YOU <b id="a3-phpv">100</b></div>' +
+              '<div class="a3-bar"><i id="a3-php" style="width:100%"></i></div>' +
+              '<div class="a3-bar sta"><i id="a3-psta" style="width:100%"></i></div>' +
+            "</div>" +
+            '<div class="a3-mid"><b id="a3-time">90</b><span>ROUND 1</span></div>' +
+            '<div class="a3-side right">' +
+              '<div class="a3-name"><b id="a3-ohpv">100</b> RIVAL</div>' +
+              '<div class="a3-bar"><i id="a3-ohp" style="width:100%"></i></div>' +
+              '<div class="a3-bar sta"><i id="a3-osta" style="width:100%"></i></div>' +
+            "</div>" +
+          "</div>" +
+          '<div class="a3-banner" id="a3-banner">READY</div>' +
+          '<div class="a3-keys">WASD move · Shift sprint · Space sidestep · Esc exit</div>' +
+          '<button class="a3-exit" id="a3-exit" type="button">Exit</button>' +
+          '<button class="a3-restart" id="a3-restart" type="button" hidden>Fight again</button>';
+        document.body.appendChild(el);
+
+        const cv = el.querySelector("#a3-canvas");
+        const ctx = cv.getContext("2d");
+        const fit = () => {
+          const r = Math.min(2, window.devicePixelRatio || 1);
+          cv.width = Math.round(el.clientWidth * r);
+          cv.height = Math.round(el.clientHeight * r);
+        };
+        fit();
+        window.addEventListener("resize", fit);
+        el._fit = fit;
+
+        a3Reset();
+        A3.on = true;
+        A3.last = performance.now();
+        const loop = (now) => {
+          if (!A3.on || !document.querySelector(".arena3")) return;
+          const dt = Math.min(0.05, (now - A3.last) / 1000);
+          A3.last = now;
+          a3Step(dt);
+          a3Render(cv, ctx);
+          A3.raf = requestAnimationFrame(loop);
+        };
+        A3.raf = requestAnimationFrame(loop);
+
+        el.querySelector("#a3-exit").addEventListener("click", closeArena3D);
+        el.querySelector("#a3-restart").addEventListener("click", a3Reset);
+      }
+      function closeArena3D() {
+        A3.on = false;
+        if (A3.raf) cancelAnimationFrame(A3.raf);
+        A3.raf = 0;
+        const el = document.querySelector(".arena3");
+        if (el && el._fit) window.removeEventListener("resize", el._fit);
+        document.querySelectorAll(".arena3").forEach((n) => n.remove());
+      }
+      const a3Open = () => !!document.querySelector(".arena3");
+      window.addEventListener("keydown", (e) => {
+        if (!a3Open()) return;
+        const k = e.key.toLowerCase();
+        if (k === "escape") { e.preventDefault(); return closeArena3D(); }
+        if (["w", "a", "s", "d", "shift"].includes(k)) { A3.keys.add(k); e.preventDefault(); }
+        if (k === " ") { a3Sidestep(); e.preventDefault(); }
+      });
+      window.addEventListener("keyup", (e) => {
+        if (!a3Open()) return;
+        A3.keys.delete(e.key.toLowerCase());
+      });
+      window.addEventListener("blur", () => A3.keys.clear());
+
       /* ── MODE SELECT ─────────────────────────────────────────────
          PLAY opens a picker rather than dropping straight into the
          career. Missions is the career and is live; the other three
@@ -4830,8 +5312,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         { id: "street", label: "Street Fight", live: true,
           sub: "Arcade. Hold the middle of the street for sixty seconds against waves from both sides.",
           art: 1 },
-        { id: "duel", label: "1v1", live: false,
-          sub: "Two players, one fighter. One of you in each corner, making opposite calls.",
+        { id: "duel", label: "1v1 Arena", live: true,
+          sub: "Three dimensions, two fighters. Circle him, cut the ring off, and watch the angles.",
           art: 2 },
         { id: "thecall", label: "The Call", live: false,
           sub: "Ten seconds of tape. Continue, stop, or call the doctor. Placeholder name.",
@@ -4988,7 +5470,9 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             const m = MODES.find((x) => x.id === btn.dataset.mode);
             if (m && m.live) {
               closeModeSelect();
-              return m.id === "street" ? openStreetFight() : openMissionSetup();
+              return m.id === "street" ? openStreetFight()
+                   : m.id === "duel" ? openArena3D()
+                   : openMissionSetup();
             }
             maintenance(btn.dataset.mode);
           }));
@@ -5759,7 +6243,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       }
       function hotkeysBlocked() {
         if (document.querySelector(".st-key.binding")) return true;
-        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight")) return true;
+        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3")) return true;
         return !!document.querySelector("dialog[open]");
       }
       window.addEventListener("keydown", (e) => {
@@ -6682,7 +7166,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       /* ── gym input ───────────────────────────────────────────── */
       function gymActive() {
         return lobbyView === "gym" && !!document.querySelector(".lobby")
-          && !document.querySelector(".trainer,.settings,.market,.gearup,.msetup,.modesel,#gymload,.boardwrap,.tradewrap,.sfight");
+          && !document.querySelector(".trainer,.settings,.market,.gearup,.msetup,.modesel,#gymload,.boardwrap,.tradewrap,.sfight,.arena3");
       }
       window.addEventListener("keydown", (e) => {
         if (!gymActive()) return;
