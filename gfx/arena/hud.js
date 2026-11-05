@@ -30,7 +30,7 @@ const TIPS = [
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 const other = (who) => (who === 'p' ? 'o' : 'p');
-const power01 = (p) => (p > 1.5 ? Math.min(1, p / 12) : clamp01(p || 0));
+const power01 = (p) => clamp01(p || 0);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function coarsePointer() {
@@ -114,7 +114,7 @@ const TEMPLATE = (touch) => `
   <div class="ax-bn-in">
     <div class="ax-bn-band"></div>
     <div class="ax-bn-word"><div class="ax-bn-back"></div><div class="ax-bn-main"></div><div class="ax-bn-ghost"></div></div>
-    <div class="ax-bn-num"><span class="ax-bn-numb"></span><span class="ax-bn-numf"></span></div><div class="ax-bn-sub"></div><div class="ax-bn-tag"></div>
+    <div class="ax-bn-num"><span class="ax-bn-numb"></span><span class="ax-bn-numf"></span></div><div class="ax-bn-sub"></div><div class="ax-bn-tag"></div><div class="ax-bn-up"><span class="ax-bn-upf"></span></div>
   </div>
 </div>
 <div class="ax-cap" aria-hidden="true"></div>
@@ -185,7 +185,7 @@ export function createHud(rootEl, opts = {}) {
   /* ── element refs ─────────────────────────────────────────────────── */
   const sr = q('.ax-sr'), vig = q('.ax-vig'), white = q('.ax-white');
   const clockBox = q('.ax-clockbox'), clockEl = q('.ax-clock'), rlabel = q('.ax-rlabel');
-  const bn = q('.ax-bn'), bnMain = q('.ax-bn-main'), bnBack = q('.ax-bn-back'), bnGhost = q('.ax-bn-ghost'), bnNum = q('.ax-bn-num'), bnNumF = q('.ax-bn-numf'), bnNumB = q('.ax-bn-numb'), bnSub = q('.ax-bn-sub'), bnTag = q('.ax-bn-tag'), cap = q('.ax-cap');
+  const bn = q('.ax-bn'), bnMain = q('.ax-bn-main'), bnBack = q('.ax-bn-back'), bnGhost = q('.ax-bn-ghost'), bnNum = q('.ax-bn-num'), bnNumF = q('.ax-bn-numf'), bnNumB = q('.ax-bn-numb'), bnSub = q('.ax-bn-sub'), bnTag = q('.ax-bn-tag'), bnUp = q('.ax-bn-up'), bnUpF = q('.ax-bn-upf'), cap = q('.ax-cap');
   const hint = q('.ax-hint');
   const pausePanel = q('.ax-pause'), endPanel = q('.ax-end');
   const endTitle = endPanel.querySelector('.ax-title'), endHow = q('.ax-how'), endScore = q('.ax-score'), endStats = q('.ax-stats'), endReport = q('.ax-report'), endCarry = q('.ax-carry');
@@ -208,7 +208,7 @@ export function createHud(rootEl, opts = {}) {
 
   /* ── match bookkeeping ────────────────────────────────────────────── */
   let match = null, lastState = null, shownRound = 0, foughtRound = 0, overShown = false, overT = 0, endShown = false, endHow_ = null;
-  let bKind = null, bT = 0, bOut = 0, downWho = null, wCount = -1, lastSec = -1, wRound = null, hintT = 0, hintGone = false, paused = false, wPips = '', loadTimer = 0, loadP = 0, endEv = null;
+  let bKind = null, bT = 0, bOut = 0, downWho = null, wCount = -1, wUp = -1, lastSec = -1, wRound = null, hintT = 0, hintGone = false, paused = false, wPips = '', loadTimer = 0, loadP = 0, endEv = null;
   const queue = [];
   const roundLog = [];
 
@@ -222,8 +222,8 @@ export function createHud(rootEl, opts = {}) {
     bKind = kind; bT = dur; bOut = 0;
     bnMain.textContent = word; bnBack.textContent = word; bnGhost.textContent = word; bnSub.textContent = sub; bnTag.textContent = tag;
     bnNumF.textContent = ''; bnNumB.textContent = '';
-    bn.className = 'ax-bn';
-    void bn.offsetWidth; // one forced layout per banner so the same animation can replay
+    /* only a banner replacing a visible one needs the forced layout to restart its animation; from hidden it restarts by itself */
+    if (bn.classList.contains('is-on')) { bn.className = 'ax-bn'; void bn.offsetWidth; }
     bn.className = 'ax-bn is-on k-' + kind;
   }
   function endBanner() {
@@ -337,7 +337,11 @@ export function createHud(rootEl, opts = {}) {
       case 'slipped': call(S[other(ev.who)], 'Slipped'); break; // who is the puncher here
       case 'stagger': call(S[other(ev.who)], 'Staggered'); break;
       case 'knockdown': showDown(m, ev); break;
-      case 'getup': showBackUp(); break;
+      case 'getup': {
+        /* he has started to rise: the fight resumes when the sim says so, which is when the small Fight banner shows */
+        if (bKind === 'down') { const line = ev.who === 'p' ? 'You are up' : nameOf(m[ev.who]) + ' is up'; bnSub.textContent = line; say(line); }
+        break;
+      }
       case 'round_end':
         if (ev.scores || ev.p != null) roundLog[m.round - 1] = ev.scores || { p: ev.p, o: ev.o };
         break;
@@ -448,7 +452,12 @@ export function createHud(rootEl, opts = {}) {
       wRound = m.round;
       rlabel.textContent = 'Round ' + m.round;
     }
-    if (bKind === 'down') showCount(m);
+    if (bKind === 'down') {
+      showCount(m);
+      const dn = downWho === 'p' && m.p.down && m.p.down.rising == null ? m.p.down : null;
+      const up = dn ? Math.round(clamp01(dn.up || 0) * 100) : -1;
+      if (up !== wUp) { wUp = up; bnUp.classList.toggle('is-on', up >= 0); if (up >= 0) bnUpF.style.transform = 'scaleX(' + (up / 100).toFixed(2) + ')'; }
+    } else if (wUp !== -1) { wUp = -1; bnUp.classList.remove('is-on'); }
     if (bOut > 0) {
       bOut -= d;
       if (bOut <= 0) clearBanner();
@@ -536,7 +545,7 @@ export function createHud(rootEl, opts = {}) {
     if (r.how === 'ko') how = 'Knockout in round ' + r.round;
     else if (r.how === 'tko') how = 'Three knockdowns in round ' + r.round;
     else if (r.how === 'stopped') {
-      const hp = Math.max(0, Math.round(m[r.winner === 'p' ? 'o' : 'p'].hp));
+      const hp = Math.max(0, Math.round((m.result && m.result.loserHp) ?? m[r.winner === 'p' ? 'o' : 'p'].hp));
       how = 'The referee stopped it in round ' + r.round + ' with ' + hp + ' health left';
     }
     endHow.textContent = how;
@@ -562,7 +571,7 @@ export function createHud(rootEl, opts = {}) {
     } else endScore.style.display = 'none';
     // Stats
     endStats.innerHTML =
-      statRow(S.p.thrown, 'Punches thrown', S.o.thrown) +
+      statRow(m.p.thrown ?? S.p.thrown, 'Punches thrown', m.o.thrown ?? S.o.thrown) +
       statRow(m.p.landed || 0, 'Punches landed', m.o.landed || 0);
     // The one honest report line.
     endReport.textContent = 'you took ' + (m.p.clean || 0) + ' clean to the head · he took ' + (m.o.clean || 0);
@@ -746,6 +755,5 @@ export function createHud(rootEl, opts = {}) {
   return {
     update, onEvent, showLoading, destroy, setPaused, reset, stick, el: hud, ready,
     get paused() { return paused; },
-    get ended() { return endShown; },
   };
 }

@@ -176,6 +176,8 @@ export class LightField {
 }
 
 const bakedMats = new Map();
+/* Forgets the baked copies when a stage closes: each stage makes its own materials, so old entries would only pile up. */
+export function clearBakedMaterials() { bakedMats.clear(); }
 function bakedMaterial(mat, hemi, spec) {
   const key = `${mat.uuid}:${hemi}:${spec}`; if (bakedMats.has(key)) return bakedMats.get(key);
   const m = mat.clone(); m.onBeforeCompile = (s) => applyBake(s, { hemi, spec }); m.customProgramCacheKey = () => `bakeprop${hemi ? 1 : 0}${spec ? 1 : 0}`; bakedMats.set(key, m); return m;

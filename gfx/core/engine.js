@@ -46,9 +46,9 @@ export function hasWebGL2() {
 export class Engine {
   constructor(canvas, opts = {}) {
     this.canvas = canvas; this.opts = opts;
-    const name = !opts.quality || opts.quality === 'auto' ? detectQuality(opts) : opts.quality;
+    const name = PRESETS[opts.quality] ? opts.quality : detectQuality(opts);
     this.q = { ...PRESETS[name] };
-    this.adaptive = opts.adaptive !== false && (!opts.quality || opts.quality === 'auto');
+    this.adaptive = opts.adaptive !== false && !PRESETS[opts.quality];
     this.reducedMotion = !!opts.reducedMotion; if (this.reducedMotion) this.q.motion = false;
     const r = this.renderer = new THREE.WebGLRenderer({ canvas, antialias: name === 'low', powerPreference: 'high-performance', stencil: false, alpha: false, depth: true });
     r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping;
@@ -108,7 +108,7 @@ export class Engine {
     if (update) this.update = update; if (this.running) return; this.running = true; this._last = performance.now();
     const frame = (now) => {
       if (!this.running) return; this._raf = requestAnimationFrame(frame);
-      const raw = (now - this._last) / 1000; this._last = now; const dt = Math.min(raw, 1 / 15); this.t += dt;
+      const raw = Math.max(0, now - this._last) / 1000; this._last = now; const dt = Math.min(raw, 1 / 15); this.t += dt; /* a frame's timestamp can be older than the moment start() ran */
       if (this.update) this.update(dt, this.t);
       this.render(dt); this._watch(raw);
     };

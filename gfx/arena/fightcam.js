@@ -2,7 +2,7 @@
    pulling back as they separate, and orbiting slowly after the line as they circle. It reads the sim and the rigs and writes only the camera.
 
      const cam = createFightCam(engine.camera, { reducedMotion, shake, canvasY });
-     each frame: cam.update(match, rigP, rigO, realDt);   engine.post.focus = cam.getFocus();
+     each frame: cam.update(match, rigP, rigO, realDt);   engine.post.focus = cam.getFocus();   engine.post.aperture = cam.getAperture();
      on a landed punch: cam.kick(power, dir);
      for input: cam.basis() -> { rx, rz, fx, fz }, the screen's right and into-the-screen directions on the canvas, without any shake.
 
@@ -29,13 +29,15 @@ const BOTTOM_ROOM = 0.92;
 const SIDE_MARGIN = 0.62;       // metres kept clear beside each man
 const MIN_DIST = 2.6, MAX_DIST = 9.5;
 const LIMIT = 6.1;              // camera stays inside this square: the columns stand at 6.3
-const MAX_RATE = 3.0;           // rad/s, the orbit never goes faster than this
+const MAX_RATE = 3.4;           // rad/s, the orbit never goes faster than this
+const APERTURE = 0.016;         // film aperture when both men stand near the focal plane
 
 export function createFightCam(camera, opts = {}) {
-  const reduced = !!opts.reducedMotion, canvasY = opts.canvasY ?? 0.75;
+  const reduced = !!opts.reducedMotion, canvasY = opts.canvasY ?? 0.75, stage = opts.stage || null;
+  const postHidden = [false, false, false, false];
   let shakeOn = opts.shake !== false && !reduced;
-  const S = { init: false, th: 0, om: 0, d: 4.6, x: 0, z: 0, look: LOOK_H, wide: 1, push: 0, tan: BASE_TAN, focus: 4.6, err: 0 };
-  const kickP = new THREE.Vector3(), kickV = new THREE.Vector3(), look = new THREE.Vector3(), right = new THREE.Vector3(), up = new THREE.Vector3(), fwd = new THREE.Vector3();
+  const S = { init: false, th: 0, om: 0, d: 4.6, x: 0, z: 0, look: LOOK_H, wide: 1, push: 0, tan: BASE_TAN, focus: 4.6, ap: APERTURE, init2: false, err: 0 };
+  const kickP = new THREE.Vector3(), kickV = new THREE.Vector3(), look = new THREE.Vector3(), fwd = new THREE.Vector3();
   let roll = 0, rollV = 0, zoom = 0, zoomV = 0, rumble = 0, t = 0, fovNow = 0;
   const basisOut = { rx: 1, rz: 0, fx: 0, fz: -1 };
 
@@ -76,7 +78,7 @@ export function createFightCam(camera, opts = {}) {
     if (Math.abs(err) > 2.7 && S.om * err < 0) err += err > 0 ? -TAU : TAU;
     S.err = err;
     const dead = 0.035, e = err > dead ? err - dead : err < -dead ? err + dead : 0;
-    const wantOm = clamp(0.95 * e + 1.15 * e * e * e, calm ? -1.1 : -MAX_RATE, calm ? 1.1 : MAX_RATE);
+    const wantOm = clamp(1.7 * e + 1.2 * e * e * e, calm ? -1.1 : -MAX_RATE, calm ? 1.1 : MAX_RATE);
     S.om += (wantOm - S.om) * (1 - Math.exp(-5.5 * dt));
     S.th = wrap(S.th + S.om * dt);
 
@@ -138,9 +140,27 @@ export function createFightCam(camera, opts = {}) {
     if (roll !== 0) camera.rotateZ(roll);
     const fov = THREE.MathUtils.radToDeg(2 * Math.atan(S.tan)) - zoom;
     if (Math.abs(fov - fovNow) > 1e-3) { fovNow = fov; camera.fov = fov; camera.updateProjectionMatrix(); }
+    /* a corner post between the camera and either man fades out: side-on framing goes past every corner sooner or later */
+    if (stage && stage.posts) {
+      const px1 = camera.position.x, pz1 = camera.position.z;
+      const a1 = (p.x - px1) * rx + (p.z - pz1) * rz, b1 = Math.max(0.5, (p.x - px1) * fx + (p.z - pz1) * fz), a2 = (o.x - px1) * rx + (o.z - pz1) * rz, b2 = Math.max(0.5, (o.x - px1) * fx + (o.z - pz1) * fz);
+      const lo = Math.min((a1 - 0.6) / b1, (a2 - 0.6) / b2), hi = Math.max((a1 + 0.6) / b1, (a2 + 0.6) / b2), far = Math.max(b1, b2);
+      for (let i = 0; i < 4; i++) {
+        const q = stage.posts[i], a = (q[0] - px1) * rx + (q[1] - pz1) * rz, b = (q[0] - px1) * fx + (q[1] - pz1) * fz, m = postHidden[i] ? 0.07 : 0;
+        /* wider than the pad itself, because a post this close is a big soft blur; and one close to the lens goes whether or not it covers anyone */
+        const hide = b > 0.05 && ((b < far && (a + 0.38) / b > lo - m && (a - 0.38) / b < hi + m) || (b < 2.8 + m && Math.abs(a / b) < tanH + 0.2));
+        if (hide !== postHidden[i]) { postHidden[i] = hide; stage.setPostAlpha(i, hide ? 0 : 1); }
+      }
+    }
     /* focus on the plane through the two men, measured the way the depth buffer measures it */
     camera.getWorldDirection(fwd);
     S.focus = Math.max(0.5, (look.x - camera.position.x) * fwd.x + (look.y - camera.position.y) * fwd.y + (look.z - camera.position.z) * fwd.z);
+    /* the lens stops down when the two men stand at different depths, so neither goes soft: walking to the corners, or caught mid-orbit */
+    {
+      const dp = Math.abs((p.x - camera.position.x) * fx + (p.z - camera.position.z) * fz - S.focus), dq = Math.abs((o.x - camera.position.x) * fx + (o.z - camera.position.z) * fz - S.focus);
+      const want = Math.min(APERTURE, 0.0018 * S.focus / Math.max(0.2, Math.max(dp, dq)));
+      S.ap = S.init2 ? damp(S.ap, want, 5, dt) : want; S.init2 = true;
+    }
   }
 
   /* power 0..1. dir, optional, is the blow's direction [x, z]: the camera gives way along it. */
@@ -157,9 +177,10 @@ export function createFightCam(camera, opts = {}) {
   return {
     update, kick,
     getFocus() { return S.focus; },
+    getAperture() { return S.ap; },
     basis() { return basisOut; },
     /* the next update starts clean, on the line, with no leftover motion */
-    snap() { S.init = false; },
+    snap() { S.init = false; S.init2 = false; },
     setShake(on) { shakeOn = !!on && !reduced; if (!shakeOn) { kickP.set(0, 0, 0); kickV.set(0, 0, 0); roll = rollV = zoom = zoomV = rumble = 0; } },
     get shake() { return shakeOn; },
     stats() { return { th: S.th, om: S.om, err: S.err, d: S.d, tan: S.tan, wide: S.wide, push: S.push }; },

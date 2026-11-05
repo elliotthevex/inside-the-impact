@@ -426,8 +426,8 @@ export class FighterRig {
     P.copy(C).addScaledVector(n, rad * (this.tune ? this.tune.skin : 0.94));
     /* a blocked shot lands on the guard, not through it */
     if (headShot && (p.result ? p.blocked : foe.guard >= 0.5)) { const gl = O.gloveWorld('L'), gr = O.gloveWorld('R'), near = gl.distanceToSquared(S) < gr.distanceToSquared(S) ? gl : gr; const toS = _v[8].copy(S).sub(near).normalize(); P.copy(near).addScaledVector(toS, 0.062); }
-    /* a slip leaves the glove going where the head was */
-    if (foe.slip > 0) P.copy(this.lastHeadAim); else this.lastHeadAim.copy(P);
+    /* a slip leaves the glove going where the head was, but only a head shot and only while the sim would call it evaded: anything else really lands, on the man as he is */
+    if (headShot && foe.slip > 0 && (foe.slipT ?? 0) >= 0.04 && (foe.slipT ?? 0) <= 0.22) P.copy(this.lastHeadAim); else this.lastHeadAim.copy(P);
     if (p.result || p.t >= p.contact + (p.active ?? 0.05)) pu.froze = true;
     return P;
   }

@@ -19,7 +19,6 @@ const PUNCH_KEYS = { KeyJ: 'jab', KeyK: 'cross', KeyL: 'hook', KeyU: 'upper', Ke
 const HAND = { jab: 'L', cross: 'R', hook: 'L', upper: 'R', bodyL: 'L', bodyR: 'R' };
 const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'Space', ...Object.keys(PUNCH_KEYS)]);
 const KEY_TO_CODE = { w: 'KeyW', a: 'KeyA', s: 'KeyS', d: 'KeyD', j: 'KeyJ', k: 'KeyK', l: 'KeyL', u: 'KeyU', i: 'KeyI', o: 'KeyO', ' ': 'Space', shift: 'ShiftLeft', escape: 'Escape', tab: 'Tab' };
-const APERTURE = 0.016;
 const STALL_MS = 30000;   // this long with no asset arriving counts as a failed load
 const HOLD = 0.45;        // seconds after the load screen starts to fade before the sim starts
 const STEP = 1 / 120;     // the sim's fixed step
@@ -50,7 +49,7 @@ function makeProgress(S) {
     last: performance.now(), label: 'Loading',
     set(part, v, label) {
       if (label) this.label = label;
-      if (v > done[part]) { done[part] = Math.min(1, v); this.last = performance.now(); }
+      if (v > done[part]) { done[part] = Math.min(1, v); this.last = performance.now(); if (v >= 1) S.loadMarks[part] = Math.round(this.last - S.t0); }
       let p = 0; for (const k in W) p += W[k] * done[k];
       if (S.hud && !S.closed) S.hud.showLoading(Math.min(0.995, Math.max(0.01, p)), this.label);
     },
@@ -71,7 +70,7 @@ function newMatch(S) {
   if (S.audio.newMatch) S.audio.newMatch();
 }
 
-function clearInput(S) { S.keys.clear(); S.q.punch = null; S.q.ups = 0; S.q.lastUp = false; }
+function clearInput(S) { S.keys.clear(); S.q.punch = null; S.q.slip = false; S.q.ups = 0; S.q.lastUp = false; }
 
 function playerInput(S, m, dt) {
   if (S.bot) return S.bot.decide(m, m.p, m.o, dt);
@@ -84,7 +83,7 @@ function playerInput(S, m, dt) {
   const b = S.cam.basis();
   I.mx = b.rx * ax + b.fx * ay; I.mz = b.rz * ax + b.fz * ay;
   I.guard = K.has('ShiftLeft') || K.has('ShiftRight');
-  I.slip = K.has('Space');
+  I.slip = K.has('Space') || S.q.slip; S.q.slip = false;   // a tap shorter than a frame still counts
   I.punch = null; I.getUp = false;
   if (m.p.down) {
     /* a press while down is one mash. Pulses need a gap for the sim to see the rising edge, so a fast burst queues. */
@@ -107,11 +106,11 @@ function dispatch(S, ev, m) {
       const a = ev.who === 'p' ? S.rigP : S.rigO, stop = S.fx.impact(a.knuckleWorld(HAND[ev.kind] || 'L'), ev.dir, ev.power, !!ev.blocked, ev);
       if (stop > S.hitStop) S.hitStop = stop;
       S.cam.kick(ev.blocked ? ev.power * 0.45 : ev.power, ev.dir);
-      if (!ev.blocked && ev.power > 0.7) S.stage.kickLamp(0.5);
+      if (!ev.blocked && ev.power > 0.7 && !S.settings.reduced) S.stage.kickLamp(0.5);
       break;
     }
     case 'knockdown':
-      S.stage.kickLamp(3);
+      if (!S.settings.reduced) S.stage.kickLamp(3);
       S.cam.kick(1, ev.dir);
       if (!S.settings.reduced) S.slow = { t: 0, hold: ev.cause === 'hp' ? 0.8 : 0.5, out: 0.45, scale: 0.26 };
       break;
@@ -136,6 +135,7 @@ function frame(S, dt) {
     else if (sl.t < sl.hold + sl.out) { const u = (sl.t - sl.hold) / sl.out; scale = sl.scale + (1 - sl.scale) * u * u; }
     else S.slow = null;
   }
+  /* the rig runs on scaled real time, so slow motion stays smooth between sim ticks, except that a contact stops it exactly on the tick */
   let dts = dt * scale, advanced = 0;
   if (dts > 0) {
     const inP = playerInput(S, m, dts), inO = S.ai.decide(m, m.o, m.p, dts);
@@ -149,10 +149,9 @@ function frame(S, dt) {
       advanced += STEP;
       let contact = false;
       for (let i = from; i < m.events.length; i++) { const k = m.events[i].type; if (k === 'hit' || k === 'block') contact = true; }
-      if (contact) { S.bank = 0; break; }
+      if (contact) { S.bank = 0; dts = advanced; break; }
     }
   }
-  dts = advanced;
   S.mods.rig.FighterRig.updateBoth(S.rigP, S.rigO, m, dts);
   if (S.tap) S.tap(m, m.events, dt, dts);
   for (let i = 0; i < m.events.length; i++) dispatch(S, m.events[i], m);
@@ -162,7 +161,7 @@ function frame(S, dt) {
   S.fx.update(dt);
   S.cam.update(m, S.rigP, S.rigO, dt);
   const post = S.engine.post;
-  if (post) post.focus = S.cam.getFocus();
+  if (post) { post.focus = S.cam.getFocus(); post.aperture = S.engine.q.film ? S.cam.getAperture() : 0; }
   S.stage.update(dt, S.engine.camera);
   S.frames++;
   const ms = performance.now() - t0; S.jsMs += (ms - S.jsMs) * 0.05; if (ms > S.jsPeak) S.jsPeak = ms;
@@ -175,6 +174,7 @@ const panelOn = (S) => (S.hud ? S.hud.el.querySelector('.ax-panel.is-on') : null
 function press(S, code, repeat) {
   S.keys.add(code);
   if (repeat) return;
+  if (code === 'Space') S.q.slip = true;
   const kind = PUNCH_KEYS[code];
   if (kind && S.match) { if (S.match.p.down) S.q.ups = Math.min(4, S.q.ups + 1); else S.q.punch = kind; }
 }
@@ -214,7 +214,7 @@ function wireInput(S) {
   S.onRootKey = (e) => e.stopPropagation();
   S.onBlur = () => clearInput(S);
   S.onVisibility = () => { if (document.hidden && S.ready && !S.paused && !panelOn(S)) pause(S); };
-  S.onResize = () => { if (S.ready && S.engine && !S.engine.running) { S.cam.update(S.match, S.rigP, S.rigO, 0); S.engine.render(1e-4); } };
+  S.onResize = () => { if (S.ready && S.engine && !S.engine.running) { S.engine.resize(); S.cam.update(S.match, S.rigP, S.rigO, 0); S.engine.render(1e-4); } };
   window.addEventListener('keydown', S.onKeyDown, true);
   window.addEventListener('keyup', S.onKeyUp, true);
   S.root.addEventListener('keydown', S.onRootKey);
@@ -271,7 +271,7 @@ export async function openArena(options = {}) {
   root.appendChild(canvas);
   document.body.appendChild(root);
   const S = session = {
-    opts, root, canvas, closed: false, ready: false, paused: false, frozen: false, keys: new Set(), q: { punch: null, ups: 0, lastUp: false },
+    t0: performance.now(), loadMarks: {}, opts, root, canvas, closed: false, ready: false, paused: false, frozen: false, keys: new Set(), q: { punch: null, slip: false, ups: 0, lastUp: false },
     input: { mx: 0, mz: 0, guard: false, punch: null, slip: false, getUp: false }, matchNo: 0, frames: 0, jsMs: 0, jsPeak: 0, hitStop: 0, slow: null, hold: 0, bank: 0, botName: opts.bot || null, botKind: opts.botKind || 'jab', bot: null, tap: null,
   };
   S.handle = makeHandle(S);
@@ -317,7 +317,6 @@ async function load(S) {
     let shaderFailed = null;
     engine.renderer.debug.onShaderError = (gl, program, vs, fs) => { shaderFailed = gl.getShaderInfoLog(vs) || gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(program) || 'shader error'; console.error('[arena] shader failed:', String(shaderFailed).slice(0, 800)); };
     if (settings.st && settings.st.shadows === false) engine.renderer.shadowMap.enabled = false;
-    engine.post.aperture = engine.q.film ? APERTURE : 0;
     S.onLost = () => {
       /* the GPU took the context away: nothing here survives that, so hand back to the page, which can fall back */
       if (S.closed) return;
@@ -352,13 +351,12 @@ async function load(S) {
     S.rigO = new R(fo, clips, { who: 'o', floorY: stage.canvasY, ringHalf: stage.ringHalf, getUpTime: up });
     R.pair(S.rigP, S.rigO);
     engine.scene = stage.scene;
-    S.cam = mods.cam.createFightCam(engine.camera, { reducedMotion: settings.reduced, shake: settings.shake, canvasY: stage.canvasY });
+    S.cam = mods.cam.createFightCam(engine.camera, { reducedMotion: settings.reduced, shake: settings.shake, canvasY: stage.canvasY, stage });
     S.fx = mods.fx.createFx(stage.scene, engine.q, { stage, reducedMotion: settings.reduced, onLand: () => S.audio.land() });
     S.fx.track(S.rigP, S.rigO);
-    S.onQuality = (q) => { if (S.fx.applyQuality) S.fx.applyQuality(q); if (engine.post) engine.post.aperture = q.film ? APERTURE : 0; };
+    S.onQuality = (q) => { if (S.fx.applyQuality) S.fx.applyQuality(q); };
     engine.listeners.add(S.onQuality);
     S.audio = mods.audio.createAudio({ enabled: settings.sound, volume: settings.volume, lite: engine.q.name === 'low' });
-    await S.audio.ready; check(S);
     newMatch(S);
     S.hold = 0;
     frame(S, 0);           // real bones and a real camera, so the shaders and the first frame see what the fight sees
@@ -378,7 +376,7 @@ async function load(S) {
   try {
     await Promise.race([work, stall]);
   } catch (e) {
-    if (e && e.closed) return;
+    if (S.closed || (e && e.closed)) return; /* closed by the player while loading: not a failure, nothing to fall back to */
     throw e;
   } finally {
     clearInterval(S.stallTimer);
@@ -431,7 +429,7 @@ function makeHandle(S) {
   return {
     get match() { return S.match; }, get engine() { return S.engine; }, get stage() { return S.stage; }, get rigP() { return S.rigP; }, get rigO() { return S.rigO; },
     get cam() { return S.cam; }, get fx() { return S.fx; }, get audio() { return S.audio; }, get hud() { return S.hud; }, get mods() { return S.mods; }, get root() { return S.root; }, get ai() { return S.ai; },
-    get ready() { return S.ready; }, get paused() { return S.paused; }, get frames() { return S.frames; }, get jsMs() { return S.jsMs; }, get jsPeak() { return S.jsPeak; }, get seed() { return S.seed; }, get hitStop() { return S.hitStop; }, get slow() { return S.slow; }, get settings() { return S.settings; },
+    get loadMarks() { return S.loadMarks; }, get ready() { return S.ready; }, get paused() { return S.paused; }, get frames() { return S.frames; }, get jsMs() { return S.jsMs; }, get jsPeak() { return S.jsPeak; }, get seed() { return S.seed; }, get hitStop() { return S.hitStop; }, get slow() { return S.slow; }, get settings() { return S.settings; },
     resetPeak() { S.jsPeak = 0; },
     set tap(fn) { S.tap = fn; }, get tap() { return S.tap; },
     step(n = 1, dt = 1 / 60, o) { return S.engine.step(n, dt, o); },

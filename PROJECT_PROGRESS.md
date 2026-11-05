@@ -5,8 +5,8 @@ Work is on git branch `realistic-3d` in `site/`. Do not push or merge to `main`:
 
 ## Status
 Phase: joining the four parts into one playable match. The dev page runs a fight on the real rules, fighters, room and HUD. `index.html` now has the launch hook, but a full match through the arena card has not been confirmed.
-Usage rule: stop at 75% of the 5-hour window (`mcp__ccd_session_mgmt__get_usage`). Agents stop at 72. Last check 20:34 KST: 22%, resets 00:20 KST. Weekly 7%.
-Power: at 20:34 KST the Mac was at 3% battery, still discharging, so expect it to shut down soon. Anything running then dies, and files on disk stay. It slept once already (15:14 to 18:47) and that killed a whole build run.
+Usage rule: stop at 75% of the 5-hour window (`mcp__ccd_session_mgmt__get_usage`). Agents stop at 72. Last check 21:14 KST: 30%, resets 00:20 KST. Weekly 8%.
+Power: plugged in and charging since about 21:14 KST. It reached 2% first. It slept once already (15:14 to 18:47) and that killed a whole build run.
 
 ## Scope note
 The user's latest brief is Street Fight 3D, a complete 1v1 arena game. It takes priority over the earlier whole-game overhaul brief (20 screens to realistic 3D).
@@ -20,6 +20,7 @@ That overhaul is parked, not cancelled. Its reference notes are partly done: `sc
 
 ## In progress
 - Integration agent `a404045a6c0629b59`, running on its own (not in a workflow): `fightcam.js`, `index.js`, `audio.js`, `fx.js`, HUD on the real sim, the arena card launch, `gfx/dev/arena.html`. Notes go to `gfx/dev/notes/integrate.md`. `audio.js` and `fx.js` were written at 20:32 and have not been run. The joined game has not been run to the end yet.
+- Balance pass (workflow run `wf_0ec0b835-a23`, started 21:15 KST): tunes `sim.js` and `ai.js` with the real reach table against the targets in its script, then an independent check on fresh seeds. Notes go to `gfx/dev/notes/balance.md` and `balance-verify.md`.
 - Workflow run `wf_15ea3fef-cb4` is stopped on purpose. A message to its integration agent started a second copy, and the two overwrote each other from 20:15 to 20:27 KST. The surviving copy owns everything. The stopped copy's versions are in `scratchpad/integrate/workflow-agent-copy/`.
 
 ## Remaining, in order
@@ -52,4 +53,4 @@ New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `PROJECT_PROGRESS.md`. `i
 
 ## Next task
 Finish integration. If agent `a404045a6c0629b59` died, send it a message, which resumes it from its transcript, or start a new integration agent from `gfx/dev/notes/integrate.md`. Do not resume workflow run `wf_15ea3fef-cb4`: that starts another integrator. Only message an agent started by a workflow once that workflow has stopped.
-Balance pass: start it once the Mac is on power. It may change only the tuning numbers in `sim.js` and `ai.js`, plus `simtest.html`.
+If the balance pass died, resume it with `Workflow({scriptPath: '~/.claude/projects/-Users-elliot-jeong-Downloads-Inside-the-Impact/a4d575ac-45f5-438b-a265-75fe753a2111/workflows/scripts/arena-balance-wf_0ec0b835-a23.js', resumeFromRunId: 'wf_0ec0b835-a23'})`. Its agents own `sim.js`, `ai.js` and `simtest.html`.

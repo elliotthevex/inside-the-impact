@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import {
-  RING, ROOM, setLoader, texturesReady, pbr, grime, applyBake, bakeInto, aabb, LightField, loadModel, loadCrowdGeometry, paintPosters, wallQuad, box, metreUV, instanced, trs, cable, tube, buildRing, buildRoom, buildBenches, pendantGeometry, hangingLamp, hazeCone, dust, halos,
+  RING, ROOM, setLoader, texturesReady, pbr, grime, applyBake, bakeInto, clearBakedMaterials, aabb, LightField, loadModel, loadCrowdGeometry, paintPosters, wallQuad, box, metreUV, instanced, trs, cable, tube, buildRing, buildRoom, buildBenches, pendantGeometry, hangingLamp, hazeCone, dust, halos,
 } from '../world/kit.js';
 
 const KEY = 52; // with decay 1.15 so the ring stays readable to its corners
@@ -26,24 +26,43 @@ const BULB_COLOR = new THREE.Color(0xffc096);
 const COOL_POS = [-2.6, 3.48, -8.45];
 const FILL_POS = [0, 2.1, 0];
 
+/* Corner posts and pads fade out by screen-door when they stand between the camera and the fighters. One alpha per corner, in the order (-x,-z), (-x,+z), (+x,-z), (+x,+z).
+   Discarding pixels needs no sorting, and the shadow pass does not use this shader, so a hidden post still throws its shadow. */
+function stipple(mat, U) {
+  const prev = mat.onBeforeCompile, key = mat.customProgramCacheKey ? mat.customProgramCacheKey() : '';
+  mat.onBeforeCompile = (s, r) => {
+    if (prev) prev.call(mat, s, r);
+    s.uniforms.uPostA = U;
+    s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vHideXZ;').replace('#include <project_vertex>', '#include <project_vertex>\n vHideXZ=(modelMatrix*vec4(transformed,1.)).xz;');
+    s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vHideXZ;uniform vec4 uPostA;').replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+ {vec2 hb=abs(abs(vHideXZ)-vec2(2.97));float ha=vHideXZ.x<0.?(vHideXZ.y<0.?uPostA.x:uPostA.y):(vHideXZ.y<0.?uPostA.z:uPostA.w);if(ha<.999&&hb.x<.36&&hb.y<.36&&fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))))>=ha)discard;}`);
+  };
+  mat.customProgramCacheKey = () => `${key}|posthide`;
+  mat.needsUpdate = true;
+}
+
 function crowdMaterial(u) {
   const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82 });
   m.onBeforeCompile = (s) => {
     s.uniforms.uTime = u.uTime;
+    s.uniforms.uCamXZ = u.uCamXZ;
     applyBake(s, { hemi: true });
-    s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 aPart;varying vec2 vPart;varying float vPh;uniform float uTime;')
+    s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 aPart;varying vec2 vPart;varying float vPh;uniform float uTime;uniform vec4 uCamXZ;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
  vPart=aPart;
  #ifdef USE_INSTANCING
  float ph=instanceMatrix[3].x*1.73+instanceMatrix[3].z*2.31;vPh=fract(ph);float sw=sin(uTime*(.6+vPh*.7)+ph);float nod=sin(uTime*(1.1+vPh)+ph*2.);float hh=smoothstep(.5,1.5,position.y);
  transformed.x+=sw*.024*hh;transformed.z+=nod*.016*hh;
+ /* whoever sits in the corridor between the camera and the ring folds away, so nobody's head covers the fighters */
+ vec2 crel=instanceMatrix[3].xz-uCamXZ.xy;float cal=dot(crel,uCamXZ.zw),cla=abs(crel.x*uCamXZ.w-crel.y*uCamXZ.z);
+ transformed*=1.-(1.-smoothstep(2.6,3.9,cal))*(1.-smoothstep(1.2,1.9,cla))*step(-.5,cal);
  #endif`);
     s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vPart;varying float vPh;')
       .replace('#include <color_fragment>', `#include <color_fragment>
  {vec3 shirt=diffuseColor.rgb;vec3 pants=mix(vec3(.022,.026,.038),vec3(.06,.055,.05),fract(vPh*7.3));vec3 shoes=vec3(.012);vec3 hair=mix(vec3(.012,.009,.007),vec3(.06,.04,.025),fract(vPh*3.7)*fract(vPh*3.7));vec3 skin=mix(vec3(.3,.18,.13),vec3(.13,.075,.05),fract(vPh*5.1)*.8);
  float p=vPart.x;vec3 c=mix(shirt,pants,smoothstep(.1,.25,p));c=mix(c,shoes,smoothstep(.42,.58,p));c=mix(c,hair,smoothstep(.75,.92,p));c=mix(c,skin,smoothstep(.3,.7,vPart.y));diffuseColor.rgb=c;}`);
   };
-  m.customProgramCacheKey = () => 'crowd2';
+  m.customProgramCacheKey = () => 'crowd3';
   return m;
 }
 const PALETTE = [0x33373f, 0x403d35, 0x4c2e2a, 0x323f46, 0x4e483c, 0x2d2d2f, 0x3f4b5c, 0x5e5a50, 0x3c2b36, 0x6a6458, 0x57251f, 0x243f5a, 0x262628, 0x4a463f];
@@ -117,6 +136,7 @@ export async function createStage(engine, loader) {
   /* room and ring */
   const room = buildRoom({ wall, floor, concrete, steel: darkSteel }); scene.add(room.group);
   const ring = buildRing({ leather, linenN: linen.normalMap, wood: woodSteps, steel, aniso }); scene.add(ring.group);
+  const postA = { value: new THREE.Vector4(1, 1, 1, 1) }; const postTarget = [1, 1, 1, 1]; const postNow = [1, 1, 1, 1];
   const benches = buildBenches(woodBench, benchLeg); scene.add(benches.group);
 
   const [crowdGeos, mLamp, mCage, mPipes, mDuct, mStool, mBucket, mTube, mBox, mDoor, mBarrel, env] = await Promise.all([
@@ -217,7 +237,7 @@ export async function createStage(engine, loader) {
   const boxC = mBox.scene.clone(true); const bbx = new THREE.Box3().setFromObject(boxC); const bsz = bbx.getSize(new THREE.Vector3()); boxC.rotation.y = -Math.PI / 2; boxC.position.set(8.97 - bsz.z / 2, 1.5, 1.5); boxC.name = 'utility-box'; scene.add(boxC); toBakeSmall.push(boxC);
 
   /* crowd */
-  const crowdU = { uTime: { value: 0 } };
+  const crowdU = { uTime: { value: 0 }, uCamXZ: { value: new THREE.Vector4(0, 40, 0, -1) } };
   const crowd = buildCrowd(benches.seats, crowdU, doorX, crowdGeos); scene.add(crowd.group); crowd.setCount(q.crowd);
 
   /* bake: bulbs, tube and the ring's glow into room, canvas, skirt, benches, crowd */
@@ -230,6 +250,8 @@ export async function createStage(engine, loader) {
   for (const k of Object.keys(ring.ropes)) field.bakeGeometry(ring.ropes[k].geometry);
   field.bakeInstances(benches.planks, 0.5, 0.8); field.bakeInstances(benches.legs, 0.25, 0.6); crowd.bake(field);
   const bakeMs = performance.now() - t0;
+  /* after the bake, which swaps these meshes' materials */
+  { const pm = ring.group.getObjectByName('posts'); const pd = ring.group.getObjectByName('pads'); stipple(pm.material, postA); if (pd.material !== pm.material) stipple(pd.material, postA); }
   /* contact shadows under everything that stands on the floor */
   const H = RING.platformHalf + 0.05;
   floor.userData.u.uContact.value = paintContact([...contact, ...crowd.feet], [
@@ -252,6 +274,9 @@ export async function createStage(engine, loader) {
     scene, ringHalf: RING.ringHalf, floorY: 0, canvasY: RING.canvasY, platformHalf: RING.platformHalf, corners: ring.corners, ropes: ring.ropes, lamp, RING, autoRopes: true, keyLight: lamp.light, bakeMs, bakeRays: field.rays,
     /* a, 0..1, for one side: 'px', 'nx', 'pz', 'nz'. At 0 it no longer draws but still casts its shadow. Needs autoRopes false. */
     setRopeAlpha(side, a) { ropeState[side].target = a; },
+    /* index 0..3 in the order (-x,-z), (-x,+z), (+x,-z), (+x,+z), a 0..1. It fades there in update. Posts: where they stand. */
+    setPostAlpha(i, a) { postTarget[i] = a; },
+    posts: [[-RING.postAt, -RING.postAt], [-RING.postAt, RING.postAt], [RING.postAt, -RING.postAt], [RING.postAt, RING.postAt]],
     /* A fighter hit that side: amount in metres of push, along in -1..1 along the side. */
     ropeHit(side, amount = 0.05, along = 0) { const s = ropeState[side]; s.v += amount * 12; ring.ropes[side].material.userData.u.uWobAt.value = along; },
     kickLamp(power = 1) { lamp.kick(power); },
@@ -271,6 +296,9 @@ export async function createStage(engine, loader) {
       flick -= dt; if (flick <= 0) { flick = Math.random() < 0.82 ? 0.3 + Math.random() * 3.5 : 0.04 + Math.random() * 0.1; flickOn = flickOn < 1 ? 1 : (Math.random() < 0.5 ? 0.25 : 0.7); }
       cool.intensity = 5 * flickOn; tubeMat.emissiveIntensity = 7 * flickOn;
       lamp.light.intensity = KEY * (1 + Math.sin(u.uTime.value * 11.7) * 0.004 + Math.sin(u.uTime.value * 2.3) * 0.006);
+      if (cam) { const e = cam.matrixWorld.elements; const fx = -e[8]; const fz = -e[10]; const l = Math.hypot(fx, fz) || 1; crowdU.uCamXZ.value.set(cam.position.x, cam.position.z, fx / l, fz / l); }
+      for (let i = 0; i < 4; i++) if (postNow[i] !== postTarget[i]) postNow[i] += Math.sign(postTarget[i] - postNow[i]) * Math.min(Math.abs(postTarget[i] - postNow[i]), dt * 6);
+      postA.value.set(postNow[0], postNow[1], postNow[2], postNow[3]);
       /* ropes: a sprung wobble per side, and the fade toward each side's target */
       for (const k of Object.keys(ropeState)) {
         const s = ropeState[k]; const w = 22; s.v += (-w * w * s.x - 2.6 * s.v) * dt; s.x += s.v * dt; ring.ropes[k].material.userData.u.uWob.value = s.x;
@@ -284,7 +312,7 @@ export async function createStage(engine, loader) {
   stage.dispose = () => {
     engine.listeners.delete(onQuality); const seen = new Set(); const drop = (t) => { if (t && t.isTexture && !seen.has(t)) { seen.add(t); t.dispose(); } };
     scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []; for (const m of mats) { for (const k of Object.keys(m)) drop(m[k]); m.dispose(); } if (o.isInstancedMesh) o.dispose(); });
-    if (lamp.light.shadow.map) lamp.light.shadow.map.dispose(); envRT.dispose(); drop(floor.userData.u.uContact.value); scene.environment = null;
+    clearBakedMaterials(); if (lamp.light.shadow.map) lamp.light.shadow.map.dispose(); envRT.dispose(); drop(floor.userData.u.uContact.value); scene.environment = null;
   };
   stage.applyQuality(q); engine.listeners.add(onQuality);
   stage.update(0.001, null);

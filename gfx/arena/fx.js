@@ -30,7 +30,7 @@ void main(){
  vec2 off;
  if(kind<.5){
   vec3 vv=(viewMatrix*vec4(wv,0.)).xyz;float sp=length(vv.xy);vec2 d=sp>1e-4?vv.xy/sp:vec2(0.,1.);vec2 n=vec2(-d.y,d.x);
-  off=n*position.x*size+d*position.y*size*(1.+min(sp*5.,9.));
+  off=n*position.x*size+d*position.y*size*(1.+min(sp*3.,5.));
  }else if(kind<1.5){
   off=position.xy*size*(.5+sqrt(u));
  }else if(kind<2.5){
@@ -103,16 +103,16 @@ export function createFx(scene, q, opts = {}) {
     const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
     const body = ev && ev.tgt === 'body', heavy = p > 0.55;
     if (blocked) {
-      spawn(x, y, z, dx, 0, dz, 0.07, 0.1 + p * 0.16, 0, 0, KIND.star, 2.4, 2.25, 2.1, 0.7);
-      spawn(x, y, z, 0, 0, 0, 0.16, 0.12 + p * 0.2, 0, 0, KIND.ring, 1.2, 1.15, 1.05, 0.28);
+      spawn(x, y, z, dx, 0, dz, 0.06, 0.045 + p * 0.07, 0, 0, KIND.star, 2.4, 2.25, 2.1, 0.6);
+      spawn(x, y, z, 0, 0, 0, 0.13, 0.07 + p * 0.07, 0, 0, KIND.ring, 1.1, 1.05, 0.95, 0.13);
       const n = Math.round((2 + p * 5) * amount); for (let i = 0; i < n; i++) spawn(x, y, z, dx * rr(0.2, 0.9) + rr(-0.4, 0.4), rr(-0.1, 0.5), dz * rr(0.2, 0.9) + rr(-0.4, 0.4), rr(0.22, 0.42), rr(0.02, 0.05), 3.4, 0.4, KIND.puff, 0.9, 0.8, 0.68, 0.16);
-      if (hasLight) { light.position.set(x, y, z); lightI = Math.max(lightI, 3 + p * 6); }
+      if (hasLight) { light.position.set(x - dx * 0.26, y + 0.05, z - dz * 0.26); lightI = Math.max(lightI, 0.3 + p * 0.8); }
     } else {
-      spawn(x, y, z, dx, 0, dz, 0.075 + p * 0.05, 0.13 + p * 0.27, 0, 0, KIND.star, 3.6, 3.2, 2.7, 0.55 + p * 0.45);
-      if (heavy) spawn(x, y, z, 0, 0, 0, 0.17 + p * 0.06, 0.2 + p * 0.3, 0, 0, KIND.ring, 1.5, 1.35, 1.15, 0.32);
+      spawn(x, y, z, dx, 0, dz, 0.065 + p * 0.04, 0.05 + p * 0.12, 0, 0, KIND.star, 3.2, 2.9, 2.5, 0.45 + p * 0.45);
+      if (heavy) spawn(x, y, z, 0, 0, 0, 0.14 + p * 0.05, 0.08 + p * 0.1, 0, 0, KIND.ring, 1.3, 1.2, 1.05, 0.14);
       const n = Math.round((body ? 3 + p * 9 : 4 + Math.pow(p, 1.2) * 24) * amount);
       sweat(x, y, z, dx, dz, n, (body ? 1.1 : 1.6) * (0.65 + p * 1.5));
-      if (hasLight) { light.position.set(x, y, z); lightI = Math.max(lightI, 5 + p * 26); }
+      if (hasLight) { light.position.set(x - dx * 0.26, y + 0.05, z - dz * 0.26); lightI = Math.max(lightI, 0.6 + p * 2.2); }
     }
     return blocked ? 0.04 + p * 0.03 : 0.04 + p * 0.05;
   }
@@ -158,7 +158,7 @@ export function createFx(scene, q, opts = {}) {
     /* a fall lands when the pelvis gets down there, whatever the time scale is doing */
     for (let i = falling.length - 1; i >= 0; i--) {
       const w = falling[i]; w.age += dt;
-      if (w.rig.pelvis.y < LAND_Y) { canvasDust(w.rig.pelvis.x, w.rig.pelvis.z, 1); if (stage && stage.kickLamp) stage.kickLamp(1); if (opts.onLand) opts.onLand(); falling.splice(i, 1); } else if (w.age > 6) falling.splice(i, 1);
+      if (w.rig.pelvis.y < LAND_Y) { canvasDust(w.rig.pelvis.x, w.rig.pelvis.z, 1); if (stage && stage.kickLamp && !reduced) stage.kickLamp(1); if (opts.onLand) opts.onLand(); falling.splice(i, 1); } else if (w.age > 6) falling.splice(i, 1);
     }
   }
 
