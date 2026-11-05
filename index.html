@@ -1716,7 +1716,9 @@ body[data-s="fight"] #tip-cards,body[data-s="fight"] .library-note{display:none}
 
 <meta content="summary_large_image" name="twitter:card"/>
 <meta content="Inside the Impact — Safety Education Edition" name="twitter:title"/>
-<meta content="A fictional boxing safety-education simulation. Coach each decision, read the signs, and put fighter safety first." name="description"/><meta content="#091522" name="theme-color"/><style id="redesign-styles">
+<link href="https://impactgame-cqsybstm.manus.space/inside-the-impact.html" rel="canonical"/>
+<link crossorigin="use-credentials" href="/__manus/pwa/manifest.webmanifest" rel="manifest"/>
+<meta content="A fictional boxing safety-education simulation. Coach each decision, read the signs, and put fighter safety first." name="description"/><meta content="#091522" name="theme-color"/><link href="/impact-mark.svg" rel="icon" type="image/svg+xml"/><style id="redesign-styles">
 :root{--bg:#081321;--cd:#101e2d;--tx:#f2f6f8;--mu:#afbfcb;--ac:#e66b56;--ok:#6fc29a;--wn:#e7b957;--bd:#40596d;--ink:#050b12;--blue:#78bdd1;--navy:#0c1724;--line:rgba(178,201,215,.17);--panel:#0e1b29;--font:"IBM Plex Sans","Segoe UI",sans-serif;color-scheme:dark}
 html{background:var(--bg);scroll-behavior:smooth}body{font-family:var(--font);letter-spacing:0;background:radial-gradient(ellipse at 60% 0%,rgba(45,81,107,.18),transparent 42rem),linear-gradient(145deg,#081321,#091725 58%,#07111d);color:var(--tx);font-size:16px;line-height:1.5}body::after{display:none}button,summary{font-family:var(--font)}
 #w{width:min(1460px,calc(100% - 48px));max-width:none;margin:0 auto;padding:24px 0 64px;display:block;position:relative}
@@ -3120,6 +3122,41 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
   .mz-list{flex-direction:row;overflow-x:auto;overflow-y:hidden}
   .mz-map{flex:none;width:132px}
 }
+
+/* ── GYM / PROGRESSION ─────────────────────────────────────── */
+.gym-wallet{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:0 0 9px;
+  padding:7px 10px;border:1px solid rgba(154,183,198,.22);border-radius:7px;background:#0a1722}
+.gym-wallet span{font:800 11px/1.2 "Courier New",monospace;letter-spacing:.04em;color:#f0d28b}
+.gym-wallet .gym-xp{margin-left:auto;color:#9fb2bf;font-weight:600;font-size:10px}
+.b.gym-locked{opacity:.62;border-style:dashed}
+.b.gym-locked:hover:not(:disabled){opacity:.95;border-color:#f0d28b}
+.b.gym-locked .ic{filter:grayscale(1)}
+.b.gym-locked small{color:#c9a96a}
+.gym-cost{display:flex;justify-content:center;flex-wrap:wrap;gap:7px;margin:10px 0}
+.gym-cost span{padding:4px 9px;border:2px solid currentColor;
+  font:800 11px/1.3 "Courier New",monospace;letter-spacing:.04em}
+.gym-cost .ok{color:#8ddf72}
+.gym-cost .no{color:#ff8a7a}
+
+/* ── machine walk-up card ──────────────────────────────────── */
+#gym-prompt.gp-rich{padding:8px 12px;text-align:center;line-height:1.2;max-width:330px}
+.gp-name{font:800 13px/1.2 "Courier New",monospace;letter-spacing:.09em;
+  text-transform:uppercase;color:#fff3cf;margin-bottom:7px}
+.gp-mus{display:flex;align-items:flex-end;justify-content:center;gap:12px;margin-bottom:7px}
+.gp-m{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:46px;opacity:.72}
+.gp-m.big{opacity:1}
+/* the prompt already styles <b> as a key badge — undo that in here */
+.gp-m b{background:none!important;border:0!important;padding:0!important;margin:0!important;
+  min-width:0!important;font:700 9px/1.2 "Courier New",monospace;letter-spacing:.06em;
+  text-transform:uppercase;color:#cfe0ee}
+.gp-m.big b{font-size:11px;color:#ffcf59}
+.gp-m i{font:800 10px/1.2 "Courier New",monospace;font-style:normal;color:#9fb2bf}
+.gp-m.big i{font-size:13px;color:#fff3cf}
+.gp-act{font:700 10px/1.3 "Courier New",monospace;letter-spacing:.06em;color:#bcd0e0;
+  border-top:1px solid rgba(255,255,255,.14);padding-top:6px}
+.gp-act b{display:inline-block;min-width:18px;padding:1px 5px;margin-right:6px;
+  border:1px solid #e8c272;border-radius:3px;background:rgba(0,0,0,.45);
+  color:#ffcf59!important;font-weight:900}
 </style>
 <body data-phase="title">
 <button id="gear-btn" type="button" aria-label="Settings" onclick="openSettings()">⚙</button>
@@ -3802,6 +3839,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         G.k = 0;
         G.res = [];
         G.champ = false;
+        G.checkedThisCamp = false;
         G.opp = mkOpp(0);
         intro();
       }
@@ -4008,7 +4046,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       };
       let P = null;
       function loadProfile() {
-        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {}, up: null, gymStat: { strength: 0 }, skills: null, sp: 3 };
+        const base = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, boosts: {}, up: null, gymStat: { strength: 0 }, skills: null, sp: 3, gym: { bag: 1 } };
         try {
           const raw = localStorage.getItem(PROFILE_KEY);
           P = raw ? Object.assign(base, JSON.parse(raw)) : base;
@@ -5898,6 +5936,58 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
          couple of dozen reps and the tenth is a project. A flat hundred
          a level made the whole ladder disappear in one sitting. */
       const gymNeed = (lv) => Math.round(150 * Math.pow(1.55, lv));
+      /* ── MACHINE UNLOCKS ───────────────────────────────────────
+         Owned machines live on the saved profile, so the gym you build
+         up persists between sessions. */
+      const mcOwned = (m) => !m || !m.req || !!(P && P.gym && P.gym[m.id]);
+      function mcMissing(m) {
+        if (!m || !m.req || !P) return [];
+        const out = [];
+        if ((P.lv || 1) < m.req.lv) out.push("level " + m.req.lv);
+        if ((P.gold || 0) < m.req.gold) out.push(m.req.gold.toLocaleString() + " gold");
+        if ((P.gems || 0) < (m.req.gems || 0)) out.push(m.req.gems + " gems");
+        return out;
+      }
+      function mcUnlock(m) {
+        if (!m || mcOwned(m)) return;
+        const miss = mcMissing(m);
+        if (miss.length) return gateToast("Still needed: " + miss.join(", ") + ".");
+        P.gold -= m.req.gold;
+        P.gems -= m.req.gems || 0;
+        P.gym = P.gym || {};
+        P.gym[m.id] = 1;
+        saveProfile();
+        document.querySelectorAll(".mcwrap").forEach((n) => n.remove());
+        toast("Unlocked: " + m.name);
+        if (typeof refreshGymHud === "function") refreshGymHud();
+      }
+      function mcAsk(m) {
+        if (!m || !m.req) return;
+        const miss = mcMissing(m), can = miss.length === 0;
+        const r = m.req;
+        const pill = (ok, txt) =>
+          '<span class="' + (ok ? "ok" : "no") + '">' + txt + "</span>";
+        const wrap = document.createElement("div");
+        wrap.className = "maint-wrap mcwrap";
+        wrap.innerHTML =
+          '<div class="maint" role="dialog" aria-modal="true">' +
+          "<h3>" + escapeUI(m.name) + "</h3>" +
+          '<p class="mu" style="font-size:11px">This machine is not open yet.</p>' +
+          '<div class="gym-cost">' +
+          pill((P.lv || 1) >= r.lv, "Level " + r.lv) +
+          (r.gold ? pill((P.gold || 0) >= r.gold, r.gold.toLocaleString() + " gold") : "") +
+          (r.gems ? pill((P.gems || 0) >= r.gems, r.gems + " gems") : "") +
+          "</div>" +
+          "<p>" + (can ? "You can open it now." : "Still needed: " + escapeUI(miss.join(", ")) + ".") + "</p>" +
+          '<button type="button" id="mc-do"' + (can ? "" : " disabled") + ">" + (can ? "Unlock" : "Not yet") + "</button>" +
+          '<button type="button" id="mc-no" style="margin-top:7px;border-color:#3d5e76">Back</button>' +
+          "</div>";
+        const close = () => wrap.remove();
+        wrap.addEventListener("click", (e) => { if (e.target === wrap) close(); });
+        document.body.appendChild(wrap);
+        wrap.querySelector("#mc-no").addEventListener("click", close);
+        if (can) wrap.querySelector("#mc-do").addEventListener("click", () => mcUnlock(m));
+      }
       const gymPoints = (k) => (P && P.gymStat && P.gymStat[k]) || 0;
       function gymSplit(k) {
         let left = gymPoints(k), lv = 0;
@@ -5910,30 +6000,115 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       const gymPct = (k) => { const s = gymSplit(k); return Math.min(100, (s.into / s.need) * 100); };
       const gymBonus = (k) => gymLevel(k) * 0.1;
 
+      /* The room is wider than the screen; the camera follows the player.
+         World x runs 0 .. GYM_W, where 1.0 is one screen-width.
+         ex: which trainer animation to reuse for the rep mini-game. */
+      /* What each machine actually works, biggest share first. Shown on
+         the walk-up card so the room teaches a bit of anatomy while you
+         wander round it. */
+      const MUSCLES = {
+        dumbbell:  [["biceps", 50], ["shoulders", 30], ["forearms", 20]],
+        heavybag:  [["shoulders", 40], ["core", 35], ["back", 25]],
+        speedbag:  [["shoulders", 60], ["forearms", 25], ["core", 15]],
+        bench:     [["chest", 70], ["triceps", 20], ["shoulders", 10]],
+        doubleend: [["shoulders", 45], ["core", 30], ["neck", 25]],
+        rope:      [["calves", 45], ["legs", 30], ["heart", 25]],
+        squat:     [["legs", 65], ["glutes", 20], ["core", 15]],
+        press:     [["shoulders", 65], ["triceps", 25], ["core", 10]],
+        treadmill: [["heart", 60], ["legs", 30], ["calves", 10]],
+        ring:      [["core", 30], ["shoulders", 25], ["legs", 25], ["neck", 20]],
+      };
+      const MUSCLE_NAME = {
+        chest: "Chest", shoulders: "Shoulders", triceps: "Triceps", biceps: "Biceps",
+        forearms: "Forearms", core: "Core", back: "Back", legs: "Legs",
+        calves: "Calves", glutes: "Glutes", neck: "Neck", heart: "Cardio",
+      };
+      /* one little body, with the worked part lit up */
+      function muscleIcon(key, big) {
+        const on = "#ffcf59", off = "#44596e";
+        const c = (k) => (key === k ? on : off);
+        const sz = big ? 42 : 28;
+        return (
+          '<svg viewBox="0 0 24 30" width="' + sz + '" height="' + Math.round(sz * 1.25) + '" aria-hidden="true">' +
+          '<circle cx="12" cy="4" r="3" fill="' + c("neck") + '"/>' +
+          '<rect x="10.5" y="7" width="3" height="2" fill="' + c("neck") + '"/>' +
+          '<rect x="3.5" y="9" width="5" height="4" rx="1" fill="' + c("shoulders") + '"/>' +
+          '<rect x="15.5" y="9" width="5" height="4" rx="1" fill="' + c("shoulders") + '"/>' +
+          '<rect x="8" y="9.5" width="8" height="5" fill="' + (key === "back" ? on : c("chest")) + '"/>' +
+          '<rect x="8.5" y="14.5" width="7" height="5" fill="' + c("core") + '"/>' +
+          '<rect x="2.6" y="13" width="3" height="4.5" fill="' + c("biceps") + '"/>' +
+          '<rect x="18.4" y="13" width="3" height="4.5" fill="' + c("triceps") + '"/>' +
+          '<rect x="2.6" y="17.5" width="3" height="4" fill="' + c("forearms") + '"/>' +
+          '<rect x="18.4" y="17.5" width="3" height="4" fill="' + c("forearms") + '"/>' +
+          '<rect x="8.3" y="19.5" width="3.1" height="3" fill="' + c("glutes") + '"/>' +
+          '<rect x="12.6" y="19.5" width="3.1" height="3" fill="' + c("glutes") + '"/>' +
+          '<rect x="8.3" y="22.5" width="3.1" height="4" fill="' + c("legs") + '"/>' +
+          '<rect x="12.6" y="22.5" width="3.1" height="4" fill="' + c("legs") + '"/>' +
+          '<rect x="8.3" y="26.5" width="3.1" height="3" fill="' + c("calves") + '"/>' +
+          '<rect x="12.6" y="26.5" width="3.1" height="3" fill="' + c("calves") + '"/>' +
+          (key === "heart" ? '<path d="M12 11.2c-1.6-1.9-4.2-.5-3.2 1.7.6 1.3 2.2 2.3 3.2 3 1-.7 2.6-1.7 3.2-3 1-2.2-1.6-3.6-3.2-1.7Z" fill="' + on + '"/>' : "") +
+          "</svg>"
+        );
+      }
+      function muscleCard(m) {
+        const list = MUSCLES[m.id];
+        if (!list || !list.length) return "";
+        const top = list[0];
+        const rest = list.slice(1, 3);
+        const cell = (e, big) =>
+          '<div class="gp-m' + (big ? " big" : "") + '">' + muscleIcon(e[0], big) +
+          "<b>" + MUSCLE_NAME[e[0]] + "</b><i>" + e[1] + "%</i></div>";
+        return (
+          '<div class="gp-mus">' +
+          (rest[0] ? cell(rest[0], false) : '<div class="gp-m"></div>') +
+          cell(top, true) +
+          (rest[1] ? cell(rest[1], false) : '<div class="gp-m"></div>') +
+          "</div>"
+        );
+      }
+      const GYM_W = 3.0;
       const GYM_MACHINES = [
-        { id: "press", name: "Overhead Press", stat: "strength", kind: "rack",
-          x: .17, y: .60, w: .15, h: .20, unit: "kg",
-          diffs: [30, 50, 75, 110] },
-        { id: "bench", name: "Bench Press", stat: "strength", kind: "bench",
-          x: .42, y: .70, w: .18, h: .16, unit: "kg",
-          diffs: [40, 70, 100, 140] },
-        { id: "squat", name: "Squat Rack", stat: "strength", kind: "squat",
-          x: .68, y: .56, w: .16, h: .22, unit: "kg",
-          diffs: [60, 100, 150, 200] },
         { id: "dumbbell", name: "Dumbbell Rack", stat: "strength", kind: "rack",
-          x: .88, y: .74, w: .14, h: .14, unit: "kg",
-          diffs: [20, 35, 50, 70] },
-        /* not a machine: the trading floor is a door you walk to */
+          x: .16, y: .72, w: .14, h: .14, unit: "kg", ex: "rack",
+          req: { lv: 3, gold: 250, gems: 0 }, diffs: [20, 35, 50, 70] },
+        { id: "heavybag", name: "Heavy Bag", stat: "strength", kind: "heavybag",
+          x: .46, y: .66, w: .13, h: .26, unit: "rounds", ex: "rack",
+          req: null, diffs: [2, 4, 6, 9] },
+        { id: "speedbag", name: "Speed Bag", stat: "strength", kind: "speedbag",
+          x: .78, y: .62, w: .12, h: .22, unit: "rounds", ex: "rack",
+          req: { lv: 2, gold: 150, gems: 0 }, diffs: [2, 3, 5, 7] },
         { id: "trade", name: "Trade Central", stat: null, kind: "trade",
-          x: .50, y: .53, w: .20, h: .24 },
+          x: 1.12, y: .53, w: .20, h: .24 },
+        { id: "bench", name: "Bench Press", stat: "strength", kind: "bench",
+          x: 1.42, y: .74, w: .18, h: .16, unit: "kg", ex: "bench",
+          req: { lv: 4, gold: 400, gems: 1 }, diffs: [40, 70, 100, 140] },
+        { id: "doubleend", name: "Double-End Bag", stat: "strength", kind: "doubleend",
+          x: 1.72, y: .64, w: .12, h: .24, unit: "rounds", ex: "rack",
+          req: { lv: 5, gold: 550, gems: 1 }, diffs: [2, 4, 6, 8] },
+        { id: "rope", name: "Skipping Corner", stat: "strength", kind: "rope",
+          x: 1.98, y: .76, w: .13, h: .16, unit: "rounds", ex: "rack",
+          req: { lv: 3, gold: 200, gems: 0 }, diffs: [3, 5, 8, 12] },
+        { id: "squat", name: "Squat Rack", stat: "strength", kind: "squat",
+          x: 2.24, y: .60, w: .16, h: .22, unit: "kg", ex: "squat",
+          req: { lv: 7, gold: 900, gems: 3 }, diffs: [60, 100, 150, 200] },
+        { id: "press", name: "Overhead Press", stat: "strength", kind: "rack",
+          x: 2.46, y: .74, w: .15, h: .20, unit: "kg", ex: "rack",
+          req: { lv: 6, gold: 700, gems: 2 }, diffs: [30, 50, 75, 110] },
+        { id: "treadmill", name: "Roadwork Treadmill", stat: "strength", kind: "treadmill",
+          x: 2.68, y: .66, w: .16, h: .20, unit: "km", ex: "rack",
+          req: { lv: 5, gold: 600, gems: 2 }, diffs: [3, 6, 10, 15] },
+        { id: "ring", name: "Sparring Ring", stat: "strength", kind: "ring",
+          x: 2.90, y: .76, w: .22, h: .20, unit: "rounds", ex: "bench",
+          req: { lv: 8, gold: 1400, gems: 5 }, diffs: [1, 2, 3, 5] },
       ];
       /* how many clicks a setting asks for, and what it pays */
 
       const gymKeys = new Set();
       let gymPlayer = { x: .5, y: .78, face: 1, step: 0 };
+      let gymCam = 0;
       let gymNear = null, gymLast = 0, gymBusy = false;
 
-      function gymBounds() { return { x0: .06, x1: .94, y0: .50, y1: .92 }; }
+      function gymBounds() { return { x0: .06, x1: GYM_W + .02, y0: .50, y1: .92 }; }
       function gymStep(dt) {
         if (gymBusy) return;
         const sp = 0.42 * dt;                     /* screens per second */
@@ -5952,6 +6127,9 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const b = gymBounds();
         gymPlayer.x = Math.max(b.x0, Math.min(b.x1, gymPlayer.x));
         gymPlayer.y = Math.max(b.y0, Math.min(b.y1, gymPlayer.y));
+        /* centre on the player, but never scroll past the walls */
+        const want = Math.max(0, Math.min(GYM_W - 1, gymPlayer.x - .5));
+        gymCam += (want - gymCam) * Math.min(1, dt * 7);
         /* nearest machine within reach */
         gymNear = null;
         let best = .11;
@@ -5962,9 +6140,18 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const p = $("#gym-prompt");
         if (p) {
           p.hidden = !gymNear;
-          if (gymNear) p.innerHTML = gymNear.stat
-            ? `<b>E</b> Occupy &middot; ${gymNear.name}<i>${GYM_STATS[gymNear.stat].name}</i>`
-            : `<b>E</b> Enter &middot; ${gymNear.name}<i>Trading floor</i>`;
+          if (gymNear) {
+            const locked = !mcOwned(gymNear);
+            const miss = locked ? mcMissing(gymNear) : null;
+            p.classList.toggle("gp-rich", !!gymNear.stat);
+            p.innerHTML = !gymNear.stat
+              ? `<b>E</b> Enter &middot; ${gymNear.name}<i>Trading floor</i>`
+              : `<div class="gp-name">${gymNear.name}</div>${muscleCard(gymNear)}<div class="gp-act">${
+                  locked
+                    ? `<b>E</b> Locked &middot; ${miss.length ? "needs " + miss.join(", ") : "ready to unlock"}`
+                    : `<b>E</b> Occupy &middot; ${GYM_STATS[gymNear.stat].name}`
+                }</div>`;
+          }
         }
       }
 
@@ -5983,8 +6170,9 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             b(x, y, W * .08, H * .044, (x * 7 + y * 11) % 3 ? "#202836" : "#26303f");
           }
         }
-        for (let i = 0; i < 4; i++) {
-          const wx = W * (.08 + i * .25);
+        for (let i = 0; i < 14; i++) {
+          const wx = W * (.08 + i * .25 - gymCam * .55);   /* parallax */
+          if (wx < -W * .2 || wx > W * 1.1) continue;
           b(wx, H * .07, W * .15, H * .26, "#2c3a4c");
           b(wx + W * .008, H * .08, W * .134, H * .24, "#3b4e66");
           b(wx + W * .072, H * .07, W * .006, H * .26, "#243040");
@@ -6006,12 +6194,14 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           b(-4, y, W + 8, 1, "rgba(0,0,0,.22)");
         }
         /* training mats under the weights */
-        b(W * .36, H * .62, W * .30, H * .30, "#231b22");
-        b(W * .80, H * .66, W * .18, H * .26, "#1d2430");
+        for (const mt of [[.40, .30], [1.38, .26], [2.20, .34]]) {
+          const mx = (mt[0] - gymCam) * W;
+          if (mx > -W * .5 && mx < W * 1.5) b(mx, H * .62, W * mt[1], H * .30, "#231b22");
+        }
 
         /* machines, back to front */
         const order = GYM_MACHINES.slice().sort((p, q) => p.y - q.y);
-        for (const m of order) drawMachine(ctx, W, H, m, m === gymNear);
+        for (const m of order) drawMachine(ctx, W, H, m, m === gymNear, t);
         /* player, drawn in the right depth order */
         drawGymPlayer(ctx, W, H);
         /* grade */
@@ -6020,9 +6210,25 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
       }
 
-      function drawMachine(ctx, W, H, m, near) {
+      function drawMachine(ctx, W, H, m, near, t) {
         const b = artBlock(ctx);
-        const x = m.x * W, y = m.y * H, w = m.w * W, h = m.h * H;
+        t = t || 0;
+        const x = (m.x - gymCam) * W, y = m.y * H, w = m.w * W, h = m.h * H;
+        if (x < -w * 2 || x > W + w * 2) return;   /* off-camera */
+        /* every solid gets a lit top edge and a dark base: cheap, and it
+           stops the room reading as flat rectangles */
+        const sh = (X, Y, Wd, Ht, base, hi, lo) => {
+          b(X, Y, Wd, Ht, base);
+          b(X, Y, Wd, Math.max(1, Ht * .17), hi);
+          b(X, Y + Ht - Math.max(1, Ht * .15), Wd, Math.max(1, Ht * .15), lo);
+        };
+        /* contact shadow so nothing floats */
+        ctx.fillStyle = "rgba(0,0,0,.40)";
+        ctx.beginPath();
+        ctx.ellipse(x, y + h * .03, w * .46, h * .10, 0, 0, 6.3);
+        ctx.fill();
+        const locked = !mcOwned(m);
+        if (locked) ctx.globalAlpha = .55;
         if (near) {
           ctx.strokeStyle = "rgba(232,194,114,.85)";
           ctx.lineWidth = Math.max(1, H * .007);
@@ -6045,6 +6251,73 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           b(x - w * .52, y - h * .70, w * 1.04, h * .06, "#c9ced6");
           b(x - w * .62, y - h * .80, w * .12, h * .26, "#2b3340");
           b(x + w * .50, y - h * .80, w * .12, h * .26, "#2b3340");
+        } else if (m.kind === "heavybag") {
+          const sw = Math.sin(t / 900) * w * .07;          /* slow sway */
+          sh(x - w * .13, y - h * 1.16, w * .26, h * .06, "#2b3340", "#3d4757", "#1a1f27");
+          for (let i = 0; i < 4; i++)                      /* chain */
+            b(x - w * .03 + sw * (i / 4), y - h * (1.10 - i * .05), w * .06, h * .04,
+              i % 2 ? "#7d8a99" : "#a8b7c6");
+          b(x - w * .19 + sw, y - h * .92, w * .38, h * .05, "#3a2a1e");
+          sh(x - w * .21 + sw, y - h * .88, w * .42, h * .68, "#6a3327", "#8e4836", "#401e18");
+          b(x - w * .21 + sw, y - h * .66, w * .42, h * .05, "#2e150f");
+          b(x - w * .21 + sw, y - h * .44, w * .42, h * .05, "#2e150f");
+          b(x - w * .16 + sw, y - h * .86, w * .07, h * .64, "rgba(255,206,170,.16)");
+          sh(x - w * .22 + sw, y - h * .24, w * .44, h * .09, "#4a241c", "#67352a", "#2a1310");
+        } else if (m.kind === "speedbag") {
+          const wob = Math.sin(t / 55) * w * .06;          /* blur of use */
+          sh(x - w * .36, y - h * 1.04, w * .72, h * .10, "#6b4a2f", "#8f6540", "#45301f");
+          b(x - w * .32, y - h * .95, w * .64, h * .03, "#39424f");
+          b(x - w * .05, y - h * .94, w * .10, h * .07, "#9fb0c2");
+          sh(x - w * .13 + wob, y - h * .88, w * .26, h * .22, "#8a2820", "#b8422f", "#4d1410");
+          b(x - w * .08 + wob, y - h * .85, w * .08, h * .11, "rgba(255,198,176,.30)");
+          sh(x - w * .05, y - h * .68, w * .10, h * .66, "#39424f", "#505d6d", "#232a33");
+          sh(x - w * .18, y - h * .06, w * .36, h * .07, "#2b3340", "#3b4555", "#1a1f27");
+        } else if (m.kind === "doubleend") {
+          const bob = Math.sin(t / 210) * h * .035;
+          b(x - w * .02, y - h * 1.08, w * .04, h * .42 + bob, "#8d99a8");
+          sh(x - w * .16, y - h * .70 + bob, w * .32, h * .28, "#8a2820", "#b8422f", "#4d1410");
+          b(x - w * .11, y - h * .66 + bob, w * .10, h * .10, "rgba(255,200,180,.32)");
+          b(x - w * .02, y - h * .44 + bob, w * .04, h * .44 - bob, "#8d99a8");
+          sh(x - w * .12, y - h * .05, w * .24, h * .06, "#2b3340", "#3b4555", "#1a1f27");
+        } else if (m.kind === "rope") {
+          sh(x - w * .42, y - h * .12, w * .84, h * .12, "#241c23", "#33272f", "#151014");
+          sh(x - w * .36, y - h * .90, w * .72, h * .06, "#3a4454", "#4e5c70", "#232a33");
+          const a1 = Math.sin(t / 320);
+          for (let i = 0; i < 3; i++) {                    /* ropes on hooks */
+            const hx = x + (i - 1) * w * .26;
+            b(hx - w * .025, y - h * .86, w * .05, h * .07, "#9fb0c2");
+            for (let j = 0; j < 5; j++)
+              b(hx - w * .025 + Math.sin(j * .8 + a1) * w * .035,
+                y - h * (.79 - j * .11), w * .045, h * .10,
+                j % 2 ? "#d8c08a" : "#bb9f6e");
+          }
+        } else if (m.kind === "treadmill") {
+          const belt = (t / 420) % 1;
+          sh(x - w * .44, y - h * .22, w * .88, h * .19, "#2a3240", "#3b4757", "#151b23");
+          b(x - w * .40, y - h * .19, w * .80, h * .12, "#11151c");
+          for (let i = 0; i < 7; i++) {                    /* belt, running */
+            const by = y - h * .19 + (((i / 7) + belt) % 1) * h * .12;
+            b(x - w * .40, by, w * .80, h * .013, "#2b3442");
+          }
+          sh(x - w * .42, y - h * .80, w * .08, h * .60, "#39424f", "#505d6d", "#232a33");
+          sh(x + w * .34, y - h * .80, w * .08, h * .60, "#39424f", "#505d6d", "#232a33");
+          sh(x - w * .36, y - h * .92, w * .72, h * .15, "#3a4454", "#50607a", "#212834");
+          b(x - w * .28, y - h * .88, w * .56, h * .07, "#0b1922");
+          b(x - w * .26, y - h * .865, w * .22, h * .032, "#7fd4ff");
+          b(x + w * .04, y - h * .865, w * .12, h * .032, "#4a8fb0");
+        } else if (m.kind === "ring") {
+          sh(x - w * .54, y - h * .24, w * 1.08, h * .24, "#6b4a2f", "#8f6540", "#45301f");
+          b(x - w * .50, y - h * .21, w * 1.00, h * .15, "#9aa7b6");
+          b(x - w * .50, y - h * .21, w * 1.00, h * .035, "#c2cfdc");
+          for (const px of [-.52, .45]) {                  /* corner posts */
+            sh(x + w * px, y - h * .96, w * .08, h * .76, "#cfd8e2", "#f1f6fb", "#93a0ae");
+            b(x + w * px - w * .012, y - h * .99, w * .105, h * .055, "#e8c272");
+          }
+          for (let i = 0; i < 3; i++) {                    /* ropes */
+            const ry = y - h * (.36 + i * .20);
+            b(x - w * .52, ry, w * 1.02, h * .038, ["#d94f3e", "#e8e2d0", "#3e94e6"][i]);
+            b(x - w * .52, ry + h * .028, w * 1.02, h * .013, "rgba(0,0,0,.38)");
+          }
         } else if (m.kind === "trade") {
           /* lit counter under a signed archway */
           b(x - w * .52, y - h * .96, w * .10, h * .96, "#4a3523");
@@ -6075,11 +6348,12 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         ctx.beginPath();
         ctx.ellipse(x, y + h * .05, w * .5, h * .12, 0, 0, 6.3);
         ctx.fill();
+        ctx.globalAlpha = 1;   /* locked kit dims only itself */
       }
 
       function drawGymPlayer(ctx, W, H) {
         const b = artBlock(ctx);
-        const x = gymPlayer.x * W, y = gymPlayer.y * H;
+        const x = (gymPlayer.x - gymCam) * W, y = gymPlayer.y * H;
         const s = H * .085;                               /* body unit */
         const bob = Math.sin(gymPlayer.step) * s * .08;
         const swing = Math.sin(gymPlayer.step) * s * .22;
@@ -6339,7 +6613,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             if (faintK > 0 && faintK < 1) faintK = Math.min(1, faintK + .05);
             shownReps += (reps - shownReps) * .22;
             const drive = Math.min(1, Math.abs(reps - shownReps) * .9);
-            drawExercise(g2, cvx.width, cvx.height, m.kind, shownReps % 1, drive, shownReps, faintK);
+            drawExercise(g2, cvx.width, cvx.height, m.ex || m.kind, shownReps % 1, drive, shownReps, faintK);
             raf = requestAnimationFrame(loop);
           };
           loop();
@@ -6348,9 +6622,10 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             reps++;
             earned += perRep;
             P.gymStat = P.gymStat || { strength: 0 };
-            const before = gymLevel("strength");
-            P.gymStat.strength = (P.gymStat.strength || 0) + perRep;   /* banked as you go */
-            if (gymLevel("strength") > before) gateToast("Strength level " + gymLevel("strength") + " · +" + gymBonus("strength").toFixed(1) + "x");
+            const ST = m.stat || "strength";
+            const before = gymLevel(ST);
+            P.gymStat[ST] = (P.gymStat[ST] || 0) + perRep;             /* banked as you go */
+            if (gymLevel(ST) > before) gateToast(GYM_STATS[ST].name + " level " + gymLevel(ST) + " · +" + gymBonus(ST).toFixed(1) + "x");
             saveProfile(); refreshLobbyCard();
             fatigue += fatPerRep;
             paintGauge();
@@ -6379,7 +6654,8 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             let lost = 0;
             if (fainted) {
               lost = Math.round(earned * .25);
-              P.gymStat.strength = Math.max(0, (P.gymStat.strength || 0) - lost);
+              const SL = m.stat || "strength";
+              P.gymStat[SL] = Math.max(0, (P.gymStat[SL] || 0) - lost);
               saveProfile(); refreshLobbyCard();
             }
             setTimeout(() => {
@@ -6418,7 +6694,9 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           e.preventDefault();
         } else if (k === "e" && gymNear) {
           e.preventDefault();
-          if (gymNear.kind === "trade") openTrade(); else openTrainer(gymNear);
+          if (gymNear.kind === "trade") openTrade();
+          else if (!mcOwned(gymNear)) mcAsk(gymNear);
+          else openTrainer(gymNear);
         }
       });
       window.addEventListener("keyup", (e) => {
@@ -8361,7 +8639,10 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
         const un = hasConcern();
         const miss = false;
         G.doc++;
-        if (md == "hub") G.checkedForRecovery = true;
+        if (md == "hub") {
+          G.checkedForRecovery = true;
+          G.checkedThisCamp = true;
+        }
         unl("screen");
         if (miss) G.missed = (G.missed || 0) + 1;
         const fb = miss
@@ -8762,37 +9043,6 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
           (G.stopLog = G.stopLog || []).push(
             !!(m.conc || m.abd || m.sdh || m.head >= BAL.medical.headStop),
           );
-        if (G.champ) {
-          G.titleStop = t === "towel" || t === "medstop" ? !!m.conc : null;
-          G.postBout = true;
-          return end(W ? "champ" : t);
-        }
-        G.res.push(t == "win" ? "W" : t == "lose" ? "L" : "S");
-        if (t === "ko") {
-          m.sdh = true;
-          return end("sdh");
-        }
-        if (G.l >= 3) return end("lose");
-        G.k++;
-        m.fat *= 0.6;
-        G.days = 5;
-        /* The counterfactual. Sometimes you pull him and he was fine —
-           you took the fight off him for nothing. Learning that this is
-           STILL the right policy is the hardest idea in the subject, and
-           no paragraph can teach it. A distribution of outcomes can. */
-        if (t === "towel" || t === "medstop") {
-          const trulyHurt = G.stopLog[G.stopLog.length - 1];
-          const left = 8 - G.k - 1,
-            need = Math.max(0, 6 - G.w);
-          G.counter =
-            (trulyHurt
-              ? `<b class="k">He was concussed when you stopped it.</b><div class="mu" style="margin-top:6px">Two more rounds would have been two more rounds of it. You will never get credit for this, because nothing happened — which is what it looks like when this goes right.</div>`
-              : `<b class="w">He was not concussed.</b><div class="mu" style="margin-top:6px">Tired, behind on the cards, and he would have finished the fight. You took it off him for nothing, and he knows it.</div>`) +
-            `<div class="mu" style="margin-top:8px;border-top:2px solid #34516b;padding-top:7px">That bout is gone either way. <b class="w">${left} left · ${need} more win${need === 1 ? "" : "s"} needed.</b></div>` +
-            (trulyHurt
-              ? ""
-              : `<div class="mu" style="margin-top:7px;color:#ffe6ac">Pulling a fighter who turns out to be fine is not a mistake. It is the price of the rule, and the rule is still right — because the one time you are wrong the other way, it is his brain.</div>`);
-        }
         const why = {
           win: "Won" + (how == "KO" ? " by KO" : "") + " vs " + o.n,
           lose: "Lost on points to " + o.n,
