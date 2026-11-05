@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Street Fight dev</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three/build/three.module.js","three/addons/":"../../vendor/three/addons/"}}</script>
+</head><body>
+<script type="module">
+/* Dev page for the whole game. Query: q=auto|low|medium|high  seed=n  bot=idle|spam|mixed|skilled|turtle (plays the player's side)  kind=jab...  ai=easy|normal|hard
+   manual=1 (no loop, call ARENA.step)  touch=1  adaptive=1.  window.ARENA = { match, engine, step(n, dt), setPlayerBot(name, opts), session, close, open } */
+import { openArena, closeArena, arenaSession } from '../arena/index.js';
+const P = new URLSearchParams(location.search);
+const num = (k) => (P.has(k) ? +P.get(k) : undefined);
+async function open(extra = {}) {
+  return openArena({
+    quality: P.get('q') || 'high', adaptive: P.get('adaptive') === '1', seed: num('seed'), bot: P.get('bot') || undefined, botKind: P.get('kind') || undefined,
+    difficulty: P.get('ai') || 'normal', manual: P.get('manual') === '1', touch: P.has('touch') ? P.get('touch') === '1' : undefined, ...extra,
+  });
+}
+window.ARENA = {
+  get session() { return arenaSession(); },
+  get match() { const s = arenaSession(); return s && s.match; },
+  get engine() { const s = arenaSession(); return s && s.engine; },
+  step(n, dt, o) { return arenaSession().step(n, dt, o); },
+  setPlayerBot(name, o) { arenaSession().setPlayerBot(name, o); },
+  open, close: closeArena,
+};
+try { await open(); window.READY = true; } catch (e) { console.error('[arena dev] open failed', e); window.READY = 'failed: ' + e.message; }
+</script></body></html>

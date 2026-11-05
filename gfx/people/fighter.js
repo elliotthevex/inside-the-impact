@@ -15,8 +15,8 @@ function loadTex(mgr, url, srgb, aniso = 4) {
 export const CORNER = { blue: { trunks: 0x173a9c, stripe: '#e8e6df', glove: 0x123a9e }, red: { trunks: 0x8e1712, stripe: '#e8e6df', glove: 0x9a130e } };
 
 export async function preloadFighter(q = { tex: 2048 }, mgr) {
-  if (shared.gltf) return shared;
   const sz = q.tex >= 2048 ? 2048 : 1024; const a = q.aniso || 4;
+  if (shared.gltf && shared.sz === sz) { shared.smoothHead = q.name !== 'low'; return shared; }
   const [gltf, bd, bn, bs, hd, hn, hs, gd, gn, gr, tn, tr, od, on, or] = await Promise.all([
     new GLTFLoader(mgr).loadAsync(BASE + 'fighter.glb'),
     loadTex(mgr, `${BASE}m021_body_d_${sz}.webp`, true, a), loadTex(mgr, `${BASE}m021_body_n_${sz}.webp`, false, a), loadTex(mgr, `${BASE}m021_body_s_${sz}.webp`, false, a),
@@ -30,7 +30,7 @@ export async function preloadFighter(q = { tex: 2048 }, mgr) {
     loadTex(mgr, `${BASE}m007b_body_d_${sz}.webp`, true, a), loadTex(mgr, `${BASE}m007b_head_d_${sz}.webp`, true, a), loadTex(mgr, `${BASE}m007b_head_n_${sz}.webp`, false, a), loadTex(mgr, `${BASE}m007b_head_s_${sz}.webp`, false, a),
     fetch(BASE + 'm007b_face.bin').then((r) => r.arrayBuffer()),
   ]);
-  Object.assign(shared, { gltf, tex: { bd, bn, bs, hd, hn, hs, gd, gn, gr, tn, tr, od, on, or, b: { bd: bd2, hd: hd2, hn: hn2, hs: hs2 } } });
+  Object.assign(shared, { gltf, sz, tex: { bd, bn, bs, hd, hn, hs, gd, gn, gr, tn, tr, od, on, or, b: { bd: bd2, hd: hd2, hn: hn2, hs: hs2 } } });
   shared.face.b = faceBin; shared.smoothHead = q.name !== 'low'; shared.heads = {};
   shared.gloves = { L: buildGloveGeometry(-1), R: buildGloveGeometry(1) };
   return shared;
@@ -137,4 +137,23 @@ export class Fighter {
   setSweat(v) { for (const m of this.skinMats) m.userData.u.uSweat.value = v; }
   setFlush(v) { for (const m of this.skinMats) m.userData.u.uFlush.value = v; }
   morph(name, v) { const m = this.head; if (!m) return; const i = m.morphTargetDictionary[name]; if (i !== undefined) m.morphTargetInfluences[i] = v; }
+  /* Frees this fighter's own GPU objects. What the module shares goes with releaseFighterGPU(). */
+  dispose() {
+    if (this.root.parent) this.root.parent.remove(this.root);
+    const seen = new Set();
+    this.root.traverse((n) => {
+      if (n.skeleton && !seen.has(n.skeleton)) { seen.add(n.skeleton); n.skeleton.dispose(); }
+      if (n.isMesh && n.material && !seen.has(n.material)) { seen.add(n.material); const m = n.material; if (m.map && m.map.isCanvasTexture) m.map.dispose(); m.dispose(); }
+      if (n.isMesh && n.geometry && !seen.has(n.geometry)) { seen.add(n.geometry); n.geometry.dispose(); }
+    });
+  }
+}
+
+/* Lets go of the GPU copies of everything shared between fighters: textures, the model's geometry, gloves, heads. The images and arrays stay
+   in memory, so opening the arena again needs no download. Dispose also drops the renderer's listeners, so a closed renderer can be collected. */
+export function releaseFighterGPU() {
+  const walk = (o) => { for (const v of Object.values(o)) { if (v && v.isTexture) v.dispose(); else if (v && v.isBufferGeometry) v.dispose(); else if (v && typeof v === 'object' && !ArrayBuffer.isView(v) && !(v instanceof ArrayBuffer)) walk(v); } };
+  walk(shared.tex); if (shared.gloves) walk(shared.gloves); if (shared.heads) walk(shared.heads);
+  if (shared.bodyGloved) shared.bodyGloved.dispose();
+  if (shared.gltf) shared.gltf.scene.traverse((n) => { if (n.geometry) n.geometry.dispose(); if (n.skeleton) n.skeleton.dispose(); });
 }

@@ -746,5 +746,6 @@ export function createHud(rootEl, opts = {}) {
   return {
     update, onEvent, showLoading, destroy, setPaused, reset, stick, el: hud, ready,
     get paused() { return paused; },
+    get ended() { return endShown; },
   };
 }

@@ -4,9 +4,9 @@ Checkpoint file. Read this first when resuming. Design and interfaces are in `gf
 Work is on git branch `realistic-3d` in `site/`. Do not push or merge to `main`: a push to `main` deploys live, and the user decides that.
 
 ## Status
-Phase: the four parts are built and each tested alone. They are being joined into one playable match now. The game does not run from the arena card yet.
-Usage rule: stop at 75% of the 5-hour window (`mcp__ccd_session_mgmt__get_usage`). Agents stop at 72. Last check 20:14 KST: 15%, resets 00:20 KST. Weekly 6%.
-Power: at 20:14 KST the Mac was at 7% battery and discharging. It slept once already (15:14 to 18:47) and that killed a whole build run.
+Phase: joining the four parts into one playable match. The dev page runs a fight on the real rules, fighters, room and HUD. `index.html` now has the launch hook, but a full match through the arena card has not been confirmed.
+Usage rule: stop at 75% of the 5-hour window (`mcp__ccd_session_mgmt__get_usage`). Agents stop at 72. Last check 20:34 KST: 22%, resets 00:20 KST. Weekly 7%.
+Power: at 20:34 KST the Mac was at 3% battery, still discharging, so expect it to shut down soon. Anything running then dies, and files on disk stay. It slept once already (15:14 to 18:47) and that killed a whole build run.
 
 ## Scope note
 The user's latest brief is Street Fight 3D, a complete 1v1 arena game. It takes priority over the earlier whole-game overhaul brief (20 screens to realistic 3D).
@@ -19,7 +19,8 @@ That overhaul is parked, not cancelled. Its reference notes are partly done: `sc
 - HUD (`gfx/arena/hud.js`, `arena.css`, fonts). Looked at in every state, but only against a fake match. Its buttons have never been clicked.
 
 ## In progress
-- Integration agent (workflow run `wf_15ea3fef-cb4`): `fightcam.js`, `index.js`, `audio.js`, `fx.js`, HUD on the real sim, the arena card launch, `gfx/dev/arena.html`. Notes go to `gfx/dev/notes/integrate.md`. `audio.js` and `fx.js` were silent placeholders at the last check.
+- Integration agent `a404045a6c0629b59`, running on its own (not in a workflow): `fightcam.js`, `index.js`, `audio.js`, `fx.js`, HUD on the real sim, the arena card launch, `gfx/dev/arena.html`. Notes go to `gfx/dev/notes/integrate.md`. `audio.js` and `fx.js` were written at 20:32 and have not been run. The joined game has not been run to the end yet.
+- Workflow run `wf_15ea3fef-cb4` is stopped on purpose. A message to its integration agent started a second copy, and the two overwrote each other from 20:15 to 20:27 KST. The surviving copy owns everything. The stopped copy's versions are in `scratchpad/integrate/workflow-agent-copy/`.
 
 ## Remaining, in order
 1. Finish integration, then confirm a full match runs through the real arena card.
@@ -44,10 +45,11 @@ That overhaul is parked, not cancelled. Its reference notes are partly done: `sc
 - Never run on a phone GPU. Low was only checked at phone resolution on the M1.
 
 ## Files changed
-New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `PROJECT_PROGRESS.md`. `index.html` had not been touched at the last commit; integration will add the launch hook.
+New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `PROJECT_PROGRESS.md`. `index.html` now has the launch hook: a head loader with an injected import map, the launch line and `hotkeysBlocked`. Its original is saved at `scratchpad/integrate/index.html.orig`.
 
 ## Last successful test
-Each part on its own dev page: `gfx/dev/stage.html`, `rig.html`, `simtest.html`, `hud.html`. No full match has been played through the joined game yet.
+20:28 KST, on the page with the launch hook but with placeholder effects and sound: all scripts parse, parity `3bea3b59`, smoke test passes, and `gfx/dev/arena.html` shows a fight on the real rules, fighters, room and HUD. No full match has been played through the joined game yet.
 
 ## Next task
-Finish integration. If the run died, restart it with `Workflow({scriptPath, resumeFromRunId: 'wf_15ea3fef-cb4'})` in the same session, or start a new integration agent from `gfx/dev/notes/integrate.md`. The script is `~/.claude/projects/-Users-elliot-jeong-Downloads-Inside-the-Impact/a4d575ac-45f5-438b-a265-75fe753a2111/workflows/scripts/street-fight-3d-build-wf_f66c7ee4-14f.js`.
+Finish integration. If agent `a404045a6c0629b59` died, send it a message, which resumes it from its transcript, or start a new integration agent from `gfx/dev/notes/integrate.md`. Do not resume workflow run `wf_15ea3fef-cb4`: that starts another integrator. Only message an agent started by a workflow once that workflow has stopped.
+Balance pass: start it once the Mac is on power. It may change only the tuning numbers in `sim.js` and `ai.js`, plus `simtest.html`.

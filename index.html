@@ -6,6 +6,15 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
 <title>Inside the Impact — Boxing Safety Simulation</title>
+<script id="arena-loader">
+/* Street Fight 3D loads on click. The import map is added from here because tools/jscheck.py parses every script block as JavaScript. */
+document.head.appendChild(Object.assign(document.createElement("script"),{type:"importmap",textContent:JSON.stringify({imports:{three:"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/addons/"}})}));
+window.__openRealArena=function(fallback){
+  var gl=null;try{gl=document.createElement("canvas").getContext("webgl2");var x=gl&&gl.getExtension("WEBGL_lose_context");if(x)x.loseContext();}catch(e){gl=null;}
+  if(!gl)return fallback();
+  import("./gfx/arena/index.js").then(function(m){return m.openArena({onFail:function(){fallback();}});}).catch(function(e){console.warn("[arena] falling back to the canvas arena:",e);fallback();});
+};
+</script>
 <style>
       /* ── 8-bit indie boxing visual skin ─────────────────────────── */
       :root {
@@ -6318,7 +6327,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
             if (m && m.live) {
               closeModeSelect();
               return m.id === "street" ? openStreetFight()
-                   : m.id === "duel" ? openArena3D()
+                   : m.id === "duel" ? window.__openRealArena(openArena3D)
                    : openMissionSetup();
             }
             maintenance(btn.dataset.mode);
@@ -7090,7 +7099,7 @@ body:has(#gymload) #gear-btn,body:has(.settings) #gear-btn{display:none}
       }
       function hotkeysBlocked() {
         if (document.querySelector(".st-key.binding")) return true;
-        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3")) return true;
+        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3,.arena-x")) return true;
         return !!document.querySelector("dialog[open]");
       }
       window.addEventListener("keydown", (e) => {
