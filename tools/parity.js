@@ -10,7 +10,7 @@
  * is untouched.
  *
  * Run it the same way as smoke.js:
- *   open http://127.0.0.1:8090/inside-the-impact.html   (wait for boot)
+ *   python3 tools/serve.py, then open http://127.0.0.1:8781/   (wait for boot)
  *   paste this file into the console
  *
  * HONEST SCOPE — read this before trusting it.

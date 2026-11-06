@@ -2,7 +2,7 @@
    Nothing here writes anything except the class and data attribute the HUD itself keeps on the overlay root. */
 const SHEETS = [['arena.css', new URL('./arena.css', import.meta.url).href], ['extras.css', new URL('./extras.css', import.meta.url).href]];
 
-export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); // same five as escapeUI in index.html
+export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); // same five as escapeUI in game.js
 
 export function coarsePointer() {
   try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; }

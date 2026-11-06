@@ -11,7 +11,7 @@
 </head>
 <body>
 <!-- Test bench only. Each module on its own over a photo standing in for the live ring. No GPU needed.
-     Query: view=menu|notes|coach|stack, text=small|large, rm=1, touch=1, initial=easy|normal|hard, cx=live (the real Codex, read out of index.html, for layout).
+     Query: view=menu|notes|coach|stack, text=small|large, rm=1, touch=1, initial=easy|normal|hard, cx=live (the real Codex, read out of game.js, for layout).
      window.EXTRAS is what a test drives. -->
 <div class="arena-x" id="root"><div id="bg"></div></div>
 <script type="module">
@@ -28,15 +28,15 @@ if (P.get('rm')) document.body.classList.add('reduce-motion');
 const touch = P.has('touch') ? P.get('touch') === '1' : undefined;
 const root = document.getElementById('root');
 
-/* The real Codex, without a copy: the same object the game declares, cut out of the real page and declared the same way, as a classic-script const. */
+/* The real Codex, without a copy: the same object the game declares, cut out of the real script and declared the same way, as a classic-script const. */
 async function loadLiveCodex() {
-  const html = await (await fetch('../../index.html')).text();
-  const from = html.indexOf('const CX = {'), to = html.indexOf('const SD = {', from);
-  if (from < 0 || to < 0) throw new Error('CX not found in index.html');
+  const source = await (await fetch('../../game.js')).text();
+  const from = source.indexOf('const CX = {'), to = source.indexOf('const SD = {', from);
+  if (from < 0 || to < 0) throw new Error('CX not found in game.js');
   const s = document.createElement('script');
-  s.textContent = html.slice(from, to);
+  s.textContent = source.slice(from, to);
   document.head.appendChild(s);
-  return html;
+  return source;
 }
 
 const log = { pick: [], exit: 0, close: 0 };

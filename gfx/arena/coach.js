@@ -13,7 +13,7 @@
    the rig plays them, just past bad).
 
    Text rules, checked by the test in the notes: about fourteen words at most, no digits or number words, no diagnosis, nothing that sends a
-   man with a head sign back out to fight. The medical substance comes from the game's own Codex and tips in index.html; the key after a
+   man with a head sign back out to fight. The medical substance comes from the game's own Codex and tips in game.js; the key after a
    line names its source there (CX.x is a Codex entry, TP.x a tip, HUD is a load-screen tip in hud.js).
 
    No DOM and no imports: this runs in JavaScriptCore against the real sim. */

@@ -14,7 +14,7 @@ import { applySettings, ensureCss, esc, rawFallback, scopeOf } from './extras-ui
 
 const CREDITS_URL = new URL('../../CREDITS.md', import.meta.url);
 
-/* The wording of the About panel in index.html. A test checks these sentences are still there. */
+/* The wording of the About panel in game.js. A test checks these sentences are still there. */
 export const DISCLAIMER = [
   'This is a fictional educational game, not a medical device, examination, diagnosis, treatment, or clearance tool.',
   'Have any suspected injury assessed by qualified clinicians.',
