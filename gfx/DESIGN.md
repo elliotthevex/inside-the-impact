@@ -100,8 +100,8 @@ Additive reactions: head snap by hit direction, body fold, stagger, plus face mo
 Sweat follows fatigue. Winner raises a hand. Rig reads sim state and events only. Getters: `headWorld()`, `chestWorld()`, `gloveWorld('L'|'R')`.
 
 ### Camera, HUD, audio, effects
-Camera: Tekken-style. Side-on to the fighters' line, framing both, distance grows with separation, slow orbit that follows the line and never flips sides abruptly, player stays on the left. Hide near-side ropes when they block the view. Auto-focus DOF on the midpoint. Impact kick and shake honour settings (`ST.camerashake`, `ST.motion`, `uiPrefs.shake`, `uiPrefs.motion`; read how `index.html` uses them). Slow motion on a knockout unless reduced motion is on.
-HUD: Tekken-inspired. Large mirrored health bars across the top with a lagging damage chunk, stamina bars under them, names, round pips, a big centre clock, ROUND n / FIGHT / KO / DOWN and count banners, combo counter. Condensed font self-hosted from Google Fonts (Barlow Condensed, OFL) in `assets/fonts`. Respect Text Size via `ST.textsize`. Touch buttons on coarse pointers.
+Camera: Tekken-style. Side-on to the fighters' line, framing both, distance grows with separation, slow orbit that follows the line and never flips sides abruptly, player stays on the left. Hide near-side ropes when they block the view. Auto-focus DOF on the midpoint, with the men and the canvas around them always sharp and almost deep focus on wide shots. Impact kick and shake honour settings (`ST.camerashake`, `ST.motion`, `uiPrefs.shake`, `uiPrefs.motion`; read how `index.html` uses them). Slow motion on a knockout unless reduced motion is on.
+HUD: Tekken-inspired. Large mirrored health bars across the top with a lagging damage chunk, stamina bars under them, names, round pips, a big centre clock, ROUND n / FIGHT / KO / DOWN and count banners as lower thirds so the men stay visible (top zone on tall screens), combo counter. Condensed font self-hosted from Google Fonts (Barlow Condensed, OFL) in `assets/fonts`. Respect Text Size via `ST.textsize`. Touch buttons on coarse pointers.
 Effects: hit-stop 40-90 ms by power, sweat spray particles, a brief light flash at contact, canvas dust, rope wobble on contact with ropes, damage flash on the HUD. No blood.
 Audio: WebAudio synthesis only, no files. Punch thuds by type and blocked, whoosh, canvas foot squeaks, bell, crowd bed that swells on big shots, count. Honour `ST.fxvol` and `uiPrefs.sound`; read how `index.html` uses them.
 
@@ -110,7 +110,7 @@ A real basement fight venue, 18 m by 18 m, ceiling about 4.5 m. Ring centred: 6.
 
 ### Quality
 low: no film pipeline, direct tone mapping, 1024 textures, no AO or DOF, small shadow map, little haze, few crowd, pixel ratio 1, works on a phone GPU.
-medium: film, bloom, DOF 16 taps, 1024 textures. high: film, AO, DOF 32 taps, MSAA 4, 2048 textures. Auto-detect, `ST.lowdetail` forces low, drop a level if frames stay slow. Target 60 fps on an M1 at 1080p on high.
+medium: film, bloom, DOF 12 taps, 1024 textures. high: film, AO, DOF 16 taps, MSAA 4, 2048 textures. Auto-detect, `ST.lowdetail` forces low, drop a level if frames stay slow. Target 60 fps on an M1 at 1080p on high.
 
 ## Credits
 `site/CREDITS.md` from `assets/manifest.json` plus: Microsoft Rocketbox (MIT, keep the licence text), CMU Graphics Lab Motion Capture Database

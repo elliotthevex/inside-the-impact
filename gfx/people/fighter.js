@@ -5,6 +5,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { makeSkin } from './skin.js';
 import { buildGloveGeometry } from './glove.js';
+import { withCharLight } from './charlight.js';
+
+export { setCharLight } from './charlight.js';
 
 const BASE = new URL('../../assets/people/', import.meta.url).href;
 const shared = { gltf: null, tex: {}, gloves: null, face: {} };
@@ -12,6 +15,8 @@ const tl = new THREE.TextureLoader();
 function loadTex(mgr, url, srgb, aniso = 4) {
   return new Promise((ok, err) => { (mgr ? new THREE.TextureLoader(mgr) : tl).load(url, (t) => { t.flipY = false; t.anisotropy = aniso; if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; ok(t); }, undefined, err); });
 }
+const TRUNKS_GAIN = new THREE.Vector3(0.75, 0.75, 0.75), SKIN_GAIN_A = new THREE.Vector3(1.2, 1.2, 1.2);
+const SKIN_GAIN_B = new THREE.Vector3(2.3, 2.8, 3.1), SKIN_GAIN_B_BODY = new THREE.Vector3(2.8, 3.4, 3.8);
 export const CORNER = { blue: { trunks: 0x173a9c, stripe: '#e8e6df', glove: 0x123a9e }, red: { trunks: 0x8e1712, stripe: '#e8e6df', glove: 0x9a130e } };
 
 export async function preloadFighter(q = { tex: 2048 }, mgr) {
@@ -107,12 +112,15 @@ export class Fighter {
     this.bones = {}; this.meshes = {}; this.skinMats = [];
     const C = CORNER[corner];
     const tn = T.tn, X = variant === 'b' ? T.b : T; this.variant = variant; const skinBody = makeSkin({ map: X.bd, normalMap: T.bn, specMap: T.bs, tint }); const skinHead = makeSkin({ map: X.hd, normalMap: X.hn, specMap: X.hs, tint, normalScale: 0.9 }); this.skinMats = [skinBody, skinHead];
+    /* the same fill has to read on the second man's skin as well. His albedo is about a third of the first man's and redder, so per channel the gain brings it up to brown, not to orange */
+    withCharLight(skinBody, variant === 'b' ? SKIN_GAIN_B_BODY : null); withCharLight(skinHead, variant === 'b' ? SKIN_GAIN_B : SKIN_GAIN_A);
     const trunks = new THREE.MeshPhysicalMaterial({ map: trunksMap(C.trunks, C.stripe), normalMap: tn, roughnessMap: T.tr, roughness: 1, metalness: 0, sheen: 0.6, sheenRoughness: 0.35, sheenColor: new THREE.Color(C.trunks).lerp(new THREE.Color(0xffffff), 0.35), side: THREE.DoubleSide });
-    const boots = new THREE.MeshStandardMaterial({ map: T.od, normalMap: T.on, roughnessMap: T.or, roughness: 1 });
+    withCharLight(trunks, TRUNKS_GAIN);
+    const boots = withCharLight(new THREE.MeshStandardMaterial({ map: T.od, normalMap: T.on, roughnessMap: T.or, roughness: 1 }));
     const glove = new THREE.MeshPhysicalMaterial({ map: T.gd, normalMap: T.gn, roughnessMap: T.gr, roughness: 1.0, color: C.glove, clearcoat: 0.22, clearcoatRoughness: 0.42, specularIntensity: 0.7 });
     /* glove_d's alpha holds where the corner colour applies: leather takes it, trim, thread and strap do not */
     glove.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', 'vec4 gloveTex=texture2D(map,vMapUv);diffuseColor.rgb=mix(gloveTex.rgb,gloveTex.rgb*diffuseColor.rgb,gloveTex.a);'); };
-    glove.customProgramCacheKey = () => 'glove1';
+    glove.customProgramCacheKey = () => 'glove1'; withCharLight(glove);
     this.gloveMat = glove;
     this.model.traverse((n) => {
       if (n.isBone) this.bones[n.name] = n;

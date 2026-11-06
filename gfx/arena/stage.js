@@ -47,7 +47,7 @@ function crowdMaterial(u) {
     s.uniforms.uTime = u.uTime;
     s.uniforms.uCamXZ = u.uCamXZ;
     applyBake(s, { hemi: true });
-    s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 aPart;varying vec2 vPart;varying float vPh;uniform float uTime;uniform vec4 uCamXZ;')
+    s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aPart;varying vec3 vPart;varying float vPh;uniform float uTime;uniform vec4 uCamXZ;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
  vPart=aPart;
  #ifdef USE_INSTANCING
@@ -57,12 +57,12 @@ function crowdMaterial(u) {
  vec2 crel=instanceMatrix[3].xz-uCamXZ.xy;float cal=dot(crel,uCamXZ.zw),cla=abs(crel.x*uCamXZ.w-crel.y*uCamXZ.z);
  transformed*=1.-(1.-smoothstep(2.6,3.9,cal))*(1.-smoothstep(1.2,1.9,cla))*step(-.5,cal);
  #endif`);
-    s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vPart;varying float vPh;')
+    s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vPart;varying float vPh;')
       .replace('#include <color_fragment>', `#include <color_fragment>
  {vec3 shirt=diffuseColor.rgb;vec3 pants=mix(vec3(.022,.026,.038),vec3(.06,.055,.05),fract(vPh*7.3));vec3 shoes=vec3(.012);vec3 hair=mix(vec3(.012,.009,.007),vec3(.06,.04,.025),fract(vPh*3.7)*fract(vPh*3.7));vec3 skin=mix(vec3(.3,.18,.13),vec3(.13,.075,.05),fract(vPh*5.1)*.8);
- float p=vPart.x;vec3 c=mix(shirt,pants,smoothstep(.1,.25,p));c=mix(c,shoes,smoothstep(.42,.58,p));c=mix(c,hair,smoothstep(.75,.92,p));c=mix(c,skin,smoothstep(.3,.7,vPart.y));diffuseColor.rgb=c;}`);
+ float p=vPart.x;vec3 c=mix(shirt,pants,smoothstep(.1,.25,p));c=mix(c,shoes,smoothstep(.42,.58,p));c=mix(c,hair,smoothstep(.75,.92,p));c=mix(c,skin*vPart.z,smoothstep(.3,.7,vPart.y));diffuseColor.rgb=c;}`);
   };
-  m.customProgramCacheKey = () => 'crowd3';
+  m.customProgramCacheKey = () => 'crowd4';
   return m;
 }
 const PALETTE = [0x33373f, 0x403d35, 0x4c2e2a, 0x323f46, 0x4e483c, 0x2d2d2f, 0x3f4b5c, 0x5e5a50, 0x3c2b36, 0x6a6458, 0x57251f, 0x243f5a, 0x262628, 0x4a463f];
@@ -96,7 +96,7 @@ function buildCrowd(seats, u, doorX, geos) {
   return {
     group: g, parts, feet, total,
     setCount(n) { const k = Math.min(1, n / total); for (const p of parts) p.im.count = Math.round(p.full * k); },
-    bake(field) { for (const p of parts) field.bakeInstances(p.im, p.seated ? 1.0 : 1.35, 0.9, 0.7); },
+    bake(field, gain = 0.7) { for (const p of parts) field.bakeInstances(p.im, p.seated ? 1.0 : 1.35, 0.9, gain); },
   };
 }
 
@@ -248,7 +248,7 @@ export async function createStage(engine, loader) {
   for (const o of [...toBake, dGroup, pGroup, room.beam, ...ring.props]) bakeInto(field, o);
   for (const o of toBakeSmall) bakeInto(field, o, { single: true });
   for (const k of Object.keys(ring.ropes)) field.bakeGeometry(ring.ropes[k].geometry);
-  field.bakeInstances(benches.planks, 0.5, 0.8); field.bakeInstances(benches.legs, 0.25, 0.6); crowd.bake(field);
+  field.bakeInstances(benches.planks, 0.5, 0.8); field.bakeInstances(benches.legs, 0.25, 0.6); crowd.bake(field, q.name === 'low' ? 0.56 : 0.7); /* nothing blurs the crowd on low: dimmer people against the wall read better than clear ones */
   const bakeMs = performance.now() - t0;
   /* after the bake, which swaps these meshes' materials */
   { const pm = ring.group.getObjectByName('posts'); const pd = ring.group.getObjectByName('pads'); stipple(pm.material, postA); if (pd.material !== pm.material) stipple(pd.material, postA); }

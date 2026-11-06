@@ -507,6 +507,7 @@ function aimAt(bone, child, dir) {
   const d = new THREE.Vector3(dir[0], dir[1], dir[2]).normalize(); const rot = new THREE.Quaternion().setFromUnitVectors(cur, d);
   bone.getWorldQuaternion(_qa); bone.parent.getWorldQuaternion(_qb); bone.quaternion.copy(_qb.clone().invert().multiply(rot).multiply(_qa)); bone.updateWorldMatrix(false, true);
 }
+const HEAD_CELL = 0.038; /* heads keep enough vertices for the face shade on every preset */
 const POSES = {
   seated: { spine: [0, 1, 0.1], spine2: [0, 1, 0.06], head: [0, 1, 0.16], thighL: [0.16, -0.08, 1], thighR: [-0.16, -0.08, 1], calfL: [0.02, -1, 0.06], calfR: [-0.02, -1, 0.06], armL: [0.2, -0.95, 0.2], armR: [-0.2, -0.95, 0.2], foreL: [-0.2, -0.4, 0.9], foreR: [0.2, -0.4, 0.9] },
   lean: { spine: [0, 0.82, 0.55], spine2: [0, 0.9, 0.4], head: [0, 0.97, 0.22], thighL: [0.22, -0.05, 1], thighR: [-0.22, -0.05, 1], calfL: [0.03, -1, -0.05], calfR: [-0.03, -1, -0.05], armL: [0.22, -0.8, 0.55], armR: [-0.22, -0.8, 0.55], foreL: [-0.45, 0.5, 0.74], foreR: [0.45, 0.5, 0.74] },
@@ -537,6 +538,13 @@ export async function loadCrowdGeometry(cell = 0.07) {
     root.traverse((n) => { if (n.isBone) bones[n.name] = n; if (n.isSkinnedMesh) meshes.push(n); });
     applyPose(bones, P); root.updateMatrixWorld(true);
     const headM = bones.Bip01_Head.matrixWorld; const headInv = headM.clone().invert(); const pelvis = new THREE.Vector3().setFromMatrixPosition(bones.Bip01_Pelvis.matrixWorld);
+    /* the face, as a shade per vertex: eye sockets, brow, under the nose and the mouth. A flat oval reads as a mannequin as soon as nothing blurs it, on any preset. */
+    const eyeL = new THREE.Vector3().setFromMatrixPosition(bones.Bip01_LEye.matrixWorld), eyeR = new THREE.Vector3().setFromMatrixPosition(bones.Bip01_REye.matrixWorld), eyeC = eyeL.clone().add(eyeR).multiplyScalar(0.5);
+    const headP = new THREE.Vector3().setFromMatrixPosition(headM); const faceUp = new THREE.Vector3(); faceUp.setFromMatrixColumn(headM, 0).normalize(); /* a Biped head bone runs along its own +X, up through the skull */
+    const faceFwd = eyeC.clone().sub(headP); faceFwd.addScaledVector(faceUp, -faceFwd.dot(faceUp)).normalize();
+    const gauss = (p, c, r) => Math.exp(-p.distanceToSquared(c) / (r * r));
+    const mouthP = eyeC.clone().addScaledVector(faceUp, -0.078).addScaledVector(faceFwd, -0.004), noseUnder = eyeC.clone().addScaledVector(faceUp, -0.05).addScaledVector(faceFwd, 0.012), browL = eyeL.clone().addScaledVector(faceUp, 0.016), browR = eyeR.clone().addScaledVector(faceUp, 0.016);
+    const faceShade = (p) => 1 - Math.min(0.8, 0.9 * (gauss(p, eyeL, 0.026) + gauss(p, eyeR, 0.026)) + 0.5 * (gauss(p, browL, 0.024) + gauss(p, browR, 0.024)) + 0.42 * gauss(p, noseUnder, 0.018) + 0.62 * gauss(p, mouthP, 0.024));
     const cells = new Map(); const pos = []; const part = []; const cnt = []; const tris = new Set(); const idx = []; const v = new THREE.Vector3(); const hv = new THREE.Vector3(); let minY = Infinity;
     for (const m of meshes) {
       const k = (m.material.name || m.name).toLowerCase(); const G = m.geometry; const index = G.index; const n = G.attributes.position.count; const si = G.attributes.skinIndex; const sw = G.attributes.skinWeight; const map = new Int32Array(n); const names = m.skeleton.bones.map((x) => x.name);
@@ -544,10 +552,10 @@ export async function loadCrowdGeometry(cell = 0.07) {
         m.getVertexPosition(i, v); v.applyMatrix4(m.matrixWorld);
         let best = 0; let bw = -1; for (let j = 0; j < 4; j++) { const w = sw.getComponent(i, j); if (w > bw) { bw = w; best = si.getComponent(i, j); } }
         const name = names[best]; hv.copy(v).applyMatrix4(headInv); const isHead = /Head|Eye/.test(name); const headSpace = new THREE.Vector3().copy(v).sub(_va.setFromMatrixPosition(headM));
-        const pt = partOf(name, k, headSpace.y, headSpace.z); const c = isHead ? cell * 0.6 : cell;
+        const pt = partOf(name, k, headSpace.y, headSpace.z); const c = isHead ? HEAD_CELL : cell;
         const key = `${isHead ? 'h' : 'b'}${Math.round(v.x / c)},${Math.round(v.y / c)},${Math.round(v.z / c)}`;
-        let id = cells.get(key); if (id === undefined) { id = cnt.length; cells.set(key, id); pos.push(0, 0, 0); part.push(0, 0); cnt.push(0); }
-        pos[id * 3] += v.x; pos[id * 3 + 1] += v.y; pos[id * 3 + 2] += v.z; part[id * 2] += pt[0]; part[id * 2 + 1] += pt[1]; cnt[id]++; map[i] = id;
+        let id = cells.get(key); if (id === undefined) { id = cnt.length; cells.set(key, id); pos.push(0, 0, 0); part.push(0, 0, 0); cnt.push(0); }
+        pos[id * 3] += v.x; pos[id * 3 + 1] += v.y; pos[id * 3 + 2] += v.z; part[id * 3] += pt[0]; part[id * 3 + 1] += pt[1]; part[id * 3 + 2] += isHead ? faceShade(v) : 1; cnt[id]++; map[i] = id;
       }
       const tc = index ? index.count : n;
       for (let t = 0; t < tc; t += 3) {
@@ -555,9 +563,9 @@ export async function loadCrowdGeometry(cell = 0.07) {
         const so = [a, b, c].sort((x, y) => x - y).join(); if (tris.has(so)) continue; tris.add(so); idx.push(a, b, c);
       }
     }
-    for (let i = 0; i < cnt.length; i++) { pos[i * 3] /= cnt[i]; pos[i * 3 + 1] /= cnt[i]; pos[i * 3 + 2] /= cnt[i]; part[i * 2] /= cnt[i]; part[i * 2 + 1] /= cnt[i]; if (pos[i * 3 + 1] < minY) minY = pos[i * 3 + 1]; }
+    for (let i = 0; i < cnt.length; i++) { pos[i * 3] /= cnt[i]; pos[i * 3 + 1] /= cnt[i]; pos[i * 3 + 2] /= cnt[i]; part[i * 3] /= cnt[i]; part[i * 3 + 1] /= cnt[i]; part[i * 3 + 2] /= cnt[i]; if (pos[i * 3 + 1] < minY) minY = pos[i * 3 + 1]; }
     for (let i = 0; i < cnt.length; i++) { pos[i * 3] -= pelvis.x; pos[i * 3 + 1] -= minY; pos[i * 3 + 2] -= pelvis.z; }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('aPart', new THREE.BufferAttribute(new Float32Array(part), 2)); g.setIndex(idx); g.computeVertexNormals(); g.computeBoundingSphere(); out[poseName] = g;
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3)); g.setAttribute('aPart', new THREE.BufferAttribute(new Float32Array(part), 3)); g.setIndex(idx); g.computeVertexNormals(); g.computeBoundingSphere(); out[poseName] = g;
   }
   return out;
 }

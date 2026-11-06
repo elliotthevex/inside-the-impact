@@ -40,6 +40,7 @@ Frames as fast as the browser takes them with the real loop, sim, rig, HUD and e
 Load on localhost, images cached by the browser or not: 2.1 to 3.0 s on a quiet machine, 4 to 5 s when loaded. handle.loadMarks has the phase times.
 
 ## Rough or not verified
+(The polish pass, gfx/dev/notes/polish.md, has since dealt with several of these: FIGHT banner, low crowd, get-up at the new length, between-round camera, post.js fold-ins.)
 - Nobody has played this by hand, and nobody has heard it. The sound is measured, not judged: use gfx/dev/sound.html.
 - 60 Hz on a real display in a normal window has not been seen. High at 1080p did not reach 60 here, under Low Power Mode. Adaptive would drop to medium in that state, which reached 59.
 - Real phones never run. Touch was emulated in desktop Chrome.

@@ -2,7 +2,7 @@
 
    createHud(rootEl, opts) -> { update(match, dt), onEvent(ev), showLoading(p, label), destroy(),
                                 setPaused(bool), paused, reset(), stick, el, ready }
-   opts: touch (default: coarse pointer), onPause(), onResume(), onRematch(), onExit(), onInput(code, down)
+   opts: touch (default: coarse pointer), onPause(), onResume(), onRematch(), onExit(), onInput(code, down), onEndPanel(on)
 
    The HUD reads the sim and nothing else, and it never reads the hidden head load: that number is the point of the game and
    the player has to find it by watching the fighters. No code in this file touches `fighter.head`.
@@ -17,7 +17,7 @@ let carryShown = false; // falls back to this when sessionStorage is blocked
 
 const CHUNK_HOLD = 0.42;   // seconds the damage chunk waits before draining
 const COMBO_GAP = 1.3;     // seconds between hits that still count as one combo
-const END_DELAY = { ko: 3.4, tko: 3.4, stopped: 3.9, decision: 2.9 };
+const END_DELAY = { ko: 3.6, tko: 3.6, stopped: 4.2, decision: 2.9 };
 const TOUCH_PUNCHES = [
   ['Jab', 'KeyJ', 'j', ''], ['Cross', 'KeyK', 'k', ''], ['Hook', 'KeyL', 'l', ''],
   ['Upper', 'KeyU', 'u', ''], ['Body L', 'KeyI', 'i', ' ax-tb-body'], ['Body R', 'KeyO', 'o', ' ax-tb-body'],
@@ -228,7 +228,7 @@ export function createHud(rootEl, opts = {}) {
   }
   function endBanner() {
     if (!bKind || bOut > 0) return;
-    bOut = 0.24;
+    bOut = bKind === 'fight' ? 0.18 : 0.24;
     bn.classList.add('is-out');
   }
   function clearBanner() {
@@ -245,7 +245,7 @@ export function createHud(rootEl, opts = {}) {
   function showFight(m) {
     if (foughtRound === m.round) return;
     foughtRound = m.round;
-    banner('fight', 'Fight', '', .9);
+    banner('fight', 'Fight', '', .42);
     say('Fight');
     if (!hintGone) hintOn();
   }
@@ -258,7 +258,7 @@ export function createHud(rootEl, opts = {}) {
     banner('down', 'Down', sub, 60, 'Knockdown ' + n + ' of 3');
     downWho = who; wCount = -1;
     say(who === 'p' ? 'You are down. ' + sub : sub);
-    endCombo(S.p); endCombo(S.o);
+    endCombo(S.p); endCombo(S.o); clearCalls(); hintOff();
     flash(white, .32, 170);
   }
   function showCount(m) {
@@ -273,7 +273,7 @@ export function createHud(rootEl, opts = {}) {
   function showBackUp() {
     if (bKind !== 'down') return;
     downWho = null; wCount = -1;
-    banner('box', 'Fight', '', .7);
+    banner('fight', 'Fight', '', .42);
   }
   function showTime(m) {
     if (bKind === 'time') return;
@@ -287,12 +287,12 @@ export function createHud(rootEl, opts = {}) {
     overShown = true; overT = 0;
     hud.classList.add('is-over');
     const r = readResult(m);
-    hintOff();
+    hintOff(); clearCalls();
     endCombo(S.p); endCombo(S.o);
-    /* The word lands with the final blow, then clears so the slow motion can be seen. A caption stays in the letterbox. */
-    if (r.how === 'ko') { banner('ko', 'KO', '', 1.5); cap.textContent = 'Knockout'; }
-    else if (r.how === 'tko') { banner('tko', 'TKO', '', 1.5); cap.textContent = 'Three knockdowns in one round'; }
-    else if (r.how === 'stopped') { banner('stopped', 'Stopped', 'The referee stops the fight', 2.1); cap.textContent = 'The referee stops the fight'; }
+    /* The word lands with the final blow in the lower third, so the men and the slow motion stay in view. A caption stays in the letterbox. */
+    if (r.how === 'ko') { banner('ko', 'KO', '', 2.6); cap.textContent = 'Knockout'; }
+    else if (r.how === 'tko') { banner('tko', 'TKO', '', 2.6); cap.textContent = 'Three knockdowns in one round'; }
+    else if (r.how === 'stopped') { banner('stopped', 'Stopped', '', 3); cap.textContent = 'The referee stops the fight'; }
     else banner('decision', 'Decision', 'The judges have their scores', 30);
     say(r.how === 'decision' ? 'Decision' : r.how === 'stopped' ? 'The referee stops the fight' : r.how === 'tko' ? 'Technical knockout' : 'Knockout');
     if (r.how !== 'decision') {
@@ -365,7 +365,10 @@ export function createHud(rootEl, opts = {}) {
     a.n = 0; a.comboT = 0; a.dmg = 0; a.wDmg = -1;
     a.comboEl.classList.remove('is-on');
   }
+  /* one call at a time. Each man's tag used to stay .85 s, so two counters a few tenths apart showed on both sides at once and read as a contradiction. */
+  function clearCalls() { for (const id of ['p', 'o']) { S[id].callT = 0; S[id].callEl.classList.remove('is-on'); } }
   function call(a, text) {
+    const foe = S[other(a.id)]; foe.callT = 0; foe.callEl.classList.remove('is-on');
     a.callEl.textContent = text;
     a.callEl.classList.add('is-on');
     a.callT = .85;
@@ -484,8 +487,8 @@ export function createHud(rootEl, opts = {}) {
     else if (st === 'break') showTime(m);
     else if (st === 'over') showOver(m);
   }
-  function hintOn() { if (hint) hint.classList.remove('is-off'); }
-  function hintOff() { hintGone = true; if (hint) hint.classList.add('is-off'); }
+  function hintOn() { if (hint) { hint.classList.remove('is-off'); hud.classList.add('has-hint'); } }
+  function hintOff() { hintGone = true; if (hint) { hint.classList.add('is-off'); hud.classList.remove('has-hint'); } }
   function attach(m) {
     reset();
     match = m;
@@ -507,7 +510,7 @@ export function createHud(rootEl, opts = {}) {
     lastState = null; shownRound = 0; foughtRound = 0; overShown = false; overT = 0; endShown = false; endEv = null;
     hintT = 0; hintGone = false; wPips = ''; lastSec = -1; wRound = null;
     clearBanner();
-    hud.classList.remove('is-cine', 'is-over');
+    hud.classList.remove('is-cine', 'is-over', 'has-hint');
     clockBox.classList.remove('is-low');
     if (hint) hint.classList.add('is-off');
     for (const id of ['p', 'o']) {
@@ -519,6 +522,7 @@ export function createHud(rootEl, opts = {}) {
     }
     showPanel(endPanel, false);
     setPaused(false);
+    if (opts.onEndPanel) opts.onEndPanel(false);
   }
 
   /* ── panels ───────────────────────────────────────────────────────── */
@@ -586,6 +590,7 @@ export function createHud(rootEl, opts = {}) {
     hud.classList.remove('is-cine');
     setPaused(false);
     showPanel(endPanel, true);
+    if (opts.onEndPanel) opts.onEndPanel(true);
     say(endTitle.textContent + '. ' + how + '. ' + endReport.textContent);
   }
   const statRow = (a, l, b) => '<span class="ax-stat-a">' + a + '</span><span class="ax-stat-l">' + l + '</span><span class="ax-stat-b">' + b + '</span>';

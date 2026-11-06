@@ -7,8 +7,9 @@
      for input: cam.basis() -> { rx, rz, fx, fz }, the screen's right and into-the-screen directions on the canvas, without any shake.
 
    The orbit angle th is where the camera sits around the target: offset (sin th, cos th) on x, z. th 0 looks down -Z with +X on the right.
-   Orbit speed follows the angle error softly when it is small and hard when it is large, so ordinary circling moves the room little
-   while the player can never end up on the right for long, and the rate is capped so it can never whip round.
+   The camera stays still while the line between the men moves inside a dead zone. Past the edge of the zone it slides along with the line and stops when the line comes back,
+   so it never travels further than the line makes it. The player can never end up on the right, and the rate is capped so it can never whip round.
+   The men in corners and walking to them are held on a fixed wide view, side-on to the line between the two corners.
 
    Kick and shake are off when the settings say so. Reduced motion also drops the round-start dolly and the push-in at the end. */
 import * as THREE from 'three';
@@ -21,6 +22,7 @@ const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 
 const BASE_TAN = Math.tan(THREE.MathUtils.degToRad(38 / 2));
 const MAX_TAN = Math.tan(THREE.MathUtils.degToRad(62 / 2));
+const TALL_MAX_TAN = 0.92;       // on a tall screen the lens is already at MAX_TAN, so against a wall it may open further than that, or a man leaves the frame
 const MIN_TAN_H = 0.36;         // a narrow screen widens the lens until this much sideways view is left
 const BODY_TOP = 1.97;          // metres above the canvas that must stay in frame: head plus raised gloves
 const LOOK_H = 0.88;            // look-at height above the canvas
@@ -30,13 +32,20 @@ const SIDE_MARGIN = 0.62;       // metres kept clear beside each man
 const MIN_DIST = 2.6, MAX_DIST = 9.5;
 const LIMIT = 6.1;              // camera stays inside this square: the columns stand at 6.3
 const MAX_RATE = 3.4;           // rad/s, the orbit never goes faster than this
-const APERTURE = 0.016;         // film aperture when both men stand near the focal plane
+const APERTURE = 0.013;         // film aperture in a fight: the room behind the ring softens, the men and the canvas around them do not
+const SHARP = 1.6;              // metres each side of the focal plane that stay fully sharp
+/* deadOut, deadIn: radians off the aim where turning starts and stops. gain: how hard an error past the edge is followed. calm: rate limit outside the fight.
+   bias: radians of the aim behind the player's shoulder. slack: metres the frame centre may lag the men. distSlack: metres of extra distance kept before coming in. */
+const ORBIT = { deadOut: 0.66, deadIn: 0.64, gain: 20, smooth: 14, calm: 0.9, heldGain: 1.2, bias: 0.08, slack: 0.14, distSlack: 0.3 };
 
 export function createFightCam(camera, opts = {}) {
   const reduced = !!opts.reducedMotion, canvasY = opts.canvasY ?? 0.75, stage = opts.stage || null;
   const postHidden = [false, false, false, false];
   let shakeOn = opts.shake !== false && !reduced;
-  const S = { init: false, th: 0, om: 0, d: 4.6, x: 0, z: 0, look: LOOK_H, wide: 1, push: 0, tan: BASE_TAN, focus: 4.6, ap: APERTURE, init2: false, err: 0 };
+  const O = { ...ORBIT, ...(opts.orbit || {}) };
+  const S = { init: false, th: 0, om: 0, d: 4.6, x: 0, z: 0, look: LOOK_H, wide: 1, push: 0, tan: BASE_TAN, focus: 4.6, ap: APERTURE, sharp: SHARP, init2: false, err: 0, follow: false, shift: 0, shiftTo: 0 };
+  const corners = stage && stage.corners ? stage.corners : { blue: { x: -2.5, z: -2.5 }, red: { x: 2.5, z: 2.5 } };
+  const cornerTh = Math.atan2(-(corners.red.z - corners.blue.z), corners.red.x - corners.blue.x);
   const kickP = new THREE.Vector3(), kickV = new THREE.Vector3(), look = new THREE.Vector3(), fwd = new THREE.Vector3();
   let roll = 0, rollV = 0, zoom = 0, zoomV = 0, rumble = 0, t = 0, fovNow = 0;
   const basisOut = { rx: 1, rz: 0, fx: 0, fz: -1 };
@@ -53,7 +62,7 @@ export function createFightCam(camera, opts = {}) {
     const p = match.p, o = match.o;
     t += dt;
     let dx = o.x - p.x, dz = o.z - p.z; const sep = Math.hypot(dx, dz) || 1e-3; dx /= sep; dz /= sep;
-    const want = Math.atan2(-dz, dx);
+    const sideOn = Math.atan2(-dz, dx);
     const aspect = camera.aspect || 16 / 9;
     const tanV = clamp(Math.max(BASE_TAN, MIN_TAN_H / aspect), BASE_TAN, MAX_TAN), tanH = tanV * aspect;
     const st = match.state, over = st === 'over', downed = p.down ? p : o.down ? o : null;
@@ -67,26 +76,34 @@ export function createFightCam(camera, opts = {}) {
     }
 
     if (!S.init) {
-      S.init = true; S.th = want; S.om = 0; S.x = cx; S.z = cz; S.wide = reduced ? 0 : 1; S.push = 0; S.look = LOOK_H; S.tan = tanV;
+      S.init = true; S.th = st === 'intro' || st === 'break' ? cornerTh : sideOn - O.bias; S.om = 0; S.follow = false; S.x = cx; S.z = cz; S.wide = reduced ? 0 : 1; S.push = 0; S.look = LOOK_H; S.tan = tanV;
       kickP.set(0, 0, 0); kickV.set(0, 0, 0); roll = rollV = zoom = zoomV = rumble = 0;
     }
 
-    /* orbit */
-    const calm = st === 'break' || st === 'intro' || st === 'down';
+    /* orbit. In a fight it aims a little behind the player's shoulder of side-on, because with both men orthodox a square view shows the rival's back. */
+    const held = st === 'break' || st === 'intro', calm = held || st === 'down' || over;
+    const want = held ? cornerTh : sideOn - O.bias;
     let err = wrap(want - S.th);
     /* nearly opposite: keep turning the way it already turns instead of dithering at the far side */
     if (Math.abs(err) > 2.7 && S.om * err < 0) err += err > 0 ? -TAU : TAU;
-    S.err = err;
-    const dead = 0.035, e = err > dead ? err - dead : err < -dead ? err + dead : 0;
-    const wantOm = clamp(1.7 * e + 1.2 * e * e * e, calm ? -1.1 : -MAX_RATE, calm ? 1.1 : MAX_RATE);
-    S.om += (wantOm - S.om) * (1 - Math.exp(-5.5 * dt));
+    S.err = wrap(sideOn - S.th);
+    const ae = Math.abs(err);
+    if (held) S.follow = ae > 0.02; else if (S.follow) { if (ae < O.deadIn) S.follow = false; } else if (ae > O.deadOut) S.follow = true;
+    /* past the edge of the dead zone it slides along with the line and stops as soon as the line comes back, so swings inside the zone never move it */
+    const past = err > O.deadIn ? err - O.deadIn : err < -O.deadIn ? err + O.deadIn : 0, limit = calm ? O.calm : MAX_RATE;
+    const wantOm = !S.follow ? 0 : held ? clamp(O.heldGain * err, -limit, limit) : clamp(O.gain * past, -limit, limit);
+    S.om += (wantOm - S.om) * (1 - Math.exp(-O.smooth * dt));
     S.th = wrap(S.th + S.om * dt);
 
     const nx = Math.sin(S.th), nz = Math.cos(S.th), rx = nz, rz = -nx, fx = -nx, fz = -nz;
     basisOut.rx = rx; basisOut.rz = rz; basisOut.fx = fx; basisOut.fz = fz;
 
     /* target */
-    S.x = damp(S.x, cx, downed ? 2.6 : 5.0, dt); S.z = damp(S.z, cz, downed ? 2.6 : 5.0, dt);
+    /* a little slack, so footwork does not move the picture. The distance below is worked out from where the men really are, so nobody can leave the frame because of it. */
+    {
+      const ox = cx - S.x, oz = cz - S.z, ol = Math.hypot(ox, oz), slack = downed || held ? 0 : O.slack;
+      if (ol > slack) { const k = 1 - slack / ol, rate = downed ? 2.6 : 5.0; S.x = damp(S.x, S.x + ox * k, rate, dt); S.z = damp(S.z, S.z + oz * k, rate, dt); }
+    }
     const lookWant = downed ? LOOK_H - 0.2 : over && match.result && match.result.how !== 'decision' ? LOOK_H - 0.08 : LOOK_H;
     S.look = damp(S.look, lookWant, 2.2, dt);
 
@@ -106,7 +123,8 @@ export function createFightCam(camera, opts = {}) {
     S.wide = damp(S.wide, wideWant, 1.8, dt);
     S.push = damp(S.push, over && !reduced ? 1 : 0, 0.55, dt);
     need = clamp(need + S.wide * 1.0 - S.push * 0.45, MIN_DIST, MAX_DIST);
-    S.d = damp(S.d, need, need > S.d ? 6.5 : 1.5, dt);
+    /* pulls back at once when it has to and comes in late and slowly, so it does not breathe with every step */
+    if (need > S.d) S.d = damp(S.d, need, 6.5, dt); else if (need < S.d - O.distSlack) S.d = damp(S.d, need + O.distSlack, 1.1, dt);
 
     /* place it, inside the room: a clamped camera widens the lens instead of losing someone from the frame */
     const lift = 0.97 + 0.11 * Math.max(0, S.d - 4.4) + S.wide * 0.3;
@@ -119,7 +137,7 @@ export function createFightCam(camera, opts = {}) {
       );
       dHave = Math.max(MIN_DIST, lim); px = S.x + nx * dHave; pz = S.z + nz * dHave;
     }
-    const tanWant = clamp(tanV * Math.max(1, S.d / dHave), BASE_TAN, MAX_TAN);
+    const tanWant = clamp(tanV * Math.max(1, S.d / dHave), BASE_TAN, aspect < 1 ? TALL_MAX_TAN : MAX_TAN);
     S.tan = damp(S.tan, tanWant, 5, dt);
 
     /* kick and shake */
@@ -138,6 +156,9 @@ export function createFightCam(camera, opts = {}) {
     camera.up.set(0, 1, 0);
     camera.lookAt(look);
     if (roll !== 0) camera.rotateZ(roll);
+    /* the end panel takes one side of the screen: the picture slides out from under it */
+    S.shift = reduced ? S.shiftTo : damp(S.shift, S.shiftTo, 3.2, dt);
+    if (S.shift > 0.001) { const W = 1000, H = W / aspect, tall = aspect < 1; camera.setViewOffset(W, H, tall ? 0 : S.shift * W, tall ? S.shift * H : 0, W, H); fovNow = 0; } else if (camera.view && camera.view.enabled) { camera.clearViewOffset(); fovNow = 0; }
     const fov = THREE.MathUtils.radToDeg(2 * Math.atan(S.tan)) - zoom;
     if (Math.abs(fov - fovNow) > 1e-3) { fovNow = fov; camera.fov = fov; camera.updateProjectionMatrix(); }
     /* a corner post between the camera and either man fades out: side-on framing goes past every corner sooner or later */
@@ -147,19 +168,20 @@ export function createFightCam(camera, opts = {}) {
       const lo = Math.min((a1 - 0.6) / b1, (a2 - 0.6) / b2), hi = Math.max((a1 + 0.6) / b1, (a2 + 0.6) / b2), far = Math.max(b1, b2);
       for (let i = 0; i < 4; i++) {
         const q = stage.posts[i], a = (q[0] - px1) * rx + (q[1] - pz1) * rz, b = (q[0] - px1) * fx + (q[1] - pz1) * fz, m = postHidden[i] ? 0.07 : 0;
-        /* wider than the pad itself, because a post this close is a big soft blur; and one close to the lens goes whether or not it covers anyone */
-        const hide = b > 0.05 && ((b < far && (a + 0.38) / b > lo - m && (a - 0.38) / b < hi + m) || (b < 2.8 + m && Math.abs(a / b) < tanH + 0.2));
+        /* wider than the pad itself; and one close to the lens goes whether or not it covers anyone, because it is a big pale strip down the side of the picture. Beside the lens it goes as well, so the camera can never sit inside one. */
+        const hide = Math.hypot(a, b) < 1.3 || (b > 0.05 && ((b < far && (a + 0.38) / b > lo - m && (a - 0.38) / b < hi + m) || (b < 3.9 + m && Math.abs(a / b) < tanH + 0.4)));
         if (hide !== postHidden[i]) { postHidden[i] = hide; stage.setPostAlpha(i, hide ? 0 : 1); }
       }
     }
     /* focus on the plane through the two men, measured the way the depth buffer measures it */
     camera.getWorldDirection(fwd);
     S.focus = Math.max(0.5, (look.x - camera.position.x) * fwd.x + (look.y - camera.position.y) * fwd.y + (look.z - camera.position.z) * fwd.z);
-    /* the lens stops down when the two men stand at different depths, so neither goes soft: walking to the corners, or caught mid-orbit */
+    /* the sharp zone always reaches both men, so neither goes soft however they stand. Wide shots and the end of the fight stop down to almost deep focus. */
     {
       const dp = Math.abs((p.x - camera.position.x) * fx + (p.z - camera.position.z) * fz - S.focus), dq = Math.abs((o.x - camera.position.x) * fx + (o.z - camera.position.z) * fz - S.focus);
-      const want = Math.min(APERTURE, 0.0018 * S.focus / Math.max(0.2, Math.max(dp, dq)));
-      S.ap = S.init2 ? damp(S.ap, want, 5, dt) : want; S.init2 = true;
+      const sharp = Math.max(SHARP, Math.max(dp, dq) + 0.45), deep = Math.max(S.wide, over ? 1 : 0, held ? 1 : 0);
+      const want2 = APERTURE * (1 - 0.8 * deep) * (BASE_TAN / S.tan); /* a wider lens, on a tall screen, shows the men smaller, so the same blur would be more of them */
+      S.ap = S.init2 ? damp(S.ap, want2, 2.4, dt) : want2; S.sharp = S.init2 ? damp(S.sharp, sharp, 5, dt) : sharp; S.init2 = true;
     }
   }
 
@@ -178,11 +200,14 @@ export function createFightCam(camera, opts = {}) {
     update, kick,
     getFocus() { return S.focus; },
     getAperture() { return S.ap; },
+    getSharp() { return S.sharp; },
     basis() { return basisOut; },
     /* the next update starts clean, on the line, with no leftover motion */
-    snap() { S.init = false; S.init2 = false; },
+    snap() { S.init = false; S.init2 = false; S.shift = 0; S.shiftTo = 0; },
+    /* how far to slide the picture, as a part of the screen: to the left on a wide screen, upward on a tall one */
+    setShift(v) { S.shiftTo = v; },
     setShake(on) { shakeOn = !!on && !reduced; if (!shakeOn) { kickP.set(0, 0, 0); kickV.set(0, 0, 0); roll = rollV = zoom = zoomV = rumble = 0; } },
     get shake() { return shakeOn; },
-    stats() { return { th: S.th, om: S.om, err: S.err, d: S.d, tan: S.tan, wide: S.wide, push: S.push }; },
+    stats() { return { th: S.th, om: S.om, err: S.err, d: S.d, tan: S.tan, wide: S.wide, push: S.push, follow: S.follow, postHidden }; },
   };
 }

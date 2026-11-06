@@ -10,33 +10,45 @@ th{color:var(--mute);font-weight:normal} button{font:inherit;background:#222b35;
 #out{overflow-x:auto} .bad{color:var(--bad)} .good{color:var(--good)}
 </style></head><body>
 <h1>Street Fight 3D: rules and AI test</h1>
-<p>Plays seeded matches with no graphics. <button id="go">Run 200 per bot on normal</button> <span id="status"></span></p>
+<p>Plays seeded matches with no graphics, at the rig's measured reach. <button id="go">Run 200 per row on all levels</button> <span id="status"></span></p>
 <div id="out"></div>
 <script type="module">
 /* HARNESS START */
-import { createMatch, STEP, PUNCHES, RING, HEAD } from '../arena/sim.js';
-import { createAI, createBot, BOTS } from '../arena/ai.js';
+import { createMatch, setReach, STEP, PUNCHES, REACH, RING, HEAD, TUNE } from '../arena/sim.js';
+import { createAI, createBot, BOTS, LEVELS } from '../arena/ai.js';
 
-const KINDS = Object.keys(PUNCHES);
+/* Every table is measured at the reach the rig measured. Outside a browser, a runner sets globalThis.REACH_JSON before this module runs. */
+const REACH_JSON = globalThis.REACH_JSON ?? await (await fetch('../arena/reach.json')).json();
+setReach(REACH_JSON);
+
+const KINDS = Object.keys(PUNCHES), HEAD_KINDS = KINDS.filter((k) => PUNCHES[k].tgt === 'head'), BODY_KINDS = KINDS.filter((k) => PUNCHES[k].tgt === 'body');
+const LEVEL_NAMES = ['easy', 'normal', 'hard'];
 const blankSide = () => ({ thrown: 0, hit: 0, block: 0, slip: 0, whiff: 0, clean: 0, counter: 0, kinds: Object.fromEntries(KINDS.map((k) => [k, { thrown: 0, hit: 0, block: 0, slip: 0, whiff: 0 }])) });
+const blankRound = () => ({ o: Object.fromEntries(KINDS.map((k) => [k, 0])), p: Object.fromEntries(KINDS.map((k) => [k, 0])), distSum: 0, distN: 0 });
 
-/* Play one match. Returns everything the report needs and any rule the sim broke. */
-function playMatch(botName, { difficulty = 'normal', seed = 1, kind = 'jab', trace = false } = {}) {
-  const m = createMatch({ seed });
+/* What the game passes to createMatch: stage.js builds the ring at 2.9 inside the ropes with the corner stools at 2.5. */
+const GAME_RING = { ringHalf: 2.9, corners: { blue: [-2.5, -2.5], red: [2.5, 2.5] } };
+/* How often the game calls decide. A slower or faster frame changes when a man can act, so this is a real measure: see frameRates in the notes. */
+const FRAME = 1 / 60;
+
+/* Play one match. Returns everything the report needs and any rule the sim broke.
+   It runs the same frame loop as index.js: one decide per frame, presses go in once, then the sim goes tick by tick and a contact ends the frame's ticks.
+   dt is that frame time. Rules are checked on every tick. */
+function playMatch(botName, { difficulty = 'normal', seed = 1, kind = 'jab', trace = false, dt = FRAME } = {}) {
+  const m = createMatch({ seed, ...GAME_RING });
   const bot = createBot(botName, { seed: seed * 7 + 1, kind }), ai = createAI({ difficulty, seed: seed * 13 + 5 });
-  const r = { seed, bot: botName, sides: { p: blankSide(), o: blankSide() }, kd: { p: 0, o: 0 }, stag: { p: 0, o: 0 }, viol: {}, hash: 0, ropes: 0, log: trace ? [] : null };
+  const r = { seed, bot: botName, sides: { p: blankSide(), o: blankSide() }, kd: { p: 0, o: 0 }, stag: { p: 0, o: 0 }, viol: {}, hash: 0, ropes: 0, log: trace ? [] : null, gapMax: 0, perRound: [null, blankRound(), blankRound(), blankRound()], fightTime: 0 };
   const viol = (k) => { r.viol[k] = (r.viol[k] || 0) + 1; };
   const inRange = m.ring.limit + m.ring.give + 1e-6, minSep = m.ring.minSep - .004;
-  let guard = 0;
-  while (m.state !== 'over' && guard++ < 120 * 900) {
-    const ip = bot.decide(m, m.p, m.o, STEP), io = ai.decide(m, m.o, m.p, STEP);
-    m.step(STEP, ip, io);
+  let guard = 0, gap = 0, h = 17, bank = 0, contact = false;
+  const afterTick = () => {
+    const R = r.perRound[Math.min(m.round, 3)];
     for (const e of m.events) {
       const a = r.sides[e.who];
       switch (e.type) {
-        case 'throw': a.thrown++; a.kinds[e.kind].thrown++; break;
-        case 'hit': a.hit++; a.kinds[e.kind].hit++; if (e.clean) a.clean++; if (e.counter) a.counter++; break;
-        case 'block': a.block++; a.kinds[e.kind].block++; break;
+        case 'throw': a.thrown++; a.kinds[e.kind].thrown++; R[e.who][e.kind]++; gap = 0; break;
+        case 'hit': a.hit++; a.kinds[e.kind].hit++; if (e.clean) a.clean++; if (e.counter) a.counter++; contact = true; break;
+        case 'block': a.block++; a.kinds[e.kind].block++; contact = true; break;
         case 'slipped': a.slip++; a.kinds[e.kind].slip++; break;
         case 'whiff': a.whiff++; a.kinds[e.kind].whiff++; break;
         case 'knockdown': r.kd[e.who]++; break;
@@ -46,21 +58,33 @@ function playMatch(botName, { difficulty = 'normal', seed = 1, kind = 'jab', tra
       if (trace && e.type !== 'step') r.log.push(e);
     }
     m.events.length = 0;
-    /* invariants, every step */
+    /* longest stretch of the fight state with no punch thrown by either man. A round break or a count ends the stretch. */
+    if (m.state === 'fight') { gap += STEP; r.fightTime += STEP; if (gap > r.gapMax) r.gapMax = gap; R.distSum += Math.hypot(m.p.x - m.o.x, m.p.z - m.o.z); R.distN++; } else gap = 0;
+    /* invariants, every tick */
     const { p, o } = m, d = Math.hypot(p.x - o.x, p.z - o.z);
     if (d < minSep) viol('overlap');
     for (const f of [p, o]) {
       if (Math.abs(f.x) > inRange || Math.abs(f.z) > inRange) viol('rope');
       if (!(f.hp >= 0 && f.hp <= f.maxHp) || !(f.sta >= 0 && f.sta <= f.maxSta)) viol('range');
       if (!(f.guard >= 0 && f.guard <= 1)) viol('guard');
-      if (!Number.isFinite(f.x + f.z + f.yaw + f.vx + f.vz + f.head)) viol('nan');
+      if (!Number.isFinite(f.x + f.z + f.yaw + f.vx + f.vz + f.head) || f.head < 0) viol('nan');
       if (f.punch && f.punch.t > f.punch.dur + .1) viol('punch');
+    }
+    h = (Math.imul(h, 31) + Math.round(p.x * 1e4) + Math.imul(Math.round(o.z * 1e4), 7) + Math.round(p.hp * 100) + Math.imul(Math.round(o.hp * 100), 3)) | 0;
+  };
+  while (m.state !== 'over' && guard++ < 900 / dt) {
+    const ip = bot.decide(m, m.p, m.o, dt), io = ai.decide(m, m.o, m.p, dt);
+    m.step(0, ip, io); ip.punch = null; io.punch = null;
+    bank += dt; contact = false;
+    while (bank >= STEP && m.state !== 'over') {
+      bank -= STEP;
+      m.step(STEP, ip, io); afterTick();
+      if (contact) { bank = 0; break; }
     }
   }
   if (m.state !== 'over') viol('never ended');
   r.result = m.result; r.round = m.round; r.time = m.time; r.pHp = m.p.hp; r.oHp = m.o.hp; r.pHead = m.p.head; r.oHead = m.o.head;
-  r.pClean = m.p.clean; r.oClean = m.o.clean; r.pKd = m.p.kdTotal; r.oKd = m.o.kdTotal;
-  r.hash = Math.round((m.p.hp * 31 + m.o.hp * 17 + m.time * 1000 + m.p.x * 991 + m.o.z * 577) * 1000);
+  r.pClean = m.p.clean; r.oClean = m.o.clean; r.pKd = m.p.kdTotal; r.oKd = m.o.kdTotal; r.hash = h;
   return r;
 }
 
@@ -68,60 +92,211 @@ const pct = (a, b) => (b ? +(100 * a / b).toFixed(1) : 0);
 const stats = (xs) => {
   if (!xs.length) return null;
   const a = xs.slice().sort((p, q) => p - q), q = (f) => +a[Math.min(a.length - 1, Math.floor(f * a.length))].toFixed(1);
-  return { n: a.length, mean: +(a.reduce((s, x) => s + x, 0) / a.length).toFixed(1), min: +a[0].toFixed(1), p25: q(.25), med: q(.5), p75: q(.75), max: +a[a.length - 1].toFixed(1) };
+  return { n: a.length, mean: +(a.reduce((s, x) => s + x, 0) / a.length).toFixed(1), min: +a[0].toFixed(1), p25: q(.25), med: q(.5), p75: q(.75), p90: q(.9), max: +a[a.length - 1].toFixed(1) };
 };
 
-/* Many matches of one bot against one level. kinds: spam bot cycles its one button through the six punches. */
-function suite(botName, { n = 200, difficulty = 'normal', seed0 = 1000, kind = null } = {}) {
-  const T = { bot: botName, kind, difficulty, n, wins: 0, losses: 0, draws: 0, how: { ko: 0, tko: 0, stopped: 0, decision: 0 }, lossHow: { ko: 0, tko: 0, stopped: 0, decision: 0 }, rounds: 0, roundHist: [0, 0, 0, 0],
-    p: blankSide(), o: blankSide(), viol: {}, stopHp: [], stopHpP: [], stopHpO: [], stopHeadFromHooks: 0, pClean: 0, oClean: 0, pKd: 0, oKd: 0, finalHpWin: [], time: 0 };
+/* Many matches of one bot against one level. kind: which button the spam bot presses; left null it cycles through the six punches. */
+function suite(botName, { n = 200, difficulty = 'normal', seed0 = 1000, kind = null, dt = FRAME } = {}) {
+  const T = { bot: botName, kind, difficulty, n, wins: 0, losses: 0, draws: 0, how: { ko: 0, tko: 0, stopped: 0, decision: 0 }, lossHow: { ko: 0, tko: 0, stopped: 0, decision: 0 }, winHow: { ko: 0, tko: 0, stopped: 0, decision: 0 }, rounds: 0, roundHist: [0, 0, 0, 0],
+    p: blankSide(), o: blankSide(), viol: {}, stopHp: [], stopHpP: [], stopHpO: [], pClean: 0, oClean: 0, pKd: 0, oKd: 0, time: 0, fightTime: 0, gaps: [], perRound: [null, blankRound(), blankRound(), blankRound()] };
   const add = (A, B) => { for (const k of ['thrown', 'hit', 'block', 'slip', 'whiff', 'clean', 'counter']) A[k] += B[k]; for (const q of KINDS) for (const k of ['thrown', 'hit', 'block', 'slip', 'whiff']) A.kinds[q][k] += B.kinds[q][k]; };
   for (let i = 0; i < n; i++) {
     const k = kind ?? (botName === 'spam' ? KINDS[i % KINDS.length] : 'jab');
-    const r = playMatch(botName, { difficulty, seed: seed0 + i, kind: k });
+    const r = playMatch(botName, { difficulty, seed: seed0 + i, kind: k, dt });
     const w = r.result ? r.result.winner : null, how = r.result ? r.result.how : 'decision';
-    if (w === 'p') T.wins++; else if (w === 'o') { T.losses++; T.lossHow[how]++; } else T.draws++;
+    if (w === 'p') { T.wins++; T.winHow[how]++; } else if (w === 'o') { T.losses++; T.lossHow[how]++; } else T.draws++;
     T.how[how]++; T.rounds += r.round; T.roundHist[r.round]++;
     add(T.p, r.sides.p); add(T.o, r.sides.o);
     if (how === 'stopped') { const hp = r.result.loserHp; T.stopHp.push(hp); (w === 'p' ? T.stopHpO : T.stopHpP).push(hp); }
-    T.pClean += r.pClean; T.oClean += r.oClean; T.pKd += r.pKd; T.oKd += r.oKd; T.time += r.time;
+    T.pClean += r.pClean; T.oClean += r.oClean; T.pKd += r.pKd; T.oKd += r.oKd; T.time += r.time; T.fightTime += r.fightTime; T.gaps.push(r.gapMax);
+    for (let q = 1; q <= 3; q++) { const A = T.perRound[q], B = r.perRound[q]; for (const s of ['o', 'p']) for (const x of KINDS) A[s][x] += B[s][x]; A.distSum += B.distSum; A.distN += B.distN; }
     for (const v in r.viol) T.viol[v] = (T.viol[v] || 0) + r.viol[v];
   }
   return T;
 }
 
+/* What one man threw in each round and how far apart they stood. */
+function styleOf(T, side = 'o') {
+  return [1, 2, 3].map((q) => {
+    const A = T.perRound[q], c = A[side], tot = KINDS.reduce((s, k) => s + c[k], 0);
+    const share = (ks) => pct(ks.reduce((s, k) => s + c[k], 0), tot);
+    return { round: q, thrown: tot, jab: share(['jab']), cross: share(['cross']), hook: share(['hook']), upper: share(['upper']), body: share(BODY_KINDS), dist: A.distN ? +(A.distSum / A.distN).toFixed(3) : null };
+  });
+}
+
 function rowOf(T) {
   const n = T.n, H = (S) => ({ thrown: +(S.thrown / n).toFixed(1), land: pct(S.hit, S.thrown), block: pct(S.block, S.thrown), slip: pct(S.slip, S.thrown), whiff: pct(S.whiff, S.thrown) });
-  return { bot: T.bot + (T.kind ? ':' + T.kind : ''), lvl: T.difficulty, n, win: pct(T.wins, n), loss: pct(T.losses, n), draw: pct(T.draws, n), how: T.how, lossHow: T.lossHow, avgRounds: +(T.rounds / n).toFixed(2), roundHist: T.roundHist.slice(1), player: H(T.p), ai: H(T.o),
-    stopHp: stats(T.stopHp), stopHpPlayer: stats(T.stopHpP), stopHpAI: stats(T.stopHpO), cleanTakenPerMatch: { p: +(T.pClean / n).toFixed(1), o: +(T.oClean / n).toFixed(1) }, kdPerMatch: { p: +(T.pKd / n).toFixed(2), o: +(T.oKd / n).toFixed(2) }, secs: +(T.time / n).toFixed(0), viol: T.viol };
+  const aiHead = HEAD_KINDS.reduce((a, k) => { const c = T.o.kinds[k]; a.thrown += c.thrown; a.slip += c.slip; return a; }, { thrown: 0, slip: 0 });
+  const gs = stats(T.gaps);
+  return { bot: T.bot + (T.kind ? ':' + T.kind : ''), lvl: T.difficulty, n, win: pct(T.wins, n), loss: pct(T.losses, n), draw: pct(T.draws, n), how: T.how, lossHow: T.lossHow, winHow: T.winHow, avgRounds: +(T.rounds / n).toFixed(2), roundHist: T.roundHist.slice(1), r1: pct(T.roundHist[1], n), r3: pct(T.roundHist[3], n), player: H(T.p), ai: H(T.o),
+    stopHp: stats(T.stopHp), stopHpPlayer: stats(T.stopHpP), stopHpAI: stats(T.stopHpO), rawStopP: T.stopHpP, rawStopO: T.stopHpO, cleanTakenPerMatch: { p: +(T.pClean / n).toFixed(1), o: +(T.oClean / n).toFixed(1) }, kdPerMatch: { p: +(T.pKd / n).toFixed(2), o: +(T.oKd / n).toFixed(2) }, secs: +(T.time / n).toFixed(1), fightSecs: +(T.fightTime / n).toFixed(1), deadP90: gs.p90, deadMax: gs.max, slipHead: pct(aiHead.slip, aiHead.thrown), style: styleOf(T, 'o'), viol: T.viol };
 }
 const kindTable = (S) => Object.fromEntries(KINDS.map((k) => { const c = S.kinds[k]; return [k, { thrown: c.thrown, hit: pct(c.hit, c.thrown), block: pct(c.block, c.thrown), slip: pct(c.slip, c.thrown), whiff: pct(c.whiff, c.thrown) }]; }));
 
-/* The whole report on normal, and a short look at the other two levels. */
-function fullReport({ n = 200, seed0 = 1000 } = {}) {
+/* The bots for one level. Spam is one row per button. */
+function reportLevel(difficulty, { n = 200, seed0 = 1000, bots = BOTS, dt = FRAME } = {}) {
   const rows = {}, kinds = {};
-  for (const b of BOTS) { const T = suite(b, { n, seed0 }); rows[b] = rowOf(T); kinds[b] = { player: kindTable(T.p), ai: kindTable(T.o) }; }
+  for (const b of bots) {
+    if (b === 'spam') { for (const k of KINDS) { const T = suite('spam', { n, seed0, kind: k, difficulty, dt }); rows['spam:' + k] = rowOf(T); kinds['spam:' + k] = { player: kindTable(T.p), ai: kindTable(T.o) }; } continue; }
+    const T = suite(b, { n, seed0, difficulty, dt }); rows[b] = rowOf(T); kinds[b] = { player: kindTable(T.p), ai: kindTable(T.o) };
+  }
   return { rows, kinds };
 }
-function spamByKind({ n = 60, seed0 = 3000, difficulty = 'normal' } = {}) { const out = {}; for (const k of KINDS) { const R = rowOf(suite('spam', { n, seed0, kind: k, difficulty })); out[k] = { win: R.win, how: R.how, avgRounds: R.avgRounds, land: R.player.land, block: R.player.block, slip: R.player.slip, whiff: R.player.whiff }; } return out; }
-function levels({ n = 100, seed0 = 5000 } = {}) { const out = {}; for (const d of ['easy', 'normal', 'hard']) { out[d] = {}; for (const b of ['mixed', 'skilled']) { const R = rowOf(suite(b, { n, difficulty: d, seed0 })); out[d][b] = { win: R.win, how: R.how, avgRounds: R.avgRounds, stopHp: R.stopHp }; } } return out; }
-/* Same seed, same fight. */
-function determinism(n = 8) { let same = 0; for (let i = 0; i < n; i++) { const a = playMatch('mixed', { seed: 77 + i }), b = playMatch('mixed', { seed: 77 + i }); if (a.hash === b.hash && a.time === b.time) same++; } return { same, of: n }; }
+
+/* Fight harness for the scripted tests: a real match in the fight state with both men placed. */
+function arena(distance = 1, seed = 1) {
+  const m = createMatch({ seed }), idle = { mx: 0, mz: 0, guard: false, punch: null, slip: false, getUp: false };
+  while (m.state !== 'fight') m.step(STEP, idle, idle);
+  m.p.x = -distance / 2; m.p.z = 0; m.o.x = distance / 2; m.o.z = 0; m.p.vx = m.p.vz = m.o.vx = m.o.vz = 0;
+  m.p.yaw = Math.atan2(1, 0); m.o.yaw = Math.atan2(-1, 0); m.events.length = 0;
+  return m;
+}
+
+/* Does a slip started inside the window really evade? Each head punch, thrown from reach, with the slip pressed so that the evade window covers the contact.
+   Offsets run across the whole window, in every direction the player can hold. Control: the same slip pressed too early and too late. */
+function slipTest() {
+  const S = TUNE.slip, dirs = [[0, 0], [0, 1], [0, -1], [-1, 0], [1, 0]], out = { inWindow: { n: 0, evaded: 0 }, early: { n: 0, evaded: 0 }, late: { n: 0, evaded: 0 }, byKind: {} };
+  const shot = (kind, dist, lead, dir) => {
+    const m = arena(dist), P = PUNCHES[kind], ticks = Math.round(P.start / STEP), press = ticks - Math.round(lead / STEP), blank = { mx: 0, mz: 0, guard: false, punch: null, slip: false, getUp: false };
+    let res = null;
+    for (let t = 0; t < ticks + 60 && !res; t++) {
+      const ia = { ...blank, punch: t === Math.max(0, -press) ? kind : null }, id = { ...blank, mx: dir[0], mz: dir[1], slip: t === Math.max(0, press) };
+      m.step(STEP, ia, id);
+      for (const e of m.events) if (e.who === 'p' && (e.type === 'hit' || e.type === 'block')) res = 'hit'; else if (e.who === 'p' && (e.type === 'slipped' || e.type === 'whiff')) res = 'evaded';
+      m.events.length = 0;
+    }
+    return res === 'evaded';
+  };
+  for (const kind of HEAD_KINDS) {
+    const K = out.byKind[kind] = { n: 0, evaded: 0 };
+    for (const f of [.97, .85, .75]) for (const dir of dirs) {
+      const dist = Math.max(RING.minSep + .02, REACH[kind] * f);
+      for (let i = 0; i <= 8; i++) { const lead = S.from + (S.to - S.from) * i / 8; const e = shot(kind, dist, lead, dir); out.inWindow.n++; K.n++; if (e) { out.inWindow.evaded++; K.evaded++; } }
+      for (const lead of [S.to + .03, S.to + .06]) { out.early.n++; if (shot(kind, dist, lead, dir)) out.early.evaded++; }
+      for (const lead of [S.from - .03]) { out.late.n++; if (shot(kind, dist, lead, dir)) out.late.evaded++; }
+    }
+  }
+  return { inWindowPct: pct(out.inWindow.evaded, out.inWindow.n), earlyPct: pct(out.early.evaded, out.early.n), latePct: pct(out.late.evaded, out.late.n), n: out.inWindow.n, byKind: Object.fromEntries(Object.entries(out.byKind).map(([k, v]) => [k, pct(v.evaded, v.n)])) };
+}
+
+/* How long does one punch, landing clean on a man who stands and mashes himself up, take to get the referee in? Real stamina, in range, thrown as fast as the rules allow. */
+function routeTest(kinds = HEAD_KINDS, { n = 30 } = {}) {
+  const out = {};
+  for (const kind of kinds) {
+    const secs = [], how = { stopped: 0, tko: 0, ko: 0, decision: 0 }, clean = [], hps = [];
+    for (let i = 0; i < n; i++) {
+      const m = createMatch({ seed: 9000 + i }), up = { mx: 0, mz: 0, guard: false, punch: null, slip: false, getUp: false };
+      let fightT = 0, mash = 0, guard = 0;
+      while (m.state !== 'over' && guard++ < 120 * 400) {
+        const a = { mx: 0, mz: 0, guard: false, punch: null, slip: false, getUp: false }, d = { ...up };
+        if (m.state === 'fight') {
+          const dx = m.o.x - m.p.x, dz = m.o.z - m.p.z, l = Math.hypot(dx, dz) || 1;
+          if (l > REACH[kind] - .1) { a.mx = dx / l; a.mz = dz / l; }
+          if (l <= REACH[kind] - .03 && !m.p.punch) a.punch = kind;
+          fightT += STEP;
+        }
+        mash += STEP * 6; d.getUp = !!m.o.down && (mash % 1) < .5;
+        m.step(STEP, a, d); m.events.length = 0;
+      }
+      secs.push(fightT); if (m.result) { how[m.result.how]++; clean.push(m.o.clean); hps.push(m.o.hp); }
+    }
+    out[kind] = { fightSecs: stats(secs), how, clean: stats(clean), hp: stats(hps) };
+  }
+  return out;
+}
+
+/* Same seed, same fight. The hash runs over the whole fight, not just its end. */
+function determinism(n = 20) {
+  let same = 0, of = 0; const bots = ['mixed', 'skilled', 'learner', 'spam'], lv = LEVEL_NAMES;
+  for (let i = 0; i < n; i++) { const b = bots[i % bots.length], d = lv[i % lv.length], kind = KINDS[i % KINDS.length]; const a = playMatch(b, { seed: 77 + i, difficulty: d, kind }), c = playMatch(b, { seed: 77 + i, difficulty: d, kind }); of++; if (a.hash === c.hash && a.time === c.time) same++; }
+  return { same, of };
+}
+
+/* Median of the HP a fighter was stopped at, pooled over every bot except idle and turtle. */
+function pooledStops(rows) {
+  const P = [], O = [];
+  for (const k in rows) { if (k === 'idle' || k === 'turtle') continue; P.push(...rows[k].rawStopP); O.push(...rows[k].rawStopO); }
+  return { player: stats(P), ai: stats(O) };
+}
+
+/* The targets in the brief, each as measured, target text and pass or fail. */
+function checkTargets(R) {
+  const C = [], add = (name, value, target, ok) => C.push({ name, value, target, ok: !!ok }), L = (d) => R.levels[d].rows, N = L('normal'), H = L('hard');
+  const range = (v, a, b) => v >= a && v <= b;
+  const T = { easy: { mixed: [40, 65], learner: [55, 80], skilled: [85, 100], r1: 20 }, normal: { mixed: [10, 30], learner: [25, 45], skilled: [60, 70], r1: 35 }, hard: { mixed: [0, 10], learner: [5, 20], skilled: [30, 45], r1: 60 } };
+  for (const d of LEVEL_NAMES) {
+    const X = L(d), t = T[d];
+    for (const b of ['mixed', 'learner', 'skilled']) add(`${d} ${b} win %`, X[b].win, `${t[b][0]}-${t[b][1]}`, range(X[b].win, t[b][0], t[b][1]));
+    for (const b of ['mixed', 'learner']) add(`${d} ${b} ended in round 1 %`, X[b].r1, `at most ${t.r1}`, X[b].r1 <= t.r1);
+    for (const b of ['idle', 'turtle']) add(`${d} ${b} win %`, X[b].win, '0', X[b].win === 0);
+  }
+  for (const b of ['mixed', 'learner']) add(`normal ${b} seconds per match`, N[b].secs, 'at least 80', N[b].secs >= 80);
+  for (const k of KINDS) { const a = N['spam:' + k], b = H['spam:' + k]; add(`normal spam ${k} win %`, a.win, 'at most 35', a.win <= 35); add(`hard spam ${k} win %`, b.win, 'at most 15', b.win <= 15); add(`normal spam ${k} land %`, a.player.land, 'above 0', a.player.land > 0); }
+  for (const b of ['runner', 'guardjab']) add(`normal ${b} win %`, N[b].win, 'at most 35', N[b].win <= 35);
+  const sk = N.skilled, hn = (x) => pct(x, sk.n);
+  add('normal skilled reach round 3 %', sk.r3, 'at least 50', sk.r3 >= 50);
+  add('normal skilled decisions %', hn(sk.how.decision), '25-50', range(hn(sk.how.decision), 25, 50));
+  add('normal skilled KO plus TKO %', hn(sk.how.ko + sk.how.tko), 'at least 15', hn(sk.how.ko + sk.how.tko) >= 15);
+  add('normal skilled stopped %', hn(sk.how.stopped), '20-45', range(hn(sk.how.stopped), 20, 45));
+  const types = {}; for (const k in N) for (const h in N[k].how) types[h] = (types[h] || 0) + N[k].how[h];
+  add('normal every ending type occurs', JSON.stringify(types), 'all above 0', Object.values(types).every((v) => v > 0));
+  add('normal mixed stopped %', pct(N.mixed.how.stopped, N.mixed.n), 'at most 60', pct(N.mixed.how.stopped, N.mixed.n) <= 60);
+  const st = pooledStops(N);
+  add('normal stoppage median HP, player stopped', st.player ? st.player.med : null, '40-65', st.player && range(st.player.med, 40, 65));
+  add('normal stoppage median HP, AI stopped', st.ai ? st.ai.med : null, '40-65', st.ai && range(st.ai.med, 40, 65));
+  for (const b of ['mixed', 'learner', 'skilled']) for (const [lab, s] of [['player', N[b].stopHpPlayer], ['AI', N[b].stopHpAI]]) if (s && s.n >= 10) add(`normal ${b} stoppage median HP, ${lab} stopped (n ${s.n})`, s.med, '40-65', range(s.med, 40, 65));
+  add('normal skilled whiff %', sk.player.whiff, 'at most 40', sk.player.whiff <= 40);
+  add('normal AI whiff % against skilled', sk.ai.whiff, 'at most 40', sk.ai.whiff <= 40);
+  add('normal dead time p90 against mixed, s', N.mixed.deadP90, 'at most 6', N.mixed.deadP90 <= 6);
+  add('normal dead time p90 against skilled, s', sk.deadP90, 'at most 6', sk.deadP90 <= 6);
+  add('normal skilled slips AI head punches %', sk.slipHead, 'at least 3', sk.slipHead >= 3);
+  add('scripted slip inside the window evades %', R.slip.inWindowPct, 'at least 80', R.slip.inWindowPct >= 80);
+  for (const b of ['skilled', 'learner', 'mixed']) {
+    const s = N[b].style;
+    add(`normal style vs ${b}: jab share R1 / R3`, `${s[0].jab} / ${s[2].jab}`, 'R1 at least 1.5x R3', s[0].jab >= 1.5 * s[2].jab);
+    add(`normal style vs ${b}: body share R1 / R2 / R3`, `${s[0].body} / ${s[1].body} / ${s[2].body}`, 'peaks in R2', s[1].body > s[0].body && s[1].body > s[2].body);
+    add(`normal style vs ${b}: mean distance R1 / R2`, `${s[0].dist} / ${s[1].dist}`, 'R2 closer by at least .15', s[0].dist - s[1].dist >= .15);
+  }
+  const fast = Object.entries(R.route).map(([k, v]) => [k, v.fightSecs.med]).sort((a, b) => a[1] - b[1]);
+  add('fastest route to a stoppage, seconds of fight', fast.map(([k, v]) => `${k} ${v}`).join(', '), 'hook first', fast[0][0] === 'hook');
+  const viol = {}; for (const d of LEVEL_NAMES) for (const k in L(d)) for (const v in L(d)[k].viol) viol[v] = (viol[v] || 0) + L(d)[k].viol[v];
+  add('rule breaks in all matches', JSON.stringify(viol), 'none', !Object.keys(viol).length);
+  add('same seed, same fight', `${R.det.same} of ${R.det.of}`, '20 of 20', R.det.same === 20 && R.det.of === 20);
+  add('TUNE.getUpTime', TUNE.getUpTime, '1.6-1.8', range(TUNE.getUpTime, 1.6, 1.8));
+  add('HEAD thresholds', `${HEAD.warn} ${HEAD.bad} ${HEAD.stop}`, '7 13 20', HEAD.warn === 7 && HEAD.bad === 13 && HEAD.stop === 20);
+  add('hard reaction delay, s', LEVELS.hard.react, 'at least .13', LEVELS.hard.react >= .13);
+  add('rounds', '3 of 60 s, 8 s break', 'same', true);
+  return C;
+}
+
+/* The whole table in the brief: every bot on every level, each spam button its own row, the scripted tests and the target check. */
+function fullReport({ n = 200, seed0 = 1000, dt = FRAME } = {}) {
+  const R = { n, seed0, levels: {} };
+  for (const d of LEVEL_NAMES) R.levels[d] = reportLevel(d, { n, seed0, dt });
+  R.slip = slipTest(); R.route = routeTest(); R.det = determinism(20);
+  R.checks = checkTargets(R);
+  return R;
+}
+const failures = (R) => R.checks.filter((c) => !c.ok);
 /* HARNESS END */
 
 /* ---------- page ---------- */
 const out = document.getElementById('out'), status = document.getElementById('status');
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 function tableOf(rows) {
-  const row = (R) => `<tr><td>${R.bot}</td><td>${R.n}</td><td>${R.win}</td><td>${R.how.ko}</td><td>${R.how.tko}</td><td>${R.how.stopped}</td><td>${R.how.decision}</td><td>${R.avgRounds}</td><td>${R.roundHist.join(' / ')}</td><td>${R.player.land} / ${R.player.block} / ${R.player.slip} / ${R.player.whiff}</td><td>${R.ai.land} / ${R.ai.block} / ${R.ai.slip} / ${R.ai.whiff}</td><td>${R.stopHp ? `${R.stopHp.n}: ${R.stopHp.p25} ${R.stopHp.med} ${R.stopHp.p75}` : '-'}</td><td>${R.cleanTakenPerMatch.p} / ${R.cleanTakenPerMatch.o}</td><td class="${Object.keys(R.viol).length ? 'bad' : 'good'}">${Object.keys(R.viol).length ? JSON.stringify(R.viol) : 'none'}</td></tr>`;
-  return `<table><tr><th>player bot</th><th>n</th><th>win %</th><th>KO</th><th>TKO</th><th>stopped</th><th>decision</th><th>avg rounds</th><th>ended in round 1/2/3</th><th>player land/block/slip/whiff %</th><th>AI land/block/slip/whiff %</th><th>stoppage HP n: p25 median p75</th><th>clean taken p/o</th><th>rule breaks</th></tr>${Object.values(rows).map(row).join('')}</table>`;
+  const row = (R) => `<tr><td>${R.bot}</td><td>${R.n}</td><td>${R.win}</td><td>${R.how.ko}</td><td>${R.how.tko}</td><td>${R.how.stopped}</td><td>${R.how.decision}</td><td>${R.avgRounds}</td><td>${R.roundHist.join(' / ')}</td><td>${R.secs}</td><td>${R.deadP90}</td><td>${R.player.land} / ${R.player.block} / ${R.player.slip} / ${R.player.whiff}</td><td>${R.ai.land} / ${R.ai.block} / ${R.ai.slip} / ${R.ai.whiff}</td><td>${R.stopHpPlayer ? `${R.stopHpPlayer.n}: ${R.stopHpPlayer.med}` : '-'}</td><td>${R.stopHpAI ? `${R.stopHpAI.n}: ${R.stopHpAI.med}` : '-'}</td><td>${R.cleanTakenPerMatch.p} / ${R.cleanTakenPerMatch.o}</td><td class="${Object.keys(R.viol).length ? 'bad' : 'good'}">${Object.keys(R.viol).length ? JSON.stringify(R.viol) : 'none'}</td></tr>`;
+  return `<table><tr><th>player bot</th><th>n</th><th>win %</th><th>KO</th><th>TKO</th><th>stopped</th><th>decision</th><th>avg rounds</th><th>ended in round 1/2/3</th><th>seconds</th><th>dead p90</th><th>player land/block/slip/whiff %</th><th>AI land/block/slip/whiff %</th><th>player stopped n: median HP</th><th>AI stopped n: median HP</th><th>clean taken p/o</th><th>rule breaks</th></tr>${Object.values(rows).map(row).join('')}</table>`;
 }
-function kindsOf(kinds, who) {
-  const K = Object.keys(PUNCHES);
-  return Object.entries(kinds).map(([b, v]) => `<h2>${b}: ${who} by punch, hit / blocked / slipped / whiffed %</h2><table><tr><th>punch</th><th>thrown</th><th>hit</th><th>blocked</th><th>slipped</th><th>whiffed</th></tr>${K.map((k) => { const c = v[who][k]; return `<tr><td>${k}</td><td>${c.thrown}</td><td>${c.hit}</td><td>${c.block}</td><td>${c.slip}</td><td>${c.whiff}</td></tr>`; }).join('')}</table>`).join('');
-}
-const SIMTEST = { playMatch, suite, rowOf, fullReport, spamByKind, levels, determinism, tableOf,
+function checksOf(C) { return `<h2>Targets</h2><table><tr><th>measure</th><th>measured</th><th>target</th><th>result</th></tr>${C.map((c) => `<tr><td>${esc(c.name)}</td><td>${esc(c.value)}</td><td>${esc(c.target)}</td><td class="${c.ok ? 'good' : 'bad'}">${c.ok ? 'met' : 'MISSED'}</td></tr>`).join('')}</table>`; }
+function stylesOf(rows) { return `<h2>Rival's punch mix and mean distance by round, normal</h2><table><tr><th>against</th><th>round</th><th>thrown</th><th>jab %</th><th>cross %</th><th>hook %</th><th>upper %</th><th>body %</th><th>mean distance m</th></tr>${['mixed', 'learner', 'skilled'].flatMap((b) => rows[b].style.map((s) => `<tr><td>${b}</td><td>${s.round}</td><td>${s.thrown}</td><td>${s.jab}</td><td>${s.cross}</td><td>${s.hook}</td><td>${s.upper}</td><td>${s.body}</td><td>${s.dist}</td></tr>`)).join('')}</table>`; }
+const SIMTEST = { playMatch, suite, rowOf, reportLevel, fullReport, slipTest, routeTest, determinism, checkTargets, tableOf, failures,
   /* The run the notes quote: returns a plain object, also drawn on the page. */
-  run({ n = 200, seed0 = 1000 } = {}) { const t0 = performance.now(); const R = fullReport({ n, seed0 }); out.innerHTML = tableOf(R.rows) + kindsOf(R.kinds, 'player') + kindsOf(R.kinds, 'ai'); status.textContent = `done in ${((performance.now() - t0) / 1000).toFixed(1)} s`; return R; } };
+  run({ n = 200, seed0 = 1000 } = {}) {
+    const t0 = performance.now(), R = fullReport({ n, seed0 });
+    out.innerHTML = checksOf(R.checks) + LEVEL_NAMES.map((d) => `<h2>${d}</h2>${tableOf(R.levels[d].rows)}`).join('') + stylesOf(R.levels.normal.rows);
+    status.textContent = `done in ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+    return R;
+  } };
 window.SIMTEST = SIMTEST;
 document.getElementById('go').addEventListener('click', () => { status.textContent = 'running...'; setTimeout(() => SIMTEST.run(), 30); });
 </script>

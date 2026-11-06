@@ -49,6 +49,8 @@ const STANCE = { L: { x: 0.115, z: 0.285, yaw: -0.16, heel: 0.05 }, R: { x: -0.1
 const PELVIS_Y = 0.845;
 const FALL_CLIP = 'knockdown', RISE_CLIP = 'getup';
 const SIT_T = 2.1; /* time in the get-up clip where he is sitting up: mashing moves him this far, rising does the rest */
+const STIR_RATE = 1.9; /* clip seconds per second: however the mash jumps, he stirs and sits up at a man's speed */
+const RISE_BLEND = 0.78; /* part of the get-up after which the fight pose takes over. At 1.7 s that is .37 s, and the head stays under about 2.5 m/s */
 
 class Spring { constructor(w, z) { this.w = w; this.z = z; this.x = new THREE.Vector3(); this.v = new THREE.Vector3(); }
   step(dt) { const k = this.w * this.w, c = 2 * this.z * this.w; this.v.x += (-k * this.x.x - c * this.v.x) * dt; this.v.y += (-k * this.x.y - c * this.v.y) * dt; this.v.z += (-k * this.x.z - c * this.v.z) * dt; this.x.x += this.v.x * dt; this.x.y += this.v.y * dt; this.x.z += this.v.z * dt; } }
@@ -174,9 +176,9 @@ export class FighterRig {
     const breathe = Math.sin(this.clock * 2.2) * 0.012;
     const dn = me.down; const up = dn ? (dn.up ?? 0) : 1; const rising = dn && dn.rising != null ? dn.rising : (dn ? null : 1e3);
     /* he lies still for a moment, then starts to stir toward the get-up pose as the mash fills, rises when the sim says so */
-    if (rising == null) { const stir = sstep(fall.dur - 0.5, fall.dur + 1.1, D.t); D.g = damp(D.g, SIT_T * Math.pow(up, 1.3), 3.5, dt); D.g0 = D.g; D.wG = Math.max(D.wG ?? 0, stir * (up > 0.02 ? 1 : 0.65)); }
+    if (rising == null) { const stir = sstep(fall.dur - 0.5, fall.dur + 1.1, D.t), gw = damp(D.g, SIT_T * Math.pow(up, 1.3), 3.5, dt), gMax = STIR_RATE * dt; D.g = D.g + clamp(gw - D.g, -gMax, gMax); D.g0 = D.g; const wWant = stir * (up > 0.02 ? 1 : 0.65), wNow = D.wG ?? 0; D.wG = Math.max(wNow, Math.min(wWant, wNow + 1.5 * dt)); }
     else { if (D.phase !== 'rise') { D.phase = 'rise'; D.g0 = D.g; D.riseT = 0; D.wG = D.wG ?? 1; D.wG0 = D.wG; D.yaw1 = wrap(me.yaw - (D.yawG + (rise.meta.endYaw ?? 0))); }
-      D.riseT += dt; D.prog = clamp(D.riseT / this.getUpTime); const pr = D.prog; D.g = lerp(D.g0, rise.dur, pr * pr * (3 - 2 * pr) * 0.35 + pr * 0.65); D.wG = lerp(D.wG0, 1, sstep(0, 0.12, pr)); }
+      D.riseT += dt; D.prog = clamp(D.riseT / this.getUpTime); const pr = D.prog; D.g = lerp(D.g0, rise.dur, pr * pr * (3 - 2 * pr) * 0.35 + pr * 0.65); D.wG = lerp(D.wG0, 1, sstep(0, lerp(0.42, 0.12, D.wG0), pr)); }
     rise.sample(D.g, this.qG, this.rG);
     const wG = D.wG ?? 0;
     for (let i = 0; i < this.nb; i++) nlerpArr(this.qD, this.qD, i * 4, this.qG, i * 4, wG);
@@ -193,7 +195,7 @@ export class FighterRig {
     const inF = sstep(0, 0.2, D.t); px = lerp(D.p0.x, px, inF); py = lerp(D.p0.y, py, inF); pz = lerp(D.p0.z, pz, inF); yawW = D.y0 + wrap(yawW - D.y0) * inF;
     D.px = px; D.py = py; D.pz = pz; D.yawW = yawW;
     /* weight of this layer over the fight pose */
-    if (D.phase === 'rise') { this.wDown = 1 - sstep(0.86, 1, D.prog); if (!D.seeded && D.prog >= 0.84) { this._seedFeet(); D.seeded = true; } if (D.prog >= 1 && !dn) { this.D = null; this.wDown = 0; } }
+    if (D.phase === 'rise') { this.wDown = 1 - sstep(RISE_BLEND, 1, D.prog); if (!D.seeded && D.prog >= RISE_BLEND - 0.02) { this._seedFeet(); D.seeded = true; } if (D.prog >= 1 && !dn) { this.D = null; this.wDown = 0; } }
     else this.wDown = 1;
   }
   _seedFeet() { for (const s of ['L', 'R']) { const f = this.feet[s], p = wp(this.legs[s].O, _v[0]), q = wq(this.legs[s].F, _q[0]); f.x = p.x; f.z = p.z; f.swing = null; const dir = _v[1].copy(this.legs[s].ballLocal).applyQuaternion(q); f.yaw = Math.atan2(dir.x, dir.z); f.y = this.ballY; } this.settle = 0.15; }

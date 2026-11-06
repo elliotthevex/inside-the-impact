@@ -9,4 +9,4 @@ Created by Joohyun Lee.
 They cannot diagnose, exclude, locate or grade a real injury. For any suspected
 injury, seek qualified medical assessment. Emergency services in South Korea: 119.
 
-Play: https://elliotthevex.github.io/inside-the-impact/
+Play: https://inside-the-impact.pages.dev/

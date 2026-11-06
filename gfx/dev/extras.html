@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Arena extras test bench</title>
+<style>
+  html,body{margin:0;background:#000;height:100%}
+  #bg{position:absolute;inset:0;background:#141210 url(ref/look-target.png) center/cover no-repeat}
+</style>
+</head>
+<body>
+<!-- Test bench only. Each module on its own over a photo standing in for the live ring. No GPU needed.
+     Query: view=menu|notes|coach|stack, text=small|large, rm=1, touch=1, initial=easy|normal|hard, cx=live (the real Codex, read out of index.html, for layout).
+     window.EXTRAS is what a test drives. -->
+<div class="arena-x" id="root"><div id="bg"></div></div>
+<script type="module">
+import { createFightMenu, LEVEL_LINES, STORE_KEY } from '../arena/menu.js';
+import { createNotesPanel, DISCLAIMER, renderMarkdown } from '../arena/notes.js';
+import { createCoach, COACH_LINES } from '../arena/coach.js';
+import { createMatch, setReach, STEP, HEAD } from '../arena/sim.js';
+import { createAI, createBot } from '../arena/ai.js';
+
+const P = new URLSearchParams(location.search);
+const view = P.get('view') || 'menu';
+if (P.get('text')) document.documentElement.dataset.textSize = P.get('text');
+if (P.get('rm')) document.body.classList.add('reduce-motion');
+const touch = P.has('touch') ? P.get('touch') === '1' : undefined;
+const root = document.getElementById('root');
+
+/* The real Codex, without a copy: the same object the game declares, cut out of the real page and declared the same way, as a classic-script const. */
+async function loadLiveCodex() {
+  const html = await (await fetch('../../index.html')).text();
+  const from = html.indexOf('const CX = {'), to = html.indexOf('const SD = {', from);
+  if (from < 0 || to < 0) throw new Error('CX not found in index.html');
+  const s = document.createElement('script');
+  s.textContent = html.slice(from, to);
+  document.head.appendChild(s);
+  return html;
+}
+
+const log = { pick: [], exit: 0, close: 0 };
+const X = window.EXTRAS = { log, view, LEVEL_LINES, STORE_KEY, DISCLAIMER, COACH_LINES, HEAD, renderMarkdown, menu: null, notes: null, coach: null, hud: null, match: null, game: null };
+
+/* ---------- helpers a test can call ---------- */
+const describe = (n) => (n ? n.tagName.toLowerCase() + (n.className && n.className.baseVal === undefined ? '.' + String(n.className).trim().replace(/\s+/g, '.') : '') + (n.dataset && n.dataset.level ? '[' + n.dataset.level + ']' : '') + (n.dataset && n.dataset.key ? '[' + n.dataset.key + ']' : '') + (n.dataset && n.dataset.act ? '[' + n.dataset.act + ']' : '') : null);
+X.focused = () => describe(document.activeElement);
+/* Anything showing that runs off the viewport, within one module's element. */
+X.offscreen = (sel) => {
+  const w = innerWidth, h = innerHeight, bad = [];
+  for (const el of document.querySelectorAll(sel + ', ' + sel + ' *')) {
+    const cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) continue;
+    if (r.right > w + 1 || r.left < -1) bad.push(describe(el) + ' x ' + Math.round(r.left) + '..' + Math.round(r.right));
+  }
+  return bad.slice(0, 8);
+};
+X.rects = (sel) => [...document.querySelectorAll(sel)].map((el) => { const r = el.getBoundingClientRect(); return { el: describe(el), x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }; });
+
+/* ---------- menu ---------- */
+X.makeMenu = (o = {}) => {
+  if (X.menu) X.menu.destroy();
+  X.menu = createFightMenu(root, { touch, initial: P.get('initial') || undefined, onPick: (l) => log.pick.push(l), onExit: () => log.exit++, ...o });
+  return X.menu;
+};
+/* ---------- notes ---------- */
+X.makeNotes = (o = {}) => {
+  if (X.notes) X.notes.destroy();
+  X.notes = createNotesPanel(root, { onClose: () => log.close++, ...o });
+  return X.notes;
+};
+
+/* ---------- the corner's line: the markup the hook adds to index.js, and the real sim to feed it ---------- */
+function makeCoachStrip() {
+  const el = document.createElement('div');
+  el.className = 'ax-x-coach';
+  el.setAttribute('role', 'status');
+  el.innerHTML = '<span class="ax-x-coach-who">Your corner</span><span class="ax-x-coach-text"></span>';
+  (X.hud ? X.hud.el : root).appendChild(el); // inside the HUD's stacking context, as the hook does, so the pause and end panels cover it
+  return el;
+}
+X.showCoach = (text) => { if (!X.strip) X.strip = makeCoachStrip(); X.strip.querySelector('.ax-x-coach-text').textContent = text; X.strip.classList.add('is-on'); };
+X.hideCoach = () => { if (X.strip) X.strip.classList.remove('is-on'); };
+/* One real match, the game's frame loop, a bot on the player's side. Returns what the corner said at each round end. */
+X.playCoach = async (bot = 'learner', level = 'normal', seed = 1) => {
+  setReach(await (await fetch('../arena/reach.json')).json());
+  const FRAME = 1 / 60, m = createMatch({ seed, ringHalf: 2.9, corners: { blue: [-2.5, -2.5], red: [2.5, 2.5] } }), b = createBot(bot, { seed: seed * 7 + 1 }), ai = createAI({ difficulty: level, seed: seed * 13 + 5 });
+  const c = X.coach || (X.coach = createCoach({ HEAD }));
+  c.reset();
+  const said = [];
+  let bank = 0, guard = 0;
+  while (m.state !== 'over' && guard++ < 54000) {
+    const ip = b.decide(m, m.p, m.o, FRAME), io = ai.decide(m, m.o, m.p, FRAME);
+    m.step(0, ip, io); ip.punch = null; io.punch = null;
+    bank += FRAME;
+    while (bank >= STEP && m.state !== 'over') { bank -= STEP; m.step(STEP, ip, io); }
+    for (const e of m.events) { c.onEvent(e); if (e.type === 'round_end') { const r = c.line(m); said.push({ round: e.round, tag: r.tag, text: r.text, stop: c.offerStop(m), state: m.state }); } }
+    m.events.length = 0;
+  }
+  X.match = m;
+  return { said, how: m.result.how };
+};
+
+/* ---------- stack: the real HUD under the modules, and index.js's keyboard routing with the hook's one line, so the routing can be tested with no GPU ---------- */
+function fakeFighter(name, corner) { return { x: 0, z: 0, vx: 0, vz: 0, yaw: 0, hp: 100, maxHp: 100, sta: 100, maxSta: 100, head: 0, guard: 0, punch: null, stun: 0, slip: 0, down: null, knock: { x: 0, z: 0 }, landed: 0, taken: 0, clean: 0, fat: 0, name, corner, thrown: 0, kd: 0 }; }
+async function makeStack() {
+  const { createHud } = await import('../arena/hud.js');
+  const m = X.match = { state: 'fight', round: 1, rounds: 3, clock: 41, p: fakeFighter('YOU', 'blue'), o: fakeFighter('RIVAL', 'red'), events: [], result: null, scores: [], step() {} };
+  const game = X.game = { paused: false, closed: 0, keys: [], seen: [] };
+  const hud = X.hud = createHud(root, { touch, onPause: () => { game.paused = true; }, onResume: () => { game.paused = false; }, onExit: () => { game.closed++; }, onRematch: () => {}, onInput: () => {}, onNotes: () => X.notes.open() });
+  await hud.ready;
+  /* the Notes button the hook adds to hud.js, unless it is already there */
+  for (const panel of hud.el.querySelectorAll('.ax-pause,.ax-end')) if (!panel.querySelector('[data-x-notes],[data-act="notes"]')) {
+    const b = document.createElement('button');
+    b.className = 'ax-btn'; b.type = 'button'; b.dataset.xNotes = '1'; b.innerHTML = '<span>Notes</span>';
+    b.addEventListener('click', () => X.notes.open());
+    panel.querySelector('.ax-btnrow').appendChild(b);
+  }
+  hud.update(m, 0);
+  /* From index.js wireInput. The first two lines after the modifier check are the hook. */
+  const panelOn = () => hud.el.querySelector('.ax-panel.is-on');
+  const GAME = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'Space', 'KeyJ', 'KeyK', 'KeyL', 'KeyU', 'KeyI', 'KeyO']);
+  game.onKeyDown = (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (X.menu && X.menu.isOpen) return;
+    if (X.notes && X.notes.isOpen) return;
+    const code = e.code;
+    if (code === 'Escape') {
+      e.preventDefault(); e.stopPropagation();
+      if (e.repeat) return;
+      if (hud.paused) { game.paused = false; hud.setPaused(false); return; }
+      if (hud.el.querySelector('.ax-end.is-on')) { game.closed++; return; }
+      game.paused = true; hud.setPaused(true); return;
+    }
+    const panel = panelOn();
+    if (panel) {
+      if (code === 'Tab') { e.preventDefault(); const b = [...panel.querySelectorAll('.ax-btn')], i = b.indexOf(document.activeElement); b[(i + (e.shiftKey ? -1 : 1) + b.length) % b.length].focus(); }
+      if (!(e.target && panel.contains(e.target))) e.stopPropagation();
+      return;
+    }
+    e.stopPropagation();
+    if (code === 'Tab') e.preventDefault();
+    if (!GAME.has(code)) return;
+    e.preventDefault();
+    game.keys.push(code);
+  };
+  game.onKeyUp = (e) => { const panel = panelOn(); if (!(panel && e.target && panel.contains(e.target))) e.stopPropagation(); };
+  window.addEventListener('keydown', game.onKeyDown, true);
+  window.addEventListener('keyup', game.onKeyUp, true);
+  root.addEventListener('keydown', (e) => e.stopPropagation());
+  root.addEventListener('keyup', (e) => e.stopPropagation());
+  /* the page's own listeners, which must never hear a key while the overlay is up */
+  window.addEventListener('keydown', (e) => game.seen.push(e.code));
+  X.endScreen = async () => {
+    Object.assign(m, { state: 'over', clock: 0, round: 3, scores: [[10, 9], [9, 10], [10, 9]], result: { winner: 'p', how: 'decision', round: 3 } });
+    m.p.hp = 41; m.o.hp = 33; m.p.clean = 9; m.o.clean = 11; m.p.landed = 38; m.o.landed = 35;
+    hud.onEvent({ type: 'decision', who: 'p', t: 0 });
+    for (let i = 0; i < 30; i++) hud.update(m, .25);
+  };
+  X.breakScreen = () => {
+    Object.assign(m, { state: 'break', clock: 8, round: 1, scores: [[10, 9]] });
+    m.p.hp = 58; m.o.hp = 44; m.p.sta = 60; m.o.sta = 50;
+    hud.onEvent({ type: 'round_end', who: 'p', round: 1, score: [10, 9], t: 0 });
+    hud.update(m, .05);
+    hud.update(m, 1.5);
+  };
+}
+
+X.ready = (async () => {
+  let page = null;
+  if (P.get('cx') === 'live') page = await loadLiveCodex();
+  X.makeNotes();
+  X.makeMenu();
+  await Promise.all([X.menu.ready, X.notes.ready]);
+  X.pageSource = page;
+  if (view === 'stack') await makeStack();
+  if (view === 'coach') { X.coach = createCoach({ HEAD }); await makeStack(); X.breakScreen(); }
+  if (view === 'menu') X.menu.show();
+  if (view === 'notes') X.notes.open(P.get('section') || undefined);
+  return true;
+})();
+</script>
+</body>
+</html>

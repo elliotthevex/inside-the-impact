@@ -14,7 +14,7 @@ const params = new URLSearchParams(location.search);
 const quality = params.get('q') || 'high';
 /* Profiling overrides, for example ?ao=0&msaa=0&dof=16&bulbs=2 */
 for (const k of ['msaa', 'dof', 'bulbs', 'shadow', 'hazeSteps', 'crowd', 'dust', 'aoSamples', 'maxPixels', 'aniso']) if (params.has(k)) PRESETS[quality][k] = +params.get(k);
-for (const k of ['ao', 'bloom', 'film', 'grain', 'halfDof']) if (params.has(k)) PRESETS[quality][k] = params.get(k) !== '0';
+for (const k of ['ao', 'bloom', 'film', 'grain']) if (params.has(k)) PRESETS[quality][k] = params.get(k) !== '0';
 if (params.has('main')) PRESETS[quality].mainFormat = params.get('main');
 const canvas = document.getElementById('c');
 const engine = new Engine(canvas, { quality, adaptive: false });

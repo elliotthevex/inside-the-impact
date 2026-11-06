@@ -57,7 +57,7 @@ Load: about 0.9 s on localhost including fighters, textures already local. Downl
 
 ## Changes to other people's assumptions
 - `createStage` is async. Contract shows it returning the object directly.
-- post.js is not edited. `makePost` in engine.js adjusts a Post after building it. Three things, all measured and all worth folding into post.js by whoever owns it:
+- The three patches below were folded into post.js by the polish pass (gfx/dev/notes/polish.md), with the same output; `makePost` is gone. Depth of field, contrast, vignette and AO strength were then retuned there. What the patches do:
   1. AO stripes: `vpos` reads nearest depth but rebuilds position at its own UV, and half-res pixel centres sit exactly on texel edges. Snapped to texel centre with a small offset. Without it the canvas shows dark bands.
   2. Depth of field replaced by `HalfResDof` (half-res gather, tent filter, depth-aware upsample), same uniforms. 32 taps cost 9.5 ms at 1080p before, about 3.5 now.
   3. Main target is R11F_G11F_B10F when `mainFormat: 'r11'`. Half the bytes per sample with MSAA. Nothing reads its alpha.

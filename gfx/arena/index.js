@@ -161,7 +161,7 @@ function frame(S, dt) {
   S.fx.update(dt);
   S.cam.update(m, S.rigP, S.rigO, dt);
   const post = S.engine.post;
-  if (post) { post.focus = S.cam.getFocus(); post.aperture = S.engine.q.film ? S.cam.getAperture() : 0; }
+  if (post) { post.focus = S.cam.getFocus(); post.sharp = S.cam.getSharp(); post.aperture = S.engine.q.film ? S.cam.getAperture() : 0; }
   S.stage.update(dt, S.engine.camera);
   S.frames++;
   const ms = performance.now() - t0; S.jsMs += (ms - S.jsMs) * 0.05; if (ms > S.jsPeak) S.jsPeak = ms;
@@ -294,6 +294,7 @@ async function load(S) {
     touch: opts.touch,
     onPause: () => pause(S, true), onResume: () => resume(S, true),
     onRematch: () => rematch(S), onExit: () => closeArena(),
+    onEndPanel: (on) => { if (S.cam) S.cam.setShift(on ? 0.2 : 0); },
     onInput: (code, down) => {
       if (down) { if (S.ready && !panelOn(S)) press(S, code, false); } else S.keys.delete(code);
     },
@@ -354,7 +355,8 @@ async function load(S) {
     S.cam = mods.cam.createFightCam(engine.camera, { reducedMotion: settings.reduced, shake: settings.shake, canvasY: stage.canvasY, stage });
     S.fx = mods.fx.createFx(stage.scene, engine.q, { stage, reducedMotion: settings.reduced, onLand: () => S.audio.land() });
     S.fx.track(S.rigP, S.rigO);
-    S.onQuality = (q) => { if (S.fx.applyQuality) S.fx.applyQuality(q); };
+    mods.fighter.setCharLight(engine.q);
+    S.onQuality = (q) => { if (S.fx.applyQuality) S.fx.applyQuality(q); mods.fighter.setCharLight(q); };
     engine.listeners.add(S.onQuality);
     S.audio = mods.audio.createAudio({ enabled: settings.sound, volume: settings.volume, lite: engine.q.name === 'low' });
     newMatch(S);

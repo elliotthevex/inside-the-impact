@@ -1,0 +1,97 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Camera bench</title>
+<!-- No GPU work to speak of: real sim, real AI, real camera, fake rigs, tens of thousands of frames a second. Through tools/gfx/cdp.py with --eval:
+     runCam(orbit, matches, seed, {aspect, dt, aiSide}) camera measures; lineStats() how the line between the men moves; lazy() the least a camera could turn, with perfect foresight; counters() counter hits a few tenths apart.
+     orbit overrides fields of ORBIT in fightcam.js. aiSide scales the AI's sideways movement, for what-if numbers only. --><script type="importmap">{"imports":{"three":"../../vendor/three/build/three.module.js","three/addons/":"../../vendor/three/addons/"}}</script></head><body><script type="module">
+import * as THREE from 'three';
+import { createMatch, setReach } from '../arena/sim.js';
+import { createAI, createBot } from '../arena/ai.js';
+import { createFightCam } from '../arena/fightcam.js';
+setReach(await (await fetch('../arena/reach.json')).json());
+const canvasY = 0.75;
+class FakeRig { constructor(f) { this.f = f; this.v = new THREE.Vector3(); } headWorld() { const f = this.f; return this.v.set(f.x, canvasY + (f.down ? 0.2 : 1.62), f.z); } }
+const SPECS = [['skilled'], ['skilled'], ['mixed'], ['turtle'], ['spam', 'hook'], ['spam', 'cross'], ['idle'], ['learner'], ['runner'], ['guardjab']];
+window.runCam = (orbit, n = 10, seed0 = 500, opts = {}) => {
+  const out = { frames: 0, omSum: 0, maxRate: 0, h: [0, 0, 0, 0, 0], right: 0, outF: 0, moving: 0, secs: 0, perSpec: {}, breakFrames: 0, breakLine: 0, breakOff: 0, lineRate: 0 };
+  const c = new THREE.PerspectiveCamera(38, opts.aspect || 16 / 9, 0.1, 42);
+  const a = new THREE.Vector3(), b = new THREE.Vector3();
+  for (let i = 0; i < n; i++) {
+    const sp = SPECS[i % SPECS.length], seed = seed0 + i * 97;
+    const m = createMatch({ seed, names: { p: 'P', o: 'O' }, ringHalf: 2.9, corners: { blue: [-2.5, -2.5], red: [2.5, 2.5] } });
+    const ai = createAI({ difficulty: 'normal', seed: seed + 1 }), bot = createBot(sp[0], { seed: seed + 2, kind: sp[1] || 'jab' });
+    const cam = createFightCam(c, { canvasY, orbit });
+    const rp = new FakeRig(m.p), ro = new FakeRig(m.o);
+    const dt = opts.dt || 1 / 60; let t = 0, lastLine = null, lastTh = null, lastPos = null; const key = sp.join(':'); const P = out.perSpec[key] ??= { f: 0, om: 0 };
+    while (m.state !== 'over' && t < 400) {
+      const iP = bot.decide(m, m.p, m.o, dt), iO = ai.decide(m, m.o, m.p, dt);
+      if (opts.aiSide != null) { const dx = m.p.x - m.o.x, dz = m.p.z - m.o.z, l = Math.hypot(dx, dz) || 1, ax = dx / l, az = dz / l, along = iO.mx * ax + iO.mz * az, tx = iO.mx - along * ax, tz = iO.mz - along * az; iO.mx = along * ax + tx * opts.aiSide; iO.mz = along * az + tz * opts.aiSide; }
+      m.step(dt, iP, iO); m.events.length = 0;
+      cam.update(m, rp, ro, dt); t += dt; c.updateMatrixWorld(true);
+      const st = cam.stats();
+      if (lastTh != null) { let d = st.th - lastTh; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; const r = Math.abs(d) / dt; if (r > out.maxRate) out.maxRate = r; }
+      lastTh = st.th;
+      if (m.state === 'fight') {
+        if (lastPos) { const ds = lastPos.distanceTo(c.position) / dt; out.posSum = (out.posSum || 0) + ds; } lastPos = (lastPos || new THREE.Vector3()).copy(c.position); out.distSum = (out.distSum || 0) + Math.abs(st.d - (out.lastD ?? st.d)) / dt; out.lastD = st.d;
+        out.frames++; const om = Math.abs(st.om); out.omSum += om; P.f++; P.om += om; if (om > 0.02) out.moving++;
+        const e = Math.abs(st.err) * 57.3; out.h[e < 15 ? 0 : e < 30 ? 1 : e < 45 ? 2 : e < 60 ? 3 : 4]++;
+        const pts = [[m.p.x, canvasY + 1.75, m.p.z], [m.o.x, canvasY + 1.75, m.o.z], [m.p.x, canvasY, m.p.z], [m.o.x, canvasY, m.o.z]]; let bad = false;
+        for (const q of pts) { a.set(q[0], q[1], q[2]).project(c); if (Math.abs(a.x) > 1 || Math.abs(a.y) > 1 || a.z > 1) bad = true; }
+        if (bad) out.outF++;
+        a.set(m.p.x, canvasY + 1, m.p.z).project(c); b.set(m.o.x, canvasY + 1, m.o.z).project(c); if (a.x > b.x) out.right++;
+        const line = Math.atan2(m.o.z - m.p.z, m.o.x - m.p.x); if (lastLine != null) { let d = line - lastLine; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; out.lineRate += Math.abs(d) / dt; } lastLine = line;
+      } else lastLine = null;
+      if (m.state === 'break') { out.breakFrames++; a.set(m.p.x, canvasY + 1, m.p.z).project(c); b.set(m.o.x, canvasY + 1, m.o.z).project(c); const gap = Math.abs(a.x - b.x); if (gap < 0.12) out.breakLine++; if (a.x > b.x) out.breakOff++; }
+    }
+    out.secs += t;
+  }
+  const f = Math.max(1, out.frames);
+  return { camMs: +((out.posSum || 0) / f).toFixed(2), zoomMs: +((out.distSum || 0) / f).toFixed(3), frames: out.frames, meanDegS: +(out.omSum / f * 57.3).toFixed(1), lineDegS: +(out.lineRate / f * 57.3).toFixed(1), maxRate: +out.maxRate.toFixed(2), under15: +(out.h[0] / f * 100).toFixed(1), u30: +(out.h[1] / f * 100).toFixed(1), u45: +(out.h[2] / f * 100).toFixed(1), u60: +(out.h[3] / f * 100).toFixed(1), over60: +(out.h[4] / f * 100).toFixed(1), within45: +((out.h[0] + out.h[1] + out.h[2]) / f * 100).toFixed(1), rightPct: +(out.right / f * 100).toFixed(3), outPct: +(out.outF / f * 100).toFixed(3), movingPct: +(out.moving / f * 100).toFixed(1), breakFrames: out.breakFrames, breakOverlap: out.breakLine, breakRight: out.breakOff, perSpec: Object.fromEntries(Object.entries(out.perSpec).map(([k, v]) => [k, +(v.om / Math.max(1, v.f) * 57.3).toFixed(1)])) };
+};
+window.lineStats = (n = 10, seed0 = 500) => {
+  const res = [];
+  for (let i = 0; i < n; i++) {
+    const sp = SPECS[i % SPECS.length], seed = seed0 + i * 97;
+    const m = createMatch({ seed, names: { p: 'P', o: 'O' }, ringHalf: 2.9, corners: { blue: [-2.5, -2.5], red: [2.5, 2.5] } });
+    const ai = createAI({ difficulty: 'normal', seed: seed + 1 }), bot = createBot(sp[0], { seed: seed + 2, kind: sp[1] || 'jab' });
+    const dt = 1 / 60; let t = 0, last = null, un = 0; const th = []; let sepS = 0, sepN = 0, speedS = 0;
+    while (m.state !== 'over' && t < 400) {
+      m.step(dt, bot.decide(m, m.p, m.o, dt), ai.decide(m, m.o, m.p, dt)); m.events.length = 0; t += dt;
+      if (m.state === 'fight') { const l = Math.atan2(m.o.z - m.p.z, m.o.x - m.p.x); if (last != null) { let d = l - last; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; un += d; } last = l; th.push(un); const s = Math.hypot(m.o.x - m.p.x, m.o.z - m.p.z); sepS += s; sepN++; speedS += Math.hypot(m.o.vx, m.o.vz) + Math.hypot(m.p.vx, m.p.vz); }
+    }
+    const rate = (W) => { const k = Math.round(W * 60); let S = 0, N = 0; for (let j = k; j < th.length; j += 7) { S += Math.abs(th[j] - th[j - k]) / W; N++; } return +(S / Math.max(1, N) * 57.3).toFixed(1); };
+    res.push([sp.join(':'), 'secs', +(th.length / 60).toFixed(0), 'net', +(un * 57.3 / (th.length / 60)).toFixed(1), 'w.25', rate(.25), 'w1', rate(1), 'w2', rate(2), 'w4', rate(4), 'w8', rate(8), 'sep', +(sepS / sepN).toFixed(2), 'speed', +(speedS / sepN).toFixed(2)].join(' '));
+  }
+  return res;
+};
+window.lazy = (n = 10, seed0 = 500) => {
+  const Ws = [25, 35, 45, 50, 55, 60, 70, 80, 88]; const tot = Ws.map(() => ({ tv: 0, in45: 0, f: 0 }));
+  for (let i = 0; i < n; i++) {
+    const sp = SPECS[i % SPECS.length], seed = seed0 + i * 97;
+    const m = createMatch({ seed, names: { p: 'P', o: 'O' }, ringHalf: 2.9, corners: { blue: [-2.5, -2.5], red: [2.5, 2.5] } });
+    const ai = createAI({ difficulty: 'normal', seed: seed + 1 }), bot = createBot(sp[0], { seed: seed + 2, kind: sp[1] || 'jab' });
+    const dt = 1 / 60; let t = 0, last = null, un = 0; const phi = Ws.map(() => null);
+    while (m.state !== 'over' && t < 400) {
+      m.step(dt, bot.decide(m, m.p, m.o, dt), ai.decide(m, m.o, m.p, dt)); m.events.length = 0; t += dt;
+      if (m.state === 'fight') { const l = Math.atan2(m.o.z - m.p.z, m.o.x - m.p.x); if (last != null) { let d = l - last; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; un += d; } last = l;
+        Ws.forEach((w, k) => { const W = w / 57.3; if (phi[k] == null) phi[k] = un; const e = un - phi[k]; if (e > W) { tot[k].tv += e - W; phi[k] = un - W; } else if (e < -W) { tot[k].tv += -e - W; phi[k] = un + W; } if (Math.abs(un - phi[k]) < 45 / 57.3) tot[k].in45++; tot[k].f++; }); }
+    }
+  }
+  return Ws.map((w, k) => 'W ' + w + ' TV deg/s ' + (tot[k].tv / (tot[k].f / 60) * 57.3).toFixed(1) + ' within45 ' + (tot[k].in45 / tot[k].f * 100).toFixed(1));
+};
+window.counters = (n = 10, seed0 = 500) => {
+  let hits = 0, counters = 0, overlap = 0, same = 0; const gaps = [];
+  for (let i = 0; i < n; i++) {
+    const sp = SPECS[i % SPECS.length], seed = seed0 + i * 97;
+    const m = createMatch({ seed, names: { p: 'P', o: 'O' }, ringHalf: 2.9, corners: { blue: [-2.5, -2.5], red: [2.5, 2.5] } });
+    const ai = createAI({ difficulty: 'normal', seed: seed + 1 }), bot = createBot(sp[0], { seed: seed + 2, kind: sp[1] || 'jab' });
+    const dt = 1 / 60; let t = 0; const last = { p: -9, o: -9 };
+    while (m.state !== 'over' && t < 400) {
+      m.step(dt, bot.decide(m, m.p, m.o, dt), ai.decide(m, m.o, m.p, dt)); t += dt;
+      for (const e of m.events) if (e.type === 'hit') { hits++; if (e.counter) { counters++; const other = e.who === 'p' ? 'o' : 'p', g = t - last[other]; if (g < 0.85) { overlap++; gaps.push(+g.toFixed(3)); if (g < 1e-6) same++; } last[e.who] = t; } }
+      m.events.length = 0;
+    }
+  }
+  gaps.sort((a, b) => a - b);
+  return { hits, counters, bothShowing: overlap, sameFrame: same, gapMedian: gaps[gaps.length >> 1], gapMin: gaps[0], gapMax: gaps[gaps.length - 1] };
+};
+window.READY = true;
+</script></body></html>

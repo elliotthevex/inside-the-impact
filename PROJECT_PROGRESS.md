@@ -4,9 +4,11 @@ Checkpoint file. Read this first when resuming. Design and interfaces are in `gf
 Work is on git branch `realistic-3d` in `site/`. Do not push or merge to `main`: a push to `main` deploys live, and the user decides that.
 
 ## Status
-Phase: balance and polish, both running. A whole match plays from the 1v1 Arena card on the real page.
-Usage rule: stop at 75% of the 5-hour window (`mcp__ccd_session_mgmt__get_usage`). Agents stop at 72. Last check 08:56 KST on 2026-11-06: 14%, resets 10:40 KST. Weekly 17%.
-Power: on battery at 73% at 08:56 KST, and the user has been asked to plug in. The lid was closed from 22:29 to 08:55, which paused everything overnight. A closed lid sleeps the Mac even on the charger.
+Phase: balance and polish, both interrupted for the usage line, with the feature modules built but not hooked in.
+STOPPED at 10:26 KST on 2026-11-06 because the 5-hour figure read 49 against the 50 line. It rose from 40 to 49 in ten minutes. The window resets at 10:40 KST.
+Usage rule: stop at 50% of the 5-hour window (the user lowered it from 75% on 2026-11-06); the weekly limit keeps 75%. Check with `mcp__ccd_session_mgmt__get_usage`. Agents stop at 47. Weekly 21% at the stop.
+Power: on battery at 47% at 10:26 KST, about two hours left, and the user has been asked three times to plug in. A closed lid sleeps the Mac even on the charger.
+Another session, "AAA fighting game screenshot", runs in this folder and shares the usage limit. Its changes, if any, are not coordinated with this work.
 
 ## Scope note
 The user's latest brief is Street Fight 3D, a complete 1v1 arena game. It takes priority over the earlier whole-game overhaul brief, which is parked, not cancelled, and saved at `gfx/dev/overhaul-brief.md`.
@@ -17,20 +19,21 @@ The user's latest brief is Street Fight 3D, a complete 1v1 arena game. It takes 
 - Independently rerun at 22:26 KST on 2026-11-05: `jscheck.py` parses, parity `3bea3b59`, smoke passes.
 - `CREDITS.md`, `ASSET_LIST.md`.
 
-## In progress
-Both are workflows, so never message their agents (see memory `workflow-agents-have-no-inbox`).
-- Balance, run `wf_0ec0b835-a23`, owns `gfx/arena/sim.js`, `ai.js`, `gfx/dev/simtest.html`, `gfx/dev/notes/balance*.md`. Tuning, then an independent check on fresh seeds. Its files are uncommitted on purpose until it finishes.
-- Polish, run `wf_14dc4bd3-946`, owns the rest of `gfx/`. Fighter light, depth of field, exposure across presets, broadcast graphics that hide the fight, camera movement, low-preset crowd, get-up timing, folding the `engine.js` patches into `post.js`. Notes in `gfx/dev/notes/polish*.md`.
-- Both retry after a network error. To resume either after a stop: `Workflow({scriptPath: '<its script in the session workflows/scripts folder>', resumeFromRunId: '<run id>'})`.
+## In progress, all stopped at 10:26 KST
+Resume each after the reset with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the session's `workflows/scripts` folder and were patched at the stop: agents now stop at 47, and they are told to go easy on images.
+- Balance: `arena-balance-wf_0ec0b835-a23.js`, run `wf_0ec0b835-a23`. Still in its tuning step. `sim.js` and `ai.js` hold experimental numbers from a kiting experiment, so read "Mid-experiment warning" in `gfx/dev/notes/balance.md` first. Known exploit being fixed: jab then back off wins 92-100% on every level. Harness now plays at the game's real 60 fps.
+- Polish: `arena-polish-wf_14dc4bd3-946.js`, run `wf_14dc4bd3-946`. First pass nearly done, per `gfx/dev/notes/polish.md`: Post patches folded, character light, focus, banners as lower thirds, calmer camera, crowd faces, get-up timing. Independent review not started.
+- Feature modules: `arena-feature-modules-wf_92506359-3fd.js`, run `wf_92506359-3fd`. Built and passing their own tests. The review stopped for usage before it ran anything, so there is no verdict. Hook plan: 16 edits in `gfx/dev/notes/features.md`.
 
 ## Remaining, in order
-1. Read the balance and polish results, look at frames, rerun the gates, commit.
-2. In-game medical notes and credits panel, reached from pause and the end panel. The user asked for "all the medical knowledge in credits or somewhere". Draw the entries from the game's live `CX` so the text cannot drift. Wait for polish to finish, because it owns `hud.js`.
-3. Adversarial playtest and fix pass on the final balance.
-4. Performance and low-end preset: measure with everything on, adaptive quality, GPU memory on low, missing-extension fallbacks.
-5. Prune `vendor/` and unused assets, final checkpoint.
-6. Remove the `.lab`, `.dl` and `.scratch` symlinks from the project root.
-7. Ask the user before anything goes to `main`. A release also has to sync `upload/` with the whole tree.
+1. Resume the three jobs above. Then read their results, look at frames, rerun the gates, commit.
+2. Two report-only audits: edge cases in the game's flows, and phone and Safari compatibility. Promised to the user for after the 10:40 reset.
+3. Hook in the difficulty menu, coach lines and medical notes once polish has finished, because it owns `hud.js` and `index.js`, and a menu would block its test bot. Re-run `gfx/dev/coachtest.js` and `gfx/dev/menuclaims.js` after balance, because the menu's claims describe the AI. CREDITS.md says Codex entries unlock in a bout, which reads oddly in a panel where all are open; suggested wording is in `features.md`.
+4. "Stop the fight" choice at a break, using `coach.offerStop`. It needs a small addition to `sim.js`, so it waits for balance.
+5. Adversarial playtest and fix pass on the final balance.
+6. Performance and low-end preset: measure with everything on, adaptive quality, GPU memory on low, missing-extension fallbacks.
+7. Prune `vendor/` and unused assets, final checkpoint. Remove the `.lab`, `.dl` and `.scratch` symlinks from the project root.
+8. Ask the user before anything goes to `main`. A release also has to sync `upload/` with the whole tree.
 
 ## Known bugs
 - Listed for the polish pass in its script. Anything it leaves goes here.
@@ -49,4 +52,4 @@ New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `CREDITS.md`, `ASSET_LIST
 22:26 KST on 2026-11-05: all scripts parse, parity `3bea3b59`, smoke passes. 22:23 KST: two more whole matches on the real page, KO and TKO.
 
 ## Next task
-Wait for the balance and polish workflows. If the Mac slept, check `pmset -g log` and their transcripts before assuming they are alive.
+After the reset at 10:40 KST, confirm usage has really dropped, then resume the three workflows in the order balance, polish, features.
