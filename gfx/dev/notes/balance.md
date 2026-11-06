@@ -60,3 +60,29 @@ Jab-and-run 52/24/4, hook-or-cross 78/40/12 (nearly all round 1), hook with paus
 - No human has played this numbers set. Nothing here was run through the real game with rigs, only the page and JavaScriptCore.
 - Fights are long: on normal 98% of mixed matches reach round 3 and mixed is stopped in only 24.5%. Inside target, but check that a new player actually sees a stoppage often enough. Raising load a little brings stoppages back and cuts decisions quickly (head x.93 moved skilled decisions by 26 points).
 - If margins are wanted: try easy spar .8, and a little more softness on normal for learner.
+
+## Round 2: fixing what balance-verify.md found (STOPPED at the usage line 47, restart from here)
+Status: NOT finished. ai.js runs and holds both rules below. No n=200 table was run on this code, no rule-break check was read, no Chrome run, simtest.html untouched (it already calls setReach). sim.js untouched. Everything below is n=40 on seeds 81000+ only, so about +-8 points per row. No second seed range yet.
+Working folder: scratchpad `balance/fix/`. `q.py n seed --ov 'JS' --set y|b|a` prints yardsticks (mixed, learner, skilled at E/N/H) and a basket of 19 no-timing policies at N/H; `--ov 'L.LEVELS.normal.spareFrom=-4'` overrides for one run. Use own seeds 81000+, 91000+ (the checker used 50000, 60000, 70000). The checker's full tools are in `balance/verify/`: table.py + ev.py, bconf.py, short.py, pols.py, sloppy.py, grid.py, boring.py. Run them on own seeds at the end.
+Rules added, ai.js:
+- spare (inside decide): he spares a man only from ahead. lead = what he dealt this round minus what he felt this round, plus kdLead per knockdown difference, minus lostLead per round already lost. It also fades when he carries more hidden load than the man (spareHead, spareHeadSpan). soft is multiplied by spare. LEVELS spareFrom, lostLead, spareHead; TEMPER kdLead, spareSpan, spareHeadSpan; eye sample kd. Easy has spareFrom -200, spareHead 99, beat 0, so easy only moves through TEMPER.tempo.
+- readBeat: a man who keeps time gets timed. Seen throw times and kinds in S.seq (last 9). If the gaps and buttons repeat over a period of 1, 2 or 3 punches within beatTol, the next punch is predicted. With chance LEVELS.beat he holds the guard for a head shot or steps back for a body shot. Reads only the delayed view. TEMPER beatTol .14, beatLead .2.
+- TEMPER.tempo .4 to .7. Normal spareFrom -5, spareHead 3, beat .6, lostLead 2. Hard spareFrom -2, spareHead 2, beat .85, lostLead 3.
+Measured, win % normal / hard, n=40, seeds 81000+. "Before" is the verified code, same seeds. Basket rows over the line: before 34 of 38, now 10 of 38.
+| Row | Before | Now | Line |
+|---|---|---|---|
+| bodyL+bodyR 1.3 s beat | 97.5 / 92.5 | 40 / 0 | 50 / 25 |
+| jab+bodyL 1.2 s beat | 95 / 85 | 32.5 / 0 | |
+| one-two 1 s pause | 87.5 / 72.5 | 62.5 / 7.5 | OVER on normal |
+| one-two 1.5 s pause | 77.5 / 60 | 42.5 / 12.5 | |
+| hook+cross .9 s beat | 70 / 55 | 75 / 47.5 | OVER both |
+| jab cross hook, back, wait for bar 60 | 75 / 75 | 97.5 / 50 | OVER both, got worse on normal |
+| one-two, guard after a hit, step back | 92.5 / 77.5 | 87.5 / 47.5 | OVER both |
+| hook+upper in turn 1 s | 82.5 / 57.5 | 60 / 32.5 | OVER both |
+| sloppy jab+bodyL | 87.5 / 92.5 | 60 / 2.5 | OVER on normal |
+Yardsticks now, E / N / H: mixed 62.5 / 30 / 0, learner 65 / 20 / 7.5, skilled 100 / 70 / 37.5. Targets: mixed 40-65 / 10-30 / at most 10, learner 55-80 / 25-45 / 5-20, skilled at least 85 / 60-70 / 30-45. Learner on normal is under its band, mixed on normal and skilled on normal sit at the top edge, all on small samples.
+Next, in order:
+1. What is left over the line steps away between combos or uses hooks. Stepping back after a combo breaks the beat read's range and resets his soft. Lower threatAt or make being behind on the head race shorten his gaps (heat), and give him a lunge or chase against a man who steps out after a combo. Check the two jch-back60 and j2-guardback rows first: they are the worst.
+2. Learner on normal needs about 10 more points without lifting skilled (top of band): try spareFrom lower only while the man's land share is low, or more softness once ahead (TEMPER.load).
+3. Skilled decisions on normal near 25 (one miss at 24 in the check): try kdBase .16 to .13, or head load x.98. Not touched yet.
+4. Whole table at n=200 on two own seed ranges, checker's tools on own seeds, Chrome run of simtest.html, same seed 20 of 20, rule breaks.

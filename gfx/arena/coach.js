@@ -299,7 +299,7 @@ const COACHING = [
 const PRAISE = [
   ['praise-slip', (r) => r.slips >= PRAISE_SLIP],
   ['praise-clean', (r) => r.landed >= PRAISE_LAND && r.cleanTaken <= PRAISE_CLEAN],
-  ['praise-guard', (r) => r.blocks >= PRAISE_GUARD && r.blocks * 2 >= r.cleanTaken],
+  ['praise-guard', (r) => r.blocks >= PRAISE_GUARD && r.blocks >= r.cleanTaken],
   ['praise-body', (r) => r.bodyLanded >= PRAISE_BODY],
   ['praise-work', (r, ro) => r.landed >= PRAISE_LAND && r.landed > ro.landed],
 ];
@@ -317,7 +317,7 @@ export function createCoach({ HEAD } = {}) {
   let leaned = false;  // the last sign line leaned on the bar. Kept across matches too.
 
   function count(c, ev) {
-    const who = ev.who, def = ev.def || other(who), a = c[who], d = c[def];
+    const who = ev.who, def = ev.def === 'p' || ev.def === 'o' ? ev.def : other(who), a = c[who], d = c[def];
     switch (ev.type) {
       case 'throw': a.thrown++; if (ev.tgt === 'body') a.bodyThrown++; else a.headThrown++; break;
       case 'whiff': a.whiff++; break;

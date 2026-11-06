@@ -6,7 +6,7 @@ This is a fictional educational game, not a medical device, examination, diagnos
 
 ## Medical knowledge
 
-The game's Medical Codex holds 19 entries, which unlock as you meet them in a bout:
+The game's Medical Codex holds 19 entries. In the career game they unlock as you meet them in a bout. The Notes panel in Street Fight 3D shows them all:
 
 - Possible concussion
 - Serious brain injury / emergency warning signs

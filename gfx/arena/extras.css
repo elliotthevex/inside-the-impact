@@ -23,11 +23,18 @@
 .arena-x .ax-x-how{flex:1 1 280px;display:flex;flex-wrap:wrap;align-items:center;gap:.3em 1em;min-width:0}
 .arena-x .ax-x-watch{font-weight:500;font-size:calc(clamp(14.5px,1.42vw,19px)*var(--ax-ts));line-height:1.24;letter-spacing:.012em;color:#e9e4d9}
 .arena-x .ax-x-menu .ax-btn{flex:0 0 auto;min-width:104px;min-height:44px;margin-left:auto;font-size:calc(clamp(15px,1.4vw,20px)*var(--ax-ts))}
+/* A tall screen: the corners are out of the camera's frame, so behind the menu the men walk to their marks (see the hook) and stand in the middle of the screen.
+   The card stays under their feet: plates stacked and tight, Exit up beside the title. */
 @media (max-aspect-ratio:1/1){
-  .arena-x .ax-x-plates{grid-template-columns:minmax(0,1fr)}
-  .arena-x .ax-title.ax-x-menu-title{font-size:calc(clamp(28px,8.4vw,50px)*var(--ax-ts))}
-  .arena-x .ax-x-plate-name{font-size:calc(clamp(22px,6.4vw,38px)*var(--ax-ts))}
-  .arena-x .ax-x-plate-line,.arena-x .ax-x-watch{font-size:calc(clamp(15px,4vw,19px)*var(--ax-ts))}
+  .arena-x .ax-x-menu{padding-bottom:max(8px,env(safe-area-inset-bottom))}
+  .arena-x .ax-x-menu-card{padding:8px 10px 10px}
+  .arena-x .ax-title.ax-x-menu-title{display:flex;align-items:center;min-height:44px;padding-right:calc(84px + .4em);font-size:calc(clamp(26px,7.4vw,50px)*var(--ax-ts))}
+  .arena-x .ax-x-plates{grid-template-columns:minmax(0,1fr);gap:clamp(5px,1.4vw,10px);margin-top:clamp(5px,1.4vw,10px)}
+  .arena-x .ax-x-plate{gap:.12em;padding:clamp(5px,1.5vw,12px) clamp(9px,2.4vw,16px) clamp(6px,1.7vw,13px)}
+  .arena-x .ax-x-plate-name{font-size:calc(clamp(20px,5.6vw,38px)*var(--ax-ts))}
+  .arena-x .ax-x-plate-line,.arena-x .ax-x-watch{font-size:calc(clamp(14.5px,3.8vw,19px)*var(--ax-ts));line-height:1.18}
+  .arena-x .ax-x-menu-foot{margin-top:clamp(6px,1.6vw,12px)}
+  .arena-x .ax-x-menu .ax-btn{position:absolute;top:8px;right:10px;min-width:84px;margin:0}
 }
 /* the fight has not begun while the menu is up: no banner, key hint, touch controls or pause icon under it */
 .arena-x:has(.ax-x-menu.is-on) .ax-bn,.arena-x:has(.ax-x-menu.is-on) .ax-hint,.arena-x:has(.ax-x-menu.is-on) .ax-touch,.arena-x:has(.ax-x-menu.is-on) .ax-pausebtn{visibility:hidden}
@@ -48,13 +55,19 @@
 .arena-x .ax-x-coach.is-on{opacity:1;visibility:visible;transition:opacity .22s linear}
 .arena-x .ax-x-coach-who{display:block;font-weight:700;font-size:calc(clamp(10.5px,1vw,14px)*var(--ax-ts));letter-spacing:.16em;text-transform:uppercase;color:var(--ax-gold-hi)}
 .arena-x .ax-x-coach-text{display:block;margin-top:.12em;font-weight:600;font-size:calc(clamp(16px,1.75vw,24px)*var(--ax-ts));line-height:1.2;letter-spacing:.012em;color:var(--ax-bone)}
-/* a short screen: narrow enough to clear the touch buttons */
-@media (max-height:480px){
-  .arena-x .ax-x-coach{width:min(720px,46vw)}
+/* A short screen: narrower, and beside the touch buttons, never over them. The sizes are .ax-touch's sums in arena.css. It stays centred while that fits, then slides left. */
+@media (max-height:480px) and (min-aspect-ratio:1/1){
+  .arena-x .ax-x-coach{--x-w:46vw;--x-tb:clamp(52px,min(15.4vw,16.6vh),76px);--x-tg:clamp(5px,1.5vw,9px);width:var(--x-w);left:min(27vw,calc(100vw - max(10px,env(safe-area-inset-right)) - 3*var(--x-tb) - 2*var(--x-tg) - 8px - var(--x-w)));transform:none}
 }
 @media (max-aspect-ratio:1/1){
   .arena-x .ax-x-coach{top:calc(var(--ax-top) + clamp(30px,5.3vw,86px)*1.05*var(--ax-ts) + 44px + min(15vw,9vh)*1.2 + 3.4em)}
   .arena-x .ax-x-coach-text{font-size:calc(clamp(17px,4.6vw,24px)*var(--ax-ts))}
+}
+
+/* ── the HUD's pause and end panels ─────────────────────────────────── */
+/* arena.css takes their buttons, Notes among them, down to 40 px on a short screen. A thumb needs 44. */
+@media (max-height:480px){
+  .arena-x .ax-panel .ax-btn{min-height:44px}
 }
 
 /* ── notes panel ────────────────────────────────────────────────────── */

@@ -78,11 +78,12 @@ function makeCoachStrip() {
   el.className = 'ax-x-coach';
   el.setAttribute('role', 'status');
   el.innerHTML = '<span class="ax-x-coach-who">Your corner</span><span class="ax-x-coach-text"></span>';
+  el.style.visibility = 'hidden';
   (X.hud ? X.hud.el : root).appendChild(el); // inside the HUD's stacking context, as the hook does, so the pause and end panels cover it
   return el;
 }
-X.showCoach = (text) => { if (!X.strip) X.strip = makeCoachStrip(); X.strip.querySelector('.ax-x-coach-text').textContent = text; X.strip.classList.add('is-on'); };
-X.hideCoach = () => { if (X.strip) X.strip.classList.remove('is-on'); };
+X.showCoach = (text) => { if (!X.strip) X.strip = makeCoachStrip(); X.strip.querySelector('.ax-x-coach-text').textContent = text; X.strip.style.visibility = 'visible'; X.strip.classList.add('is-on'); };
+X.hideCoach = () => { if (X.strip) { X.strip.classList.remove('is-on'); X.strip.style.visibility = 'hidden'; } };
 /* One real match, the game's frame loop, a bot on the player's side. Returns what the corner said at each round end. */
 X.playCoach = async (bot = 'learner', level = 'normal', seed = 1) => {
   setReach(await (await fetch('../arena/reach.json')).json());
