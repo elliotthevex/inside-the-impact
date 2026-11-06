@@ -1,6 +1,6 @@
 # Credits
 
-**Inside the Impact** by Joohyun Lee. A boxing safety-education game for a college extracurricular.
+**Inside the Impact** by Joohyun Lee and Elliot Jeong. A boxing safety-education game for a college extracurricular.
 
 This is a fictional educational game, not a medical device, examination, diagnosis, treatment or clearance tool. It has not been reviewed by a qualified sports-medicine or concussion clinician, and no professional endorsement is claimed. Have any suspected injury assessed by qualified clinicians. Emergency in South Korea: call 119.
 
