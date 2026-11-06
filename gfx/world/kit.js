@@ -383,10 +383,12 @@ function buildRopeSide(key, mat) {
   const m = mat.clone(); m.transparent = false; m.userData.u = u; m.name = 'rope-' + key;
   m.onBeforeCompile = (s) => {
     Object.assign(s.uniforms, u); applyBake(s, { spec: true });
+    /* close to the lens a rope is a thick band, so it dissolves there whatever the side's fade is doing */
+    s.fragmentShader = s.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.a*=smoothstep(.8,2.2,length(vViewPosition));if(diffuseColor.a<.02)discard;');
     s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nuniform float uWob,uWobAt,uHalf;uniform vec3 uN,uT;').replace('#include <begin_vertex>', `#include <begin_vertex>
  {float a=dot(position,uT)/uHalf;float env=max(0.,1.-a*a);env*=exp(-(a-uWobAt)*(a-uWobAt)*1.6);transformed+=uN*uWob*env;}`);
   };
-  m.customProgramCacheKey = () => 'rope1';
+  m.customProgramCacheKey = () => 'rope2';
   const mesh = new THREE.Mesh(mergeGeometries(parts, false), m); mesh.castShadow = true; mesh.receiveShadow = true; mesh.name = 'ropes-' + key;
   mesh.userData.side = key; return mesh;
 }

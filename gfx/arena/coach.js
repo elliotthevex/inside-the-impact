@@ -10,7 +10,7 @@
    Priority: signs on the player's own man, then signs on the rival, then fight coaching, then praise, then a general word.
    This file reads the hidden head load and is the only UI-facing code that does. No line may show it as a quantity: every sentence names
    only what can be seen on the fighter (late guard and slow turning from warn; from bad the guard also stops short; sway, low hands and long blinks once
-   the rig plays them, just past bad).
+   the rig really plays them, a little past bad).
 
    Text rules, checked by the test in the notes: about fourteen words at most, no digits or number words, no diagnosis, nothing that sends a
    man with a head sign back out to fight. The medical substance comes from the game's own Codex and tips in game.js; the key after a
@@ -21,9 +21,10 @@
 /* What can honestly be said about a bar. Seen on the real HUD: 70 reads as mostly full, 62 has a big piece gone, 52 is half gone.
    `fine` lines say out loud that the bar looks fine, so they need BAR_FINE. `bar` lines only say not to go by it: that needs enough bar left to be fooled by. */
 export const BAR_FINE = 0.7, BAR_LEFT = 0.5;
-/* How far over HEAD.bad the rig really plays sway and long blinks: it ramps both over 13 to 15, long blinks start past 14 (rig.js, `bad`). Under this, the lines
+/* How far over HEAD.bad the rig really plays the signs people can see (rig.js). At 15 sway is full and long blinks are on, and the hands are half way down their
+   drop (they ramp over 12.5 to 17.5: at 14 only 3 cm). The head sheds about 1 over a break, so at 15 they still show until the next round. Under this, the lines
    name only what the sim already does from HEAD.bad: a much later guard that stops short, and slower turning. */
-export const SIGNS_SHOW = 1;
+export const SIGNS_SHOW = 2;
 
 /* What counts as a pattern in one round. Measured against the bots in the notes. */
 const MISS_MIN = 8, MISS_RATE = 0.4;    // thrown at least this many, and at least this share missed

@@ -269,7 +269,7 @@ export async function createStage(engine, loader) {
   const applyAlpha = (k, a) => { const m = ring.ropes[k].material; const hidden = a < 0.01; m.opacity = a; m.colorWrite = !hidden; m.depthWrite = a > 0.98; m.transparent = true; };
   for (const k of Object.keys(ring.ropes)) applyAlpha(k, 1);
 
-  let flick = 2; let flickOn = 1;
+  let flick = 2; let flickOn = 1; let camLast = null; const camV = [0, 0];
   const stage = {
     scene, ringHalf: RING.ringHalf, floorY: 0, canvasY: RING.canvasY, platformHalf: RING.platformHalf, corners: ring.corners, ropes: ring.ropes, lamp, RING, autoRopes: true, keyLight: lamp.light, bakeMs, bakeRays: field.rays,
     /* a, 0..1, for one side: 'px', 'nx', 'pz', 'nz'. At 0 it no longer draws but still casts its shadow. Needs autoRopes false. */
@@ -299,10 +299,12 @@ export async function createStage(engine, loader) {
       if (cam) { const e = cam.matrixWorld.elements; const fx = -e[8]; const fz = -e[10]; const l = Math.hypot(fx, fz) || 1; crowdU.uCamXZ.value.set(cam.position.x, cam.position.z, fx / l, fz / l); }
       for (let i = 0; i < 4; i++) if (postNow[i] !== postTarget[i]) postNow[i] += Math.sign(postTarget[i] - postNow[i]) * Math.min(Math.abs(postTarget[i] - postNow[i]), dt * 6);
       postA.value.set(postNow[0], postNow[1], postNow[2], postNow[3]);
+      if (cam && dt > 1e-4) { if (camLast) { const k = 1 - Math.exp(-8 * dt); camV[0] += ((cam.position.x - camLast[0]) / dt - camV[0]) * k; camV[1] += ((cam.position.z - camLast[1]) / dt - camV[1]) * k; } else camLast = [0, 0]; camLast[0] = cam.position.x; camLast[1] = cam.position.z; }
       /* ropes: a sprung wobble per side, and the fade toward each side's target */
       for (const k of Object.keys(ropeState)) {
         const s = ropeState[k]; const w = 22; s.v += (-w * w * s.x - 2.6 * s.v) * dt; s.x += s.v * dt; ring.ropes[k].material.userData.u.uWob.value = s.x;
-        if (stage.autoRopes && cam) { const n = SIDE_N[k]; const out = cam.position.x * n[0] + cam.position.z * n[1]; s.target = out > RING.ropeAt - 0.35 ? 0 : 1; }
+        /* A side is gone before the camera reaches its plane, because from outside it the side would cross the men. The fade follows the camera's position and runs ahead of it when it moves out, so it is done before the rope gets thick or comes across anyone. */
+        if (stage.autoRopes && cam) { const n = SIDE_N[k]; const out = cam.position.x * n[0] + cam.position.z * n[1], ahead = out + Math.max(0, camV[0] * n[0] + camV[1] * n[1]) * 0.18, x = Math.min(1, Math.max(0, (ahead - (RING.ropeAt - 1.15)) / 0.9)); s.target = 1 - x * x * (3 - 2 * x); }
         if (s.a !== s.target) { s.a += Math.sign(s.target - s.a) * Math.min(Math.abs(s.target - s.a), dt * 5); applyAlpha(k, s.a); }
       }
     },

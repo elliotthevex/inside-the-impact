@@ -34,10 +34,10 @@ export function setReach(t = {}) {
    arc is the cosine of the widest angle off his facing that still connects. hand is which glove the rig should send (orthodox stance).
    stun is how long the target cannot start a punch. knock is the target's shove in m/s. sweep turns the force toward his right (+) for a hook. */
 export const PUNCHES = {
-  jab:   { start: .12, active: .05, rec: .14, dmg: 0.76, head: 0.21, sta: 5,  drain: 0,  tgt: 'head', hand: 'L', arc: .80, power: .28, stun: .09, knock: .55, sweep: 0 },
-  cross: { start: .26, active: .05, rec: .19, dmg: 2.09, head: 0.81, sta: 11, drain: 0,  tgt: 'head', hand: 'R', arc: .80, power: .60, stun: .16, knock: 1.25, sweep: 0 },
-  hook:  { start: .30, active: .06, rec: .26, dmg: 2.85, head: 1.71, sta: 14, drain: 0,  tgt: 'head', hand: 'L', arc: .55, power: .85, stun: .24, knock: 1.1, sweep: 1, heavy: true, staggers: true },
-  upper: { start: .28, active: .05, rec: .28, dmg: 2.85, head: 1.19, sta: 14, drain: 0,  tgt: 'head', hand: 'R', arc: .72, power: .85, stun: .22, knock: .9, sweep: 0, heavy: true },
+  jab:   { start: .12, active: .05, rec: .14, dmg: 0.76, head: 0.204, sta: 5,  drain: 0,  tgt: 'head', hand: 'L', arc: .80, power: .28, stun: .09, knock: .55, sweep: 0 },
+  cross: { start: .26, active: .05, rec: .19, dmg: 2.09, head: 0.786, sta: 11, drain: 0,  tgt: 'head', hand: 'R', arc: .80, power: .60, stun: .16, knock: 1.25, sweep: 0 },
+  hook:  { start: .30, active: .06, rec: .26, dmg: 2.85, head: 1.659, sta: 14, drain: 0,  tgt: 'head', hand: 'L', arc: .55, power: .85, stun: .24, knock: 1.1, sweep: 1, heavy: true, staggers: true },
+  upper: { start: .28, active: .05, rec: .28, dmg: 2.85, head: 1.154, sta: 14, drain: 0,  tgt: 'head', hand: 'R', arc: .72, power: .85, stun: .22, knock: .9, sweep: 0, heavy: true },
   bodyL: { start: .20, active: .05, rec: .24, dmg: 0.86, head: 0,   sta: 10, drain: 6, tgt: 'body', hand: 'L', arc: .72, power: .50, stun: .14, knock: .85, sweep: .35 },
   bodyR: { start: .24, active: .05, rec: .28, dmg: 1.0, head: 0,   sta: 12, drain: 7, tgt: 'body', hand: 'R', arc: .72, power: .60, stun: .18, knock: 1.0, sweep: -.35 },
 };

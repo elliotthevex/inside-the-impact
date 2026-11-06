@@ -208,7 +208,7 @@ export function createHud(rootEl, opts = {}) {
 
   /* ── match bookkeeping ────────────────────────────────────────────── */
   let match = null, lastState = null, shownRound = 0, foughtRound = 0, overShown = false, overT = 0, endShown = false, endHow_ = null;
-  let bKind = null, bT = 0, bOut = 0, downWho = null, wCount = -1, wUp = -1, lastSec = -1, wRound = null, hintT = 0, hintGone = false, paused = false, wPips = '', loadTimer = 0, loadP = 0, endEv = null;
+  let wCalm = false, bKind = null, bT = 0, bOut = 0, downWho = null, wCount = -1, wUp = -1, lastSec = -1, wRound = null, hintT = 0, hintGone = false, paused = false, wPips = '', loadTimer = 0, loadP = 0, endEv = null;
   const queue = [];
   const roundLog = [];
 
@@ -290,6 +290,7 @@ export function createHud(rootEl, opts = {}) {
     hintOff(); clearCalls();
     endCombo(S.p); endCombo(S.o);
     /* The word lands with the final blow in the lower third, so the men and the slow motion stay in view. A caption stays in the letterbox. */
+    cap.dataset.k = r.how; /* a tall screen sets the caption under the word, which has a different size for each ending */
     if (r.how === 'ko') { banner('ko', 'KO', '', 2.6); cap.textContent = 'Knockout'; }
     else if (r.how === 'tko') { banner('tko', 'TKO', '', 2.6); cap.textContent = 'Three knockdowns in one round'; }
     else if (r.how === 'stopped') { banner('stopped', 'Stopped', '', 3); cap.textContent = 'The referee stops the fight'; }
@@ -439,6 +440,9 @@ export function createHud(rootEl, opts = {}) {
     queue.length = 0;
     if (m.state !== lastState) enterState(m.state, lastState, m);
     lastState = m.state;
+    /* nothing to press while the men walk to their corners and back: the buttons step aside so a man behind them can be seen */
+    const calmNow = m.state === 'break' || (m.state === 'intro' && m.stateT < 1.2);
+    if (calmNow !== wCalm) { wCalm = calmNow; hud.classList.toggle('is-calm', calmNow); }
     updateSide(S.p, m.p, d);
     updateSide(S.o, m.o, d);
     writePips(m);
@@ -510,7 +514,7 @@ export function createHud(rootEl, opts = {}) {
     lastState = null; shownRound = 0; foughtRound = 0; overShown = false; overT = 0; endShown = false; endEv = null;
     hintT = 0; hintGone = false; wPips = ''; lastSec = -1; wRound = null;
     clearBanner();
-    hud.classList.remove('is-cine', 'is-over', 'has-hint');
+    hud.classList.remove('is-cine', 'is-over', 'has-hint', 'is-calm'); wCalm = false;
     clockBox.classList.remove('is-low');
     if (hint) hint.classList.add('is-off');
     for (const id of ['p', 'o']) {

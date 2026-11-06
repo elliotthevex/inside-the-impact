@@ -251,7 +251,7 @@ for (const [tag, pool] of Object.entries(COACH_LINES)) {
 /* the two lists that speak just past HEAD.bad name no late sign, and what the rig plays still fits what the lists assume */
 for (const key of ['self-bad', 'rival-bad']) for (const t of allLines(COACH_LINES[key])) if (LATE_SIGN.test(t)) { print('late sign in the early list', t); staticFail++; }
 const rig = readFile(SITE + '../people/rig.js');
-for (const needle of ['bad = sstep(13, 15, headLoad)', 'bad > 0.5 ? 0.42']) if (!rig.includes(needle)) { print('rig.js changed, re-check SIGNS_SHOW in coach.js:', needle); staticFail++; }
+for (const needle of ['bad = sstep(13, 15, headLoad)', 'bad > 0.5 ? 0.42', 'bad = sstep(12.5, 17.5, me.head ?? 0)']) if (!rig.includes(needle)) { print('rig.js changed, re-check SIGNS_SHOW in coach.js:', needle); staticFail++; }
 print('lines', total, 'static failures', staticFail, 'said at least once in play', allSaid.size);
 const never = [...seen].filter((t) => !allSaid.has(t));
 print('never said in these matches, only in the forced states below:', never.length);

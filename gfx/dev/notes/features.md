@@ -4,7 +4,7 @@ Status: the three modules, extras.css, the dev page and their tests are done. No
 Files: `gfx/arena/menu.js`, `coach.js`, `notes.js`, `extras-ui.js` (helpers the menu and notes share, my call: one copy of ensureCss and the settings reads), `extras.css`, `gfx/dev/extras.html`, `gfx/dev/coachtest.js`, `gfx/dev/menuclaims.js`.
 
 ## The hook, every line
-`site/index.html` needs NO edit: it already opens the arena with no difficulty, and "no difficulty" is what shows the menu.
+`site/index.html` and `site/game.js` need NO edit: since the page split the launcher is in `game.js` (line 14), it still opens the arena with no difficulty, and "no difficulty" is what shows the menu.
 
 ### gfx/arena/index.js
 1. `load()`, in `list`, add: `['menu', './menu.js'], ['notes', './notes.js'], ['coach', './coach.js']`
@@ -67,7 +67,7 @@ arena.css sets `.ax-btn` to 40 px under 480 px of height. extras.css raises `.ax
 - Skipping the menu: pass `difficulty`, or set `window.__arenaOpts = { difficulty: 'normal' }` before the launch (index.js merges it in underneath). Then the flow is exactly today's.
 - `gfx/dev/arena.html` always passes difficulty (`P.get('ai') || 'normal'`): no change, no menu.
 - Tools that set `__arenaOpts` with no difficulty, then wait for a fight, will hang on the menu. All are in the scratchpad. Add `difficulty: 'normal'` to the options on these lines:
-  - `integrate/play.js:312`, `polish/play.js:324`, `polish/review1/play.js:324`, `polish/review1/play_r.js:467`: `window.__arenaOpts = { seed: 321 };`
+  - `integrate/play.js:312`, `polish/play.js:324`, `polish/review1/play.js:324`, `polish/review1/play_r.js:472`: `window.__arenaOpts = { seed: 321 };`
   - `integrate/lobbycost.js:8`: `window.__arenaOpts={quality:'high',adaptive:false,seed:5};`
   - `audit/flows/fl.py:53`, the default `opts=`, and `audit/flows/s_batch.py:69`, which passes its own.
 - No change needed, read to check: the normal paths of `integrate/play.js` and `polish/play.js` (`CFG.difficulty` defaults to normal, lines 143 and 378, 155 and 390), `audit/phone/run.js:19` (same default), `integrate/drive.py` (sets no options, runs play.js), `balance/verify/` (sim only), `gfx/dev/arena.html`, `tools/parity.js` and `tools/smoke.js`.
@@ -77,11 +77,11 @@ arena.css sets `.ax-btn` to 40 px under 480 px of height. extras.css raises `.ax
 ## What each module promises
 - menu: levels easy, normal, hard. Arrows move and wrap, Enter or Space picks (a held key does not), Esc or Exit calls onExit, Tab stays in. Stored under `iti-arena-level`, default normal, try/catch. I added an Exit button because a touch player has no Esc. On a tall screen the card is compact, under the men's feet, with Exit beside the title.
 - coach: `line(match)` -> `{ text, tag }`. Tags: self-bad, self-down-warn, self-warn, self-down, rival-bad, rival-warn, rival-down, miss, idle, guard, slip, gas, body, praise-slip, praise-clean, praise-guard, praise-body, praise-work, watch. Decisions of mine: `self-down-warn` is its own tag because offerStop is true there; `idle` added to coaching (a man who only stands or only guards); offerStop answers false outside `state === 'break'`, so false at the final bell; asking line() twice in a round gives the same line; the walk through each list carries across rematches; a new lesson comes before the same lesson again.
-- coach, what may be said about a bar and about signs: `fine` lines say the bar looks fine, only at BAR_FINE (.7) or more. `bar` lines say not to go by it, only at BAR_LEFT (.5) or more. Never two of those in a row, so at most one in a match's two breaks. Signs: just past HEAD.bad a line names only what the sim does (slow guard that stops short, slow turning). Sway, long blinks and low hands wait for HEAD.bad + SIGNS_SHOW (14), where rig.js plays them. coachtest.js fails if the two rig numbers it depends on change.
+- coach, what may be said about a bar and about signs: `fine` lines say the bar looks fine, only at BAR_FINE (.7) or more. `bar` lines say not to go by it, only at BAR_LEFT (.5) or more. Never two of those in a row, so at most one in a match's two breaks. Signs: just past HEAD.bad a line names only what the sim does (slow guard that stops short, slow turning). Sway, long blinks and low hands wait for HEAD.bad + SIGNS_SHOW (15), where rig.js plays them all. coachtest.js fails if the three rig numbers it depends on change.
 - notes: `open()`, `open('credits')`, `open('conc')` or any Codex key. CX is read with `typeof CX` from the module: on the real page that is `object` with 19 keys, `window.CX` is undefined. Text never copied.
 
 ## Things I would flag
-- For the main session to decide, not changed: with the sim as tuned today most rounds end with the player over HEAD.warn, so safety lines are what people mostly hear. Real rounds, 913 lines over bots and levels: self 59%, coaching 30%, rival 11%, praise 1 line, watch none. Five rematches, 72 players: 322 self, 107 rival, 160 coaching, 2 praise, 0 watch of 591 breaks. That is the priority asked for. If praise and coaching should be heard more, the answer is in the head numbers, not in coach.js.
+- For the main session to decide, not changed: with the sim as tuned today most rounds end with the player over HEAD.warn, so safety lines are what people mostly hear. Real rounds, 978 lines over coachtest.js's bots and levels: self 60%, coaching 30%, rival 10%, praise and watch none. The review's own loop, 1076 lines: self 71%, coaching 24%, rival 5%, praise 1 line, watch none. Five rematches, 72 players: 342 self, 94 rival, 165 coaching, 2 praise, 1 watch of 604 breaks. That is the priority asked for. If praise and coaching should be heard more, the answer is in the head numbers, not in coach.js.
 - ai.js and sim.js were changing while I tested. Re-run `gfx/dev/coachtest.js` and `gfx/dev/menuclaims.js` when balance is done, and re-read the three menu lines against the table.
 
 ## Log (restart from here)
@@ -89,7 +89,7 @@ arena.css sets `.ax-btn` to 40 px under 480 px of height. extras.css raises `.ax
 - First builder's run, superseded below. Its "65 of 87 lines said in real play" counted 12-second rounds the game does not have, so it was wrong.
 - Chrome, no GPU: menu 46 of 46, notes 79 of 79, stack 41 of 41, real page 15 of 15. Real page last run before the :has rule and the 46vw strip width. Menu and notes last run before the strip width only.
 - Menu lines: my first Hard line ("jumps on you when you tire") failed menuclaims.js, he throws less when the player is tired at every level, so it was replaced.
-- Not done: the hook is not applied and nothing has run on the real rig or GPU. The routing test uses a copy of the index.js key handler in the dev page. Real phones not run, touch is emulated. Small Text Size not checked.
+- Not done: the hook is not applied and nothing has run on the real rig or GPU. The routing test uses a copy of the index.js key handler in the dev page. Real phones not run, touch is emulated. (Small Text Size has since been checked, and the hook has run on the real rig: see the sections below.)
 - Screenshots deleted from the scratchpad to save disk. Re-run the ui_*.py scripts to get them again.
 
 ## Fix round after review 2 (restart from here)
@@ -100,7 +100,7 @@ What changed, by failure:
 2. Bar looks fine over a half-red bar (coach.js): first fixer. Those lines need .7 of the bar, the others .5. Looked at the real HUD at 52, 70: 70 still reads as mostly there, 52 does not.
 3. Safety tiers take most breaks: left, a decision for the main session, numbers under "Things I would flag". The false "65 of 87" is corrected in the log above.
 4. False sentences (coach.js): first fixer rewrote or removed the four. I tightened praise-guard (blocks at least equal to clean shots taken). coachtest.js checks about 35 sentences against its own count of the round: 0 false.
-5. Signs against the rig (coach.js): first fixer split the lists at head 14. Lines before that name only what the sim does. coachtest.js also fails if the rig's numbers change.
+5. Signs against the rig (coach.js): first fixer split the lists at head 14. Third fixer moved the split to 15, see the section below. Lines before that name only what the sim does. coachtest.js also fails if the rig's numbers change.
 6. extras.css failing (menu.js, notes.js, extras-ui.js): first fixer. Checked by me on the dev page and over the real canvas: closed means `display:none`, the open menu and notes are plain but on top and usable, Enter, Esc work. I added the same for the corner's strip in the hook, it showed raw at top left.
 7. Shift+Tab from the dialog (menu.js): first fixer. Checked at all three levels: goes to Exit, the mark stays.
 8. Strip over a touch button (extras.css): fixed. Under 480 px high it stays centred while that fits, then slides left of the buttons. Measured clear at 21 sizes, three text sizes.
@@ -113,4 +113,40 @@ Also fixed, not on the list: `onEvent` threw on a `def` that is not p or o, foun
 
 Left, not done: nothing on the list except item 3, which is not mine to decide. Not checked by anyone yet: real phones, iOS Safari or WebKit, a screen reader, a fight played by hand, quality other than low.
 
-Results of the last run: see the end of this file.
+The second fixer stopped at the usage line before writing results. See the next section.
+
+## Third fixer (restart from here)
+Scratch: `features/fix4/` for this run's output and pictures, the scripts are still in `features/fix3/`. The page split (`index.html`, `style.css`, `game.js`) landed at 20:02 while this ran, so everything below is run on the split page.
+Checked before changing: items 1, 2, 4, 6 to 12 were already on disk.
+Changed:
+- coach.js `SIGNS_SHOW` 1 to 2, so lines naming sway, long blinks or low hands need head 15, not 14. The first split left a hole the review did not name: the rig lowers the hands over 12.5 to 17.5, only 3 cm at 14 and 7.5 cm at 15, and the head sheds 1 over a break, so a man at 14 at the bell is at 13 before the next round. coachtest.js now also pins the hands' ramp.
+- Test scripts only, no game code: `rv_notes.py` "every word of CREDITS.md shows" failed on URL pieces inside links and on the dropped first heading, a test bug. `rv_menu.py` hangs on its first touch event when the page started at a desktop size, a harness bug: its first 61 checks pass, `rv_menu2.py` covers the taps and a new `rv_menu3.py` the last keyboard checks. `rv_real.py` looked for the About panel in `index.html`, it is in `game.js` now.
+- This file: the launcher is in `game.js` now, `play_r.js` line moved (472), flagged numbers refreshed. The line numbers of scratch tools can move while other agents work: search for `__arenaOpts`.
+
+Not changed, checked as fine on disk with the review's own scripts:
+1. Same few sentences: review's `session2.js`, 72 players, five rematches: 8.2 different lines in 8.4 breaks, the two most said lines 26%. Was 5.9 in 8.1 and 51%. `self-warn` over the review's 684 matches: most said line 69 of 476, was 372 of 375 for two lines. `rival-warn` most said 7 of 46, was 47 of 47.
+2. Bar lines: `fine` lines only at .7 of the bar or more, `bar` lines at .5 or more. Review's loop: 205 of 1076 lines lean on a bar, hp min 50, p10 55, median 67. Looked at the real HUD at 70 and 52 with the strip: 70 reads as mostly there, 52 as half gone.
+3. Safety tiers: a decision for the main session, numbers under "Things I would flag".
+4. False sentences: the four are gone. coachtest.js checks the round's own counts against the sentences: 0 false.
+6. extras.css blocked: real ring, real page: closed notes `display:none`, open menu plain but on top, Enter picks and it hides, fight starts, closed strip hidden, Esc closes notes. Picture looked at.
+7. Shift+Tab: `ui_fix.py` at all three levels: goes to Exit, the mark stays.
+8. Strip: `m_coach.py`, 21 sizes at three text sizes: 0 overlaps. Pictures looked at: real ring 667x375 large and 844x390, dev page 568x320 large.
+9. Notes button: real arena, touch, 844x390: Resume, Restart, Exit, Notes each 174x44. Picture looked at.
+10. Portrait: real ring. 390x844 both men whole above the card, large text down to the knee, 360x640 heads and chests. Pictures looked at. For about the first 2.3 s they are still walking in from out of frame, so that much of the time shows an empty ring.
+11. Tool list: every line read again, also the "no change needed" ones. `tools/smoke.js` and `tools/parity.js` do not open the arena.
+12. CREDITS.md line 9 reads right, 19 entries.
+
+## Results of the last run (third fixer, 20:04 to 20:30 KST)
+sim.js and ai.js were changing during this (ai.js 20:09, sim.js about 20:12). index.js and hud.js did not. Hook anchors: `hook_apply.py` "problems: none".
+- `gfx/dev/coachtest.js`, last run 20:33 on ai.js of 20:31, with the new split: RESULT pass, failures 0, adversarial 0, static 0. 106 lines, 90 said in play. Five rematches, 72 players: 8.2 different lines in 8.4 breaks, the two most said lines 26%.
+- Review's `coach_loop.js`, 684 matches, 1076 lines: failures 0, offerStop 226 true of 226 wanted.
+- `gfx/dev/menuclaims.js`: all three plate lines hold. Slips per 100 head shots 0.1, 2.2, 3.2. Punches a minute on a hurt man against not: 43 / 36, 52 / 38, 57 / 37. Easy ahead against not: 27 / 37. Whiffs per 100: 14.5, 14.2, 10.
+- Chrome, no GPU, split page: `rv_notes` 54 ok, `rv_notes2` 32 ok, `rv_real` 21 ok (`typeof CX` from a module is object, 19 of 19 entries exact, parity 3bea3b59 before and after), `rv_stack` 22 ok, `ui_fix` 87 ok, `ui_strip` 6 ok, `rv_menu` 61 ok, `rv_menu2` 4 ok and 36 layouts (9 sizes, normal and large text, touch and keys) with nothing off screen or clipped, `rv_menu3` 4 ok, `m_menu` 0 problems, `m_coach` 0 overlaps. No FAIL in any.
+- Real page, real ring, GPU, quality low, hook applied on the wire, split page: `rv_hook.py` (keyboard, 20:32) 36 ok, no failures. `rv_hook_touch.py` (touch, 20:13) no failures. `rh_all.py` (portrait, short landscape, 1280, blocked stylesheet, 20:19) no failures, no page errors. `rh_signs.py` (20:30), the split on the real rig, player's bar at 80:
+  - head 13.4: hands down 1.2 cm before the bell, "Your bar looks fine. Your guard doesn't. That's what to watch for."
+  - head 14.4: 4.7 cm, the same line. The old split at 14 would have named low hands here.
+  - head 15.4: 9.1 cm, "Your bar looks fine. Your hands are dropping. That's what to watch for."
+  - head 16.6: 13.6 cm, the same line.
+  Pictures in `features/fix4/shots/`. Sway and long blinks are motion, so a still does not show them: those rest on rig.js's numbers, pinned by coachtest.js.
+- Left, small and not on the list: if extras.css arrives more than 2.5 s late, not never, the open menu keeps the plain fallback's inline dark backdrop until it closes. The inner parts get their real look. Reasoned from the code, not run.
+- Not checked by anyone yet: real phones, iOS Safari or WebKit, a screen reader, a fight played by hand, quality other than low.
