@@ -5,7 +5,7 @@ Work is on git branch `realistic-3d` in `site/`. Do not push or merge to `main`:
 
 ## Status
 Phase: a first version is LIVE (see below). Balance and polish fixes are stopped partway; the feature modules and both audits are finished and waiting to be acted on.
-STOPPED at 22:18 KST on 2026-11-06 at 67 against the 70 line. The window resets at 01:40 KST on 2026-11-07. Weekly 47%.
+STOPPED at 22:18 KST on 2026-11-06 at 67 against the 70 line. The window has since reset. At 03:55 KST on 2026-11-07 the 5-hour limit read 2% and weekly 49%. WAITING: the Mac has been lid-shut on battery since 23:37 KST, so it only wakes for about 45 seconds at a time and agents cannot run. Everything restarts when the lid opens.
 Usage rule: stop at 70% of the 5-hour window (the user moved it from 75 to 50 to 70 on 2026-11-06, and the latest message wins); the weekly limit keeps 75%. Check with `mcp__ccd_session_mgmt__get_usage`. Agents stop at 67. Five agents at once burned 45 to 60 points an hour, three about 30, so check every 5 minutes past 55. The main session stops anything still running at 67 to 68.
 Power: on battery at about 80% at 22:18 KST. A closed lid sleeps the Mac even on the charger.
 
@@ -43,7 +43,7 @@ Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the sessio
   - Also: slow networks give up while data is arriving, iOS plays all queued sounds at the first tap, the crowd sound keeps playing behind another app with the end panel up, arena.css failing leaves an invisible fight, and the touch pause icon ignores taps while another finger is down. Whether a script-added import map works in real Safari is the top unknown.
 
 ## Remaining, in order
-1. At the reset, resume balance and polish. Read results, rerun the gates, commit.
+1. Once the Mac is awake, resume balance and polish. `origin/main` is already merged in as `c41d5a5`, keeping this branch's `gfx/arena/ai.js`. Rerun parity and smoke on the merge, which only the parse check has covered so far. Read results, rerun the gates, commit.
 2. Merge `origin/main` into `realistic-3d`: it holds the release fixes and two commits by AngelCat Tech to `README.md` and `CREDITS.md`, which must be kept. Keep `realistic-3d`'s `ai.js`, not the release's rollback.
 3. Fix the audit findings, phone blockers first.
 4. Hook in the difficulty menu, coach lines and medical notes (`gfx/dev/notes/features.md`), fix `rawFallback`, then re-run `gfx/dev/coachtest.js` and `gfx/dev/menuclaims.js` on the final balance. Coach praise almost never fires because head load puts most breaks in the safety tiers: decide whether that is right after the final balance.
@@ -74,4 +74,4 @@ New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `CREDITS.md`, `ASSET_LIST
 21:58 KST on 2026-11-06, on the live site itself, commit `6c7e471`: a bot played a whole match through real key events on medium, ending in a referee stoppage in round 3 at 40 health with the report line on the end panel. No page or console errors, load 8.5 s, 43 fps with five agents running. Parity `3bea3b59` and smoke pass on the live URL.
 
 ## Next task
-After the reset at 01:40 KST on 2026-11-07, confirm usage has really dropped, then resume balance and polish.
+When the Mac is awake with the lid open, check usage and power, run parity and smoke on `c41d5a5`, then resume balance and polish.
