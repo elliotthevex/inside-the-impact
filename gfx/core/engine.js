@@ -20,21 +20,36 @@ export const PRESETS = {
 const ORDER = ['low', 'medium', 'high'];
 
 /* Reads the GPU name and the device class. ST.lowdetail (the game's Low Detail setting) always wins. */
+/* The film path renders to R11F_G11F_B10F under MSAA. A GPU that refuses it gives a black canvas and no error, so ask first. */
+function filmTargetsWork(gl) {
+  if (!gl.getExtension('EXT_color_buffer_float')) return false;
+  const fb = gl.createFramebuffer(); const rb = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
+  gl.renderbufferStorageMultisample(gl.RENDERBUFFER, Math.min(2, gl.getParameter(gl.MAX_SAMPLES)), gl.R11F_G11F_B10F, 4, 4);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, rb);
+  const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fb); gl.deleteRenderbuffer(rb);
+  return ok;
+}
+
 export function detectQuality(opts = {}) {
   const st = opts.st ?? (typeof ST !== 'undefined' ? ST : null); // eslint-disable-line no-undef
   if (opts.lowDetail || (st && st.lowdetail)) return 'low';
-  let gpu = '';
+  let gpu = ''; let film = false;
   try {
     const c = document.createElement('canvas'); const gl = c.getContext('webgl2');
     if (!gl) return 'low';
+    film = filmTargetsWork(gl);
     const ext = gl.getExtension('WEBGL_debug_renderer_info');
     gpu = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : String(gl.getParameter(gl.RENDERER));
     const lose = gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext();
   } catch (e) { return 'low'; }
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   const mem = navigator.deviceMemory || 8;
+  if (!film) return 'low';
   if (/swiftshader|llvmpipe|software|microsoft basic/i.test(gpu)) return 'low';
-  if (coarse || mem < 4) return /Apple A1[5-9]|Apple GPU|Adreno \(TM\) [78]\d\d/i.test(gpu) ? 'medium' : 'low';
+  if (coarse || mem < 4) return 'low'; // phones and tablets: Safari reports every iPhone as "Apple GPU", so an old one cannot be told from a new one
   if (/Apple M\d|RTX|GTX|Radeon (RX|Pro)|Arc\b|Apple GPU/i.test(gpu)) return 'high';
   return 'medium';
 }

@@ -526,11 +526,15 @@ export function createHud(rootEl, opts = {}) {
   }
 
   /* ── panels ───────────────────────────────────────────────────────── */
+  let panelFocus = 0;
   function showPanel(panel, on) {
     panel.classList.toggle('is-on', on);
+    if (panel === endPanel) clearTimeout(panelFocus);
     if (on) {
       const first = panel.querySelector('.ax-btn');
-      if (first) first.focus({ preventScroll: true });
+      const focus = () => { if (first && panel.classList.contains('is-on')) first.focus({ preventScroll: true }); };
+      /* Space is the slip key. A player still fighting when the end panel opens would press Rematch and never read the report, so focus waits for the hands to stop. */
+      if (panel === endPanel) panelFocus = setTimeout(focus, 900); else focus();
     } else if (panel.contains(document.activeElement)) {
       document.activeElement.blur(); // so a later Space, the slip key, cannot press a hidden button
     }
