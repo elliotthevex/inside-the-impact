@@ -5,11 +5,12 @@
      line(match)      { text, tag }. Ask at round_end. Asking again in the same round gives the same line.
      offerStop(match) true at a break when the player's own man is at or over HEAD.bad, or was knocked down this round at or over HEAD.warn.
                       It only answers the question. Ask once, at round_end: the load sheds during the break, so a later answer can differ.
-     reset()          new match. A round_start for round 1 does the same. The rotation through the lines carries on, so a rematch sounds different.
+     reset()          new match. A round_start for round 1 does the same. The walk through the lines carries on, so a rematch sounds different.
 
    Priority: signs on the player's own man, then signs on the rival, then fight coaching, then praise, then a general word.
    This file reads the hidden head load and is the only UI-facing code that does. No line may show it as a quantity: every sentence names
-   only what can be seen on the fighter (the rig performs late guard and slow turning at warn; low hands, sway and long blinks at bad).
+   only what can be seen on the fighter (late guard and slow turning from warn; from bad the guard also stops short; sway, low hands and long blinks once
+   the rig plays them, just past bad).
 
    Text rules, checked by the test in the notes: about fourteen words at most, no digits or number words, no diagnosis, nothing that sends a
    man with a head sign back out to fight. The medical substance comes from the game's own Codex and tips in index.html; the key after a
@@ -17,8 +18,12 @@
 
    No DOM and no imports: this runs in JavaScriptCore against the real sim. */
 
-/* A bar at or over this share of full "looks fine". Lines in `bar` say so out loud, so they only come out when it is true. */
-const BAR_FINE = 0.5;
+/* What can honestly be said about a bar. Seen on the real HUD: 70 reads as mostly full, 62 has a big piece gone, 52 is half gone.
+   `fine` lines say out loud that the bar looks fine, so they need BAR_FINE. `bar` lines only say not to go by it: that needs enough bar left to be fooled by. */
+export const BAR_FINE = 0.7, BAR_LEFT = 0.5;
+/* How far over HEAD.bad the rig really plays sway and long blinks: it ramps both over 13 to 15, long blinks start past 14 (rig.js, `bad`). Under this, the lines
+   name only what the sim already does from HEAD.bad: a much later guard that stops short, and slower turning. */
+export const SIGNS_SHOW = 1;
 
 /* What counts as a pattern in one round. Measured against the bots in the notes. */
 const MISS_MIN = 8, MISS_RATE = 0.4;    // thrown at least this many, and at least this share missed
@@ -27,20 +32,42 @@ const GUARD_CLEAN = 6, GUARD_RATE = 0.15; // clean shots taken, and blocks as a 
 const SLIP_MIN = 8;                     // head shots thrown at him with no slip at all
 const GAS_STA = 0.25, GAS_THROWN = 10;  // stamina share at the bell (the HUD says Tired under the same line), for a man who has been working
 const BODY_MIN = 10, BODY_RATE = 0.05;  // thrown at least this many, under this share to the body
-const PRAISE_SLIP = 2, PRAISE_GUARD = 8, PRAISE_BODY = 4, PRAISE_LAND = 8;
+const PRAISE_SLIP = 2, PRAISE_GUARD = 8, PRAISE_BODY = 4, PRAISE_LAND = 8, PRAISE_CLEAN = 2;
 
+/* Each pool: `fine` and `bar` as above, `any` true at any bar. A list walks in order, so the first lines are the ones a new player hears: keep them the most useful.
+   A pool with its own `tag` shares that tag with another pool. */
 export const COACH_LINES = {
-  /* his own man, at or over HEAD.bad: hands low, sway, long blinks */
+  /* his own man, just at HEAD.bad: much later guard that stops short, slower turning */
   'self-bad': {
+    fine: [
+      "Your bar looks fine. Your guard doesn't. That's what to watch for.",            // CX.screen, signs override appearance
+    ],
     bar: [
-      "Your bar looks fine. Your hands are dropping. That's what to watch for.",       // CX.screen, signs override appearance
-      "Never mind the bar. You're swaying and blinking slow. A real corner stops this.", // TP.towel, CX.conc
+      "Never mind the bar. Your guard's slow and won't get all the way up.",           // CX.screen
+      "Don't go by the bar. Your guard's slow. A real corner stops this.",             // TP.towel
     ],
     any: [
-      "Your hands are sinking and you're swaying. That's what to watch for.",
+      "Your hands won't get all the way up. A real corner calls the doctor.",          // TP.bh
+      "A slow guard after head shots is a doctor's call, not yours.",                  // TP.bh, CX.screen
+      "You're slow to cover and slow to turn. I'd stop this.",                         // TP.towel
+      "Your guard's slowing down. That's what to watch for.",
+    ],
+  },
+  /* his own man, well over HEAD.bad: hands low, sway, long blinks */
+  'self-bad-full': {
+    tag: 'self-bad',
+    fine: [
+      "Your bar looks fine. Your hands are dropping. That's what to watch for.",       // CX.screen
+    ],
+    bar: [
+      "Never mind the bar. You're swaying and blinking slow. A real corner stops this.", // TP.towel, CX.conc
+      "Forget the bar. Low hands, swaying. That's what to watch for.",                 // CX.screen
+    ],
+    any: [
       'Long blinks, low hands. In a real fight, that means stop and get checked.',     // CX.conc
       "You're swaying on your feet. A real corner calls the doctor now.",              // TP.bh
       "Hands low, eyes blinking long. Feeling fine wouldn't clear that.",              // CX.sic
+      "Your hands are sinking and you're swaying. That's what to watch for.",
       "I don't like your hands or your balance. That's a doctor's call, not yours.",   // CX.screen, TP.corner
       "You're swaying and your hands won't stay up. I'd stop this now.",               // TP.towel, TP.bf
     ],
@@ -57,19 +84,24 @@ export const COACH_LINES = {
   },
   /* his own man, at or over HEAD.warn: late guard, slow turning */
   'self-warn': {
-    bar: [
+    fine: [
       "Bar looks fine, but your guard's coming up late. That's what to watch for.",    // CX.screen
+      "You're late covering up and your bar looks fine. Don't let it fool you.",       // CX.screen
+    ],
+    bar: [
       "Don't trust the bar. You're late covering up after those head shots.",          // HUD
+      "You've got bar left, but your guard's late. That's what to watch for.",         // CX.screen
+      "The bar won't show this. You're slow to turn and slow to cover.",               // HUD
     ],
     any: [
-      "Your guard's coming up late. That's what to watch for.",
-      "You're slow to turn and slow to cover. That's what to watch for.",
-      "Slow hands mean something. Signs can show up late, so don't wave it off.",      // HUD, CX.conc
-      'Your hands are slow coming back. A corner watches that, not the scorecard.',    // TP.corner, TP.bh
-      'Late guard after those shots. Feeling fine is not clearance.',                  // CX.sic
       'Head shots add up, even ones that look harmless. Your guard is slowing.',       // TP.corner, CX.cum
+      'Late guard after those shots. Feeling fine is not clearance.',                  // CX.sic
+      "Slow hands mean something. Signs can show up late, so don't wave it off.",      // HUD, CX.conc
       "You're turning late. Fighters hide this stuff, so I watch it for you.",         // TP.obs
       "Your guard's late. Rest and water won't tell us what that means.",              // CX.conc, TP.water
+      'Your hands are slow coming back. A corner watches that, not the scorecard.',    // TP.corner, TP.bh
+      "You're slow to turn and slow to cover. That's what to watch for.",
+      "Your guard's coming up late. That's what to watch for.",
     ],
   },
   /* knocked down this round, nothing else showing */
@@ -83,28 +115,50 @@ export const COACH_LINES = {
     ],
   },
 
-  /* the rival, at or over HEAD.bad */
+  /* the rival, just at HEAD.bad */
   'rival-bad': {
+    fine: [
+      "His bar looks fine. His guard doesn't. That's the danger.",                     // the game's lesson
+    ],
     bar: [
+      "Ignore his bar. His guard's slow and won't get all the way up.",
+    ],
+    any: [
+      "His hands won't get all the way up. His bar can't tell you that.",
+      'Look at his hands. A referee can stop this before the bar runs out.',           // HUD
+      "His guard's slowing down. In a real fight, someone should call the doctor.",    // TP.bh
+    ],
+  },
+  /* the rival, well over HEAD.bad */
+  'rival-bad-full': {
+    tag: 'rival-bad',
+    fine: [
       "His bar looks fine. Look how he's standing. That's the danger.",                // the game's lesson
+    ],
+    bar: [
       "Ignore his bar. Hands dropping, swaying. That's what to watch for.",
     ],
     any: [
       "See him sway? His bar can't tell you that.",
-      "His hands are dropping and he's blinking long. That's what to watch for.",
-      'Look at his hands. A referee can stop this before the bar runs out.',           // HUD
       "He's swaying. In a real fight, someone should be calling the doctor.",          // TP.bh
+      "His hands are dropping and he's blinking long. That's what to watch for.",
+      'Hands low, blinking long. A referee can stop this before the bar runs out.',    // HUD
     ],
   },
   /* the rival, at or over HEAD.warn */
   'rival-warn': {
-    bar: [
+    fine: [
       "His bar looks fine, but his guard's late. That's what to watch for.",
+      "His bar looks fine. He's still late covering up. Don't let it fool you.",
+    ],
+    bar: [
+      "Never mind his bar. He's slow to turn and slow to cover.",
+      "He's got bar left, but he's slow to cover. Watch how he stands.",               // HUD
     ],
     any: [
+      "His guard's coming up late. Referees watch for that, and so should you.",       // TP.corner
       "He's slow to turn now. Watch how he stands, not just his bar.",                 // HUD
       'His hands are coming back slow. That says more than his bar.',
-      "His guard's coming up late. Referees watch for that, and so should you.",       // TP.corner
       'See how late he covers? Slow hands and a late guard mean something.',           // HUD
     ],
   },
@@ -132,8 +186,8 @@ export const COACH_LINES = {
   idle: {
     bar: [],
     any: [
-      'You barely threw anything. Standing there only gives him free shots.',
-      "Throw something back. A guard alone won't win you the round.",
+      "You barely threw anything. He's got no reason to back off.",
+      "Throw something back. You can't win a round without punching.",
       "You've got hands. Use them, or he just keeps coming.",
     ],
   },
@@ -164,13 +218,14 @@ export const COACH_LINES = {
       'Slow it down and breathe. Tired hands get you hit.',                            // TP.bf
     ],
   },
+  /* he can have thrown a few to the body: none of these say none */
   body: {
     bar: [],
     any: [
-      'Nothing to the body that round. Mix it in.',
-      "You're only head-hunting. Go to the body, it takes his wind.",
+      'Hardly anything to the body that round. Mix it in.',
+      "You're head-hunting. Go to the body, it takes his wind.",
       'Work the body too. It slows his hands down later.',
-      'All head, no body. Body shots drain him and open him up.',
+      'Almost all head. Body shots drain him and open him up.',
     ],
   },
 
@@ -195,7 +250,7 @@ export const COACH_LINES = {
     bar: [],
     any: [
       "You barely got touched up top. That's the whole job.",
-      'You hit him more than he hit you, and cleaner. Good round.',
+      'You landed plenty and took almost nothing clean. Good round.',
       'He hardly touched your head. Keep it that way.',
     ],
   },
@@ -203,7 +258,7 @@ export const COACH_LINES = {
     bar: [],
     any: [
       'Good work to the body. That takes his wind.',
-      "Good mix, head and body. He can't guess what's next.",
+      "You kept finding his body. He'll feel that later.",
       'Nice body shots. That slows him down later.',
     ],
   },
@@ -212,7 +267,7 @@ export const COACH_LINES = {
     any: [
       'Good round. You out-landed him.',
       "You're winning the exchanges. Keep your eyes on how he stands.",                // HUD
-      "Sharp round. You're picking your shots well.",
+      'Sharp round. More of that.',
     ],
   },
 
@@ -243,7 +298,7 @@ const COACHING = [
 ];
 const PRAISE = [
   ['praise-slip', (r) => r.slips >= PRAISE_SLIP],
-  ['praise-clean', (r) => r.landed >= PRAISE_LAND && r.cleanTaken * 2.5 <= r.landed],
+  ['praise-clean', (r) => r.landed >= PRAISE_LAND && r.cleanTaken <= PRAISE_CLEAN],
   ['praise-guard', (r) => r.blocks >= PRAISE_GUARD && r.blocks * 2 >= r.cleanTaken],
   ['praise-body', (r) => r.bodyLanded >= PRAISE_BODY],
   ['praise-work', (r, ro) => r.landed >= PRAISE_LAND && r.landed > ro.landed],
@@ -252,14 +307,14 @@ const PRAISE = [
 const blankSide = () => ({ thrown: 0, headThrown: 0, bodyThrown: 0, whiff: 0, landed: 0, bodyLanded: 0, cleanLanded: 0, cleanTaken: 0, taken: 0, blocks: 0, blockedBy: 0, slips: 0, slippedBy: 0, kd: 0, staggered: 0 });
 const blankCounts = () => ({ p: blankSide(), o: blankSide() });
 const other = (who) => (who === 'p' ? 'o' : 'p');
-const barFine = (f) => f.hp / (f.maxHp || 100) >= BAR_FINE;
 
 export function createCoach({ HEAD } = {}) {
   if (!HEAD || !Number.isFinite(HEAD.warn) || !Number.isFinite(HEAD.bad)) throw new Error('createCoach needs HEAD from sim.js');
 
   let round = blankCounts(), total = blankCounts();
   let used = new Set(), usedTags = new Set(), asked = null;
-  const rotation = {}; // where each list carries on from. Kept across matches on purpose.
+  const rotation = {}; // where each list carries on from. Kept across matches on purpose, so a rematch sounds different.
+  let leaned = false;  // the last sign line leaned on the bar. Kept across matches too.
 
   function count(c, ev) {
     const who = ev.who, def = ev.def || other(who), a = c[who], d = c[def];
@@ -299,7 +354,7 @@ export function createCoach({ HEAD } = {}) {
 
   /* The next unused line of one list, or null when every line of it has been said this match. */
   function nextOf(list, key) {
-    const n = list.length;
+    const n = list ? list.length : 0;
     if (!n) return null;
     const from = rotation[key] || 0;
     for (let i = 0; i < n; i++) {
@@ -308,29 +363,40 @@ export function createCoach({ HEAD } = {}) {
     }
     return null;
   }
-  function say(tag, fine) {
-    const pool = COACH_LINES[tag];
-    const text = (fine ? nextOf(pool.bar, tag + '/bar') : null) || nextOf(pool.any, tag);
-    if (text) { used.add(text); usedTags.add(tag); return { text, tag }; }
-    return null;
+  /* barOf is the man whose bar this pool may talk about. A line that leans on the bar is the lesson, but said at every break it drowns out what the other lines
+     teach, so it never comes twice in a row: with two breaks a match, that is at most one a match. */
+  function say(key, barOf) {
+    const pool = COACH_LINES[key];
+    let text = null;
+    if (barOf) {
+      const share = barOf.hp / (barOf.maxHp || 100);
+      if (!leaned && share >= BAR_FINE) text = nextOf(pool.fine, key + '/fine');
+      if (!leaned && !text && share >= BAR_LEFT) text = nextOf(pool.bar, key + '/bar');
+      leaned = !!text;
+    }
+    text = text || nextOf(pool.any, key);
+    if (!text) return null;
+    const tag = pool.tag || key;
+    used.add(text); usedTags.add(tag);
+    return { text, tag };
   }
   /* A sign has to be spoken even in a match long enough to use up its list: say the oldest line again rather than drop to something lighter. */
-  function sayAlways(tag, fine) {
-    const said = say(tag, fine);
+  function sayAlways(key, barOf) {
+    const said = say(key, barOf);
     if (said) return said;
-    const list = COACH_LINES[tag].any, at = rotation[tag] || 0;
-    rotation[tag] = (at + 1) % list.length;
-    return { text: list[at], tag };
+    const pool = COACH_LINES[key], list = pool.any, at = rotation[key] || 0;
+    rotation[key] = (at + 1) % list.length;
+    return { text: list[at], tag: pool.tag || key };
   }
 
   /* What is showing on the men, or null. Their state decides this and nothing else. */
   function sign(p, o, kdP, kdO) {
-    if (p.head >= HEAD.bad) return ['self-bad', barFine(p)];
-    if (p.head >= HEAD.warn) return kdP ? ['self-down-warn', false] : ['self-warn', barFine(p)];
-    if (kdP) return ['self-down', false];
-    if (o.head >= HEAD.bad) return ['rival-bad', barFine(o)];
-    if (o.head >= HEAD.warn) return ['rival-warn', barFine(o)];
-    if (kdO) return ['rival-down', false];
+    if (p.head >= HEAD.bad) return [p.head >= HEAD.bad + SIGNS_SHOW ? 'self-bad-full' : 'self-bad', p];
+    if (p.head >= HEAD.warn) return kdP ? ['self-down-warn'] : ['self-warn', p];
+    if (kdP) return ['self-down'];
+    if (o.head >= HEAD.bad) return [o.head >= HEAD.bad + SIGNS_SHOW ? 'rival-bad-full' : 'rival-bad', o];
+    if (o.head >= HEAD.warn) return ['rival-warn', o];
+    if (kdO) return ['rival-down'];
     return null;
   }
 

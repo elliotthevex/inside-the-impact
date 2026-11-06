@@ -297,7 +297,7 @@ export function createHud(rootEl, opts = {}) {
     say(r.how === 'decision' ? 'Decision' : r.how === 'stopped' ? 'The referee stops the fight' : r.how === 'tko' ? 'Technical knockout' : 'Knockout');
     if (r.how !== 'decision') {
       hud.classList.add('is-cine');
-      flash(white, r.how === 'stopped' ? .2 : .75, r.how === 'stopped' ? 240 : 360);
+      flash(white, r.how === 'stopped' ? .2 : .5, r.how === 'stopped' ? 240 : 300);
     }
   }
   function flash(el, a, ms) { pop(el, [{ opacity: a }, { opacity: 0 }], ms); }

@@ -10,7 +10,7 @@
 
    Keys are heard on the window in the capture phase while the panel is open. index.js also listens there and got in first, so its handler
    has to step aside while the panel is open: see the hook in gfx/dev/notes/features.md. */
-import { applySettings, ensureCss, esc, scopeOf } from './extras-ui.js';
+import { applySettings, ensureCss, esc, rawFallback, scopeOf } from './extras-ui.js';
 
 const CREDITS_URL = new URL('../../CREDITS.md', import.meta.url);
 
@@ -113,7 +113,7 @@ export function createNotesPanel(rootEl, opts = {}) {
   el.setAttribute('aria-labelledby', 'ax-x-notes-title');
   el.setAttribute('aria-describedby', 'ax-x-notes-legal');
   el.tabIndex = -1;
-  el.style.display = 'none';
+  el.style.display = 'none'; // closed. Held here, not left to the stylesheet, so a closed panel stays hidden even if extras.css never loads
   el.innerHTML = `
 <div class="ax-x-notes-box">
   <div class="ax-x-notes-head">
@@ -194,10 +194,12 @@ export function createNotesPanel(rootEl, opts = {}) {
   };
   el.addEventListener('click', onClick);
 
-  const ready = ensureCss().then(() => { cssIn = true; if (!destroyed) { el.style.display = ''; if (isOpen) enter(); } });
+  const ready = ensureCss().then(() => { cssIn = true; if (!destroyed && isOpen) enter(); });
 
   function enter() {
+    el.style.display = '';
     el.classList.add('is-on');
+    rawFallback(el);
     renderCodex();
     loadCredits();
     scroller.scrollTop = 0;
@@ -224,6 +226,7 @@ export function createNotesPanel(rootEl, opts = {}) {
     window.removeEventListener('keyup', onKeyUp, true);
     document.removeEventListener('focusin', onFocusIn);
     el.classList.remove('is-on');
+    el.style.display = 'none';
     const to = back; back = null;
     if (to && to.isConnected) to.focus({ preventScroll: true });
     else if (el.contains(document.activeElement)) document.activeElement.blur();

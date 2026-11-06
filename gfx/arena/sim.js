@@ -34,12 +34,12 @@ export function setReach(t = {}) {
    arc is the cosine of the widest angle off his facing that still connects. hand is which glove the rig should send (orthodox stance).
    stun is how long the target cannot start a punch. knock is the target's shove in m/s. sweep turns the force toward his right (+) for a hook. */
 export const PUNCHES = {
-  jab:   { start: .12, active: .05, rec: .14, dmg: .65, head: .19, sta: 5,  drain: 0,  tgt: 'head', hand: 'L', arc: .80, power: .28, stun: .09, knock: .55, sweep: 0 },
-  cross: { start: .26, active: .05, rec: .19, dmg: 1.9, head: .72, sta: 11, drain: 0,  tgt: 'head', hand: 'R', arc: .80, power: .60, stun: .16, knock: 1.25, sweep: 0 },
-  hook:  { start: .30, active: .06, rec: .26, dmg: 2.6, head: 1.55, sta: 14, drain: 0,  tgt: 'head', hand: 'L', arc: .55, power: .85, stun: .24, knock: 1.1, sweep: 1, heavy: true, staggers: true },
-  upper: { start: .28, active: .05, rec: .28, dmg: 2.6, head: 1.06, sta: 14, drain: 0,  tgt: 'head', hand: 'R', arc: .72, power: .85, stun: .22, knock: .9, sweep: 0, heavy: true },
-  bodyL: { start: .20, active: .05, rec: .24, dmg: .85, head: 0,   sta: 10, drain: 6, tgt: 'body', hand: 'L', arc: .72, power: .50, stun: .14, knock: .85, sweep: .35 },
-  bodyR: { start: .24, active: .05, rec: .28, dmg: 1.02, head: 0,   sta: 12, drain: 7, tgt: 'body', hand: 'R', arc: .72, power: .60, stun: .18, knock: 1.0, sweep: -.35 },
+  jab:   { start: .12, active: .05, rec: .14, dmg: 0.76, head: 0.21, sta: 5,  drain: 0,  tgt: 'head', hand: 'L', arc: .80, power: .28, stun: .09, knock: .55, sweep: 0 },
+  cross: { start: .26, active: .05, rec: .19, dmg: 2.09, head: 0.81, sta: 11, drain: 0,  tgt: 'head', hand: 'R', arc: .80, power: .60, stun: .16, knock: 1.25, sweep: 0 },
+  hook:  { start: .30, active: .06, rec: .26, dmg: 2.85, head: 1.71, sta: 14, drain: 0,  tgt: 'head', hand: 'L', arc: .55, power: .85, stun: .24, knock: 1.1, sweep: 1, heavy: true, staggers: true },
+  upper: { start: .28, active: .05, rec: .28, dmg: 2.85, head: 1.19, sta: 14, drain: 0,  tgt: 'head', hand: 'R', arc: .72, power: .85, stun: .22, knock: .9, sweep: 0, heavy: true },
+  bodyL: { start: .20, active: .05, rec: .24, dmg: 0.86, head: 0,   sta: 10, drain: 6, tgt: 'body', hand: 'L', arc: .72, power: .50, stun: .14, knock: .85, sweep: .35 },
+  bodyR: { start: .24, active: .05, rec: .28, dmg: 1.0, head: 0,   sta: 12, drain: 7, tgt: 'body', hand: 'R', arc: .72, power: .60, stun: .18, knock: 1.0, sweep: -.35 },
 };
 const CHAIN_FROM_JAB = { cross: 1, hook: 1, bodyL: 1, bodyR: 1 };
 
@@ -47,15 +47,15 @@ const CHAIN_FROM_JAB = { cross: 1, hook: 1, bodyL: 1, bodyR: 1 };
 export const HEAD = { warn: 7, bad: 13, stop: 20, shed: .05 };
 
 export const TUNE = {
-  speed: 2.4, accel: 15, backSpeed: .78, backAfter: .4, backLock: .25, sideSpeed: 1, guardMove: .55, moveStart: 1.1, moveActive: .6, moveRec: .4,
+  speed: 2.4, accel: 15, backSpeed: .78, sideSpeed: 1, guardMove: .55, moveStart: 1.1, moveActive: .6, moveRec: .4,
   turn: 9, buffer: .15,
-  guardUp: 1 / .09, guardDown: 1 / .14, blockAt: .5, blockCover: 1, guardHead: .8, guardLoad: .85, guardBody: .1,
+  guardUp: 1 / .09, guardDown: 1 / .14, blockAt: .5, blockCover: 1, guardHead: .8, guardLoad: .9, guardBody: .1,
   guardDrain: 6, regen: 16, regenLock: .4, lowSta: 25, tiredSlow: 1.2, tiredDmg: .65, tiredLoad: .7,
   counter: 1.25,
   armor: .55, heavyThrough: .5, blockedRec: .12, stunImm: .4, stunImmScale: .4, stagger: .5, staggerCd: 2.5,
   slip: { dur: .32, sta: 12, from: 0, to: .27, cd: .35, speed: 1.1, push: .2, whiffRec: .06 },
   knockDecay: 7, rebound: .55, ropeSpring: 8,
-  hurtHp: 25, kdBase: .18, kdRamp: .04, kdAgain: .15,
+  hurtHp: 25, kdBase: .16, kdRamp: .04, kdAgain: .15,
   intro: 2.4, walk: 1.6, breakWalk: 1.6, getUpTime: 1.7, minDown: 1.1,
   count: 1, upHp: [45, 30, 18], breakHp: 26, breakHead: 1,
   mashBase: 5, mashPerKd: 5, mashPerHead: .45, mashKoBonus: 3, mashDecay: 1, mashDecayHead: .08,
@@ -82,7 +82,7 @@ function makeFighter(id, name, corner, x, z) {
     /* extra, safe to read from the view */
     stagger: 0, slipT: 0, slipDir: [0, 0], guarding: false, onRope: false, kd: 0, kdTotal: 0, wins: 0, dealt: 0, dealtTotal: 0, thrown: 0,
     /* private */
-    slipCd: 0, armor: 0, stunImm: 0, staggerCd: 0, staLock: 0, _stepAcc: 0, _ropeCd: 0, _backLock: 0,
+    slipCd: 0, armor: 0, stunImm: 0, staggerCd: 0, staLock: 0, _stepAcc: 0, _ropeCd: 0,
     _i: { mx: 0, mz: 0, guard: false, punch: null, punchAge: 0, slipReq: false, slipAge: 0, slipHeld: false, upHeld: false, ups: 0 },
   };
 }
@@ -336,7 +336,7 @@ class Match {
       if (f.head >= HEAD.bad) sp *= .9;
       let vx = I.mx * sp, vz = I.mz * sp;
       const fx = Math.sin(f.yaw), fz = Math.cos(f.yaw), fwd = vx * fx + vz * fz;
-      if (fwd < 0) { const cut = fwd * (1 - TUNE.backSpeed * (f._backLock > 0 ? TUNE.backAfter : 1)); vx -= fx * cut; vz -= fz * cut; }
+      if (fwd < 0) { const cut = fwd * (1 - TUNE.backSpeed); vx -= fx * cut; vz -= fz * cut; }
       if (TUNE.sideSpeed < 1) { const rx = fz, rz = -fx, lat = vx * rx + vz * rz, cut = lat * (1 - TUNE.sideSpeed); vx -= rx * cut; vz -= rz * cut; }
       this._move(f, vx, vz);
     }
@@ -501,7 +501,6 @@ class Match {
     if (f.staggerCd > 0) f.staggerCd -= STEP;
     if (f.staLock > 0) f.staLock -= STEP;
     if (f._ropeCd > 0) f._ropeCd -= STEP;
-    if (f.punch) f._backLock = T.backLock; else if (f._backLock > 0) f._backLock -= STEP; /* his weight is still forward: a man cannot throw and spring straight back */
     if (f.slip > 0) { f.slip = Math.max(0, f.slip - STEP); f.slipT += STEP; }
     if (this.state !== 'over') {
       if (f.head > 0) f.head = Math.max(0, f.head - HEAD.shed * STEP);

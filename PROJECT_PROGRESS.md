@@ -4,11 +4,11 @@ Checkpoint file. Read this first when resuming. Design and interfaces are in `gf
 Work is on git branch `realistic-3d` in `site/`. Do not push or merge to `main`: a push to `main` deploys live, and the user decides that.
 
 ## Status
-Phase: balance and polish, both interrupted for the usage line, with the feature modules built but not hooked in.
-STOPPED at 10:26 KST on 2026-11-06 because the 5-hour figure read 49 against the 50 line. It rose from 40 to 49 in ten minutes. The window resets at 10:40 KST.
-Usage rule: stop at 50% of the 5-hour window (the user lowered it from 75% on 2026-11-06); the weekly limit keeps 75%. Check with `mcp__ccd_session_mgmt__get_usage`. Agents stop at 47. Weekly 21% at the stop.
-Power: on battery at 47% at 10:26 KST, about two hours left, and the user has been asked three times to plug in. A closed lid sleeps the Mac even on the charger.
-Another session, "AAA fighting game screenshot", runs in this folder and shares the usage limit. Its changes, if any, are not coordinated with this work.
+Phase: balance and polish tuned but not yet independently checked; feature modules built, reviewed once, not hooked in.
+STOPPED at 12:00 KST on 2026-11-06 because the 5-hour figure read 46 and was rising 1 point a minute against the 50 line. The window resets at 15:40 KST. Weekly 27%.
+Usage rule: stop at 50% of the 5-hour window (the user lowered it from 75% on 2026-11-06); the weekly limit keeps 75%. Check with `mcp__ccd_session_mgmt__get_usage`. Agents stop at 47. Five agents at once burned about 60 points an hour, so run at most three, and watch every 5 minutes past 35. The main session stops anything still running at 46.
+Power: on battery at 15% at 12:00 KST, about 40 minutes left. The user has been asked several times to plug in. Mobile push is disabled, so the only warnings are messages here.
+Another session, "AAA fighting game screenshot", ran in this folder and shares the usage limit. A one-line README.md play-link change, already staged, went into commit 063f451; it looks correct and was kept.
 
 ## Scope note
 The user's latest brief is Street Fight 3D, a complete 1v1 arena game. It takes priority over the earlier whole-game overhaul brief, which is parked, not cancelled, and saved at `gfx/dev/overhaul-brief.md`.
@@ -19,19 +19,20 @@ The user's latest brief is Street Fight 3D, a complete 1v1 arena game. It takes 
 - Independently rerun at 22:26 KST on 2026-11-05: `jscheck.py` parses, parity `3bea3b59`, smoke passes.
 - `CREDITS.md`, `ASSET_LIST.md`.
 
-## In progress, all stopped at 10:26 KST
-Resume each after the reset with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the session's `workflows/scripts` folder and were patched at the stop: agents now stop at 47, and they are told to go easy on images.
-- Balance: `arena-balance-wf_0ec0b835-a23.js`, run `wf_0ec0b835-a23`. Still in its tuning step. `sim.js` and `ai.js` hold experimental numbers from a kiting experiment, so read "Mid-experiment warning" in `gfx/dev/notes/balance.md` first. Known exploit being fixed: jab then back off wins 92-100% on every level. Harness now plays at the game's real 60 fps.
-- Polish: `arena-polish-wf_14dc4bd3-946.js`, run `wf_14dc4bd3-946`. First pass nearly done, per `gfx/dev/notes/polish.md`: Post patches folded, character light, focus, banners as lower thirds, calmer camera, crowd faces, get-up timing. Independent review not started.
-- Feature modules: `arena-feature-modules-wf_92506359-3fd.js`, run `wf_92506359-3fd`. Built and passing their own tests. The review stopped for usage before it ran anything, so there is no verdict. Hook plan: 16 edits in `gfx/dev/notes/features.md`.
+## In progress, all stopped at 12:00 KST
+Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the session's `workflows/scripts` folder. Finished agents replay from cache.
+- Balance: `arena-balance-wf_0ec0b835-a23.js`, run `wf_0ec0b835-a23`. Tuning finished: 0 of 78 missed at n=200 on seeds 1000+, 3 of 77 on seeds 5000+ with thin margins. Independent verify has not run. Results are in `gfx/dev/notes/balance.md`.
+- Polish: `arena-polish-wf_14dc4bd3-946.js`, run `wf_14dc4bd3-946`. First pass finished, gates pass. Worst/best face light went from .17 to .60 and .07 to .68. Camera orbit 34.7 deg/s; its own calculation says no camera reaches the 20 target with this AI. Independent review has not run.
+- Feature modules: `arena-feature-modules-wf_92506359-3fd.js`, run `wf_92506359-3fd`. Review finished with visible failures: the coach repeats the same few lines and says "bar looks fine" over a half-red bar. The fix agent was stopped partway; findings are in `gfx/dev/notes/features-review.md`.
+- Audits: `arena-audits-wf_188f91df-717.js`, run `wf_188f91df-717`. Stopped partway, report only. Partial findings in `gfx/dev/notes/audit-flows.md` and `audit-phone.md`.
 
 ## Remaining, in order
-1. Resume the three jobs above. Then read their results, look at frames, rerun the gates, commit.
-2. Two report-only audits: edge cases in the game's flows, and phone and Safari compatibility. Promised to the user for after the 10:40 reset.
-3. Hook in the difficulty menu, coach lines and medical notes once polish has finished, because it owns `hud.js` and `index.js`, and a menu would block its test bot. Re-run `gfx/dev/coachtest.js` and `gfx/dev/menuclaims.js` after balance, because the menu's claims describe the AI. CREDITS.md says Codex entries unlock in a bout, which reads oddly in a panel where all are open; suggested wording is in `features.md`.
-4. "Stop the fight" choice at a break, using `coach.offerStop`. It needs a small addition to `sim.js`, so it waits for balance.
-5. Adversarial playtest and fix pass on the final balance.
-6. Performance and low-end preset: measure with everything on, adaptive quality, GPU memory on low, missing-extension fallbacks.
+1. Resume balance, polish and features at the reset, three at most. Read results, rerun the gates, commit. Then the audits.
+2. Hook in the difficulty menu, coach lines and medical notes (16 edits listed in `gfx/dev/notes/features.md`), then re-run `gfx/dev/coachtest.js` and `gfx/dev/menuclaims.js` on the final balance.
+3. "Stop the fight" choice at a break, using `coach.offerStop`. Needs a small addition to `sim.js`.
+4. Fix what the audits found.
+5. Adversarial playtest and fix pass on the final balance. Note from balance: 98% of normal mixed matches reach round 3 and only 24.5% end stopped, so check that a new player actually sees a stoppage. Note from polish: there is no referee figure, so the stoppage is told only by the graphic and caption.
+6. Performance and low-end preset: measure with everything on and with nothing else running, adaptive quality, GPU memory on low, missing-extension fallbacks.
 7. Prune `vendor/` and unused assets, final checkpoint. Remove the `.lab`, `.dl` and `.scratch` symlinks from the project root.
 8. Ask the user before anything goes to `main`. A release also has to sync `upload/` with the whole tree.
 
@@ -49,7 +50,7 @@ Resume each after the reset with `Workflow({scriptPath, resumeFromRunId})`. Scri
 New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `CREDITS.md`, `ASSET_LIST.md`, `PROJECT_PROGRESS.md`. `index.html` has only the head loader with its injected import map, the launch line and the `hotkeysBlocked` selector.
 
 ## Last successful test
-22:26 KST on 2026-11-05: all scripts parse, parity `3bea3b59`, smoke passes. 22:23 KST: two more whole matches on the real page, KO and TKO.
+About 11:50 KST on 2026-11-06, by the polish agent on its final code: three whole matches on the real page through real key events (high and low), parse check, parity `3bea3b59`, smoke test 20 run and passing. Parse check rerun at the stop. `sim.js` and `ai.js` changed shortly before that run.
 
 ## Next task
-After the reset at 10:40 KST, confirm usage has really dropped, then resume the three workflows in the order balance, polish, features.
+After the reset at 15:40 KST, confirm usage has really dropped, then resume balance, polish and features.

@@ -25,6 +25,7 @@ const MAX_TAN = Math.tan(THREE.MathUtils.degToRad(62 / 2));
 const TALL_MAX_TAN = 0.92;       // on a tall screen the lens is already at MAX_TAN, so against a wall it may open further than that, or a man leaves the frame
 const MIN_TAN_H = 0.36;         // a narrow screen widens the lens until this much sideways view is left
 const BODY_TOP = 1.97;          // metres above the canvas that must stay in frame: head plus raised gloves
+const WIN_TOP = 2.5;            // the same at the end, when the winner raises a hand under the HUD
 const LOOK_H = 0.88;            // look-at height above the canvas
 const TOP_ROOM = 0.70;          // part of the upper half of the screen a head may use: the HUD owns the rest
 const BOTTOM_ROOM = 0.92;
@@ -35,8 +36,9 @@ const MAX_RATE = 3.4;           // rad/s, the orbit never goes faster than this
 const APERTURE = 0.013;         // film aperture in a fight: the room behind the ring softens, the men and the canvas around them do not
 const SHARP = 1.6;              // metres each side of the focal plane that stay fully sharp
 /* deadOut, deadIn: radians off the aim where turning starts and stops. gain: how hard an error past the edge is followed. calm: rate limit outside the fight.
+   softRate: rate limit in the fight while the line is under softAt off the aim, so a quick swing of the line does not whip the room past; further off it may use the full MAX_RATE.
    bias: radians of the aim behind the player's shoulder. slack: metres the frame centre may lag the men. distSlack: metres of extra distance kept before coming in. */
-const ORBIT = { deadOut: 0.66, deadIn: 0.64, gain: 20, smooth: 14, calm: 0.9, heldGain: 1.2, bias: 0.08, slack: 0.14, distSlack: 0.3 };
+const ORBIT = { deadOut: 0.66, deadIn: 0.64, softRate: 2.2, softAt: 0.8, gain: 20, smooth: 14, calm: 0.9, heldGain: 1.2, bias: 0.08, slack: 0.14, distSlack: 0.3 };
 
 export function createFightCam(camera, opts = {}) {
   const reduced = !!opts.reducedMotion, canvasY = opts.canvasY ?? 0.75, stage = opts.stage || null;
@@ -51,9 +53,9 @@ export function createFightCam(camera, opts = {}) {
   const basisOut = { rx: 1, rz: 0, fx: 0, fz: -1 };
 
   /* Distance from the target that frames one point: a is its offset along the screen's right, b its offset into the screen. */
-  function needFor(a, b, tanH, tanV, lookH) {
+  function needFor(a, b, tanH, tanV, lookH, bodyTop = BODY_TOP) {
     const side = (Math.abs(a) + SIDE_MARGIN) / tanH;
-    const top = (BODY_TOP - lookH) / (TOP_ROOM * tanV);
+    const top = (bodyTop - lookH) / (TOP_ROOM * tanV);
     const bottom = lookH / (BOTTOM_ROOM * tanV);
     return Math.max(side, top, bottom) - b;
   }
@@ -90,7 +92,7 @@ export function createFightCam(camera, opts = {}) {
     const ae = Math.abs(err);
     if (held) S.follow = ae > 0.02; else if (S.follow) { if (ae < O.deadIn) S.follow = false; } else if (ae > O.deadOut) S.follow = true;
     /* past the edge of the dead zone it slides along with the line and stops as soon as the line comes back, so swings inside the zone never move it */
-    const past = err > O.deadIn ? err - O.deadIn : err < -O.deadIn ? err + O.deadIn : 0, limit = calm ? O.calm : MAX_RATE;
+    const past = err > O.deadIn ? err - O.deadIn : err < -O.deadIn ? err + O.deadIn : 0, limit = calm ? O.calm : O.softRate + (MAX_RATE - O.softRate) * sstep(O.softAt, O.softAt + 0.35, ae);
     const wantOm = !S.follow ? 0 : held ? clamp(O.heldGain * err, -limit, limit) : clamp(O.gain * past, -limit, limit);
     S.om += (wantOm - S.om) * (1 - Math.exp(-O.smooth * dt));
     S.th = wrap(S.th + S.om * dt);
@@ -111,7 +113,7 @@ export function createFightCam(camera, opts = {}) {
     let need = MIN_DIST;
     for (const [f, rig] of [[p, rigP], [o, rigO]]) {
       const ax = f.x - S.x, az = f.z - S.z;
-      need = Math.max(need, needFor(ax * rx + az * rz, ax * fx + az * fz, tanH, tanV, S.look));
+      need = Math.max(need, needFor(ax * rx + az * rz, ax * fx + az * fz, tanH, tanV, S.look, over ? WIN_TOP : BODY_TOP));
       if (f.down) { const h = rig.headWorld(), hx = h.x - S.x, hz = h.z - S.z; need = Math.max(need, needFor(hx * rx + hz * rz, hx * fx + hz * fz, tanH, tanV, S.look)); }
     }
     /* the walk to the marks and back to the corners is seen from further out and higher */

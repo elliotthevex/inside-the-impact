@@ -80,3 +80,7 @@ The Tab handling in index.js and the arrow keys in hud.js collect `.ax-btn` by q
 - Menu lines: my first Hard line ("jumps on you when you tire") failed menuclaims.js, he throws less when the player is tired at every level, so it was replaced.
 - Not done: the hook is not applied and nothing has run on the real rig or GPU. The routing test uses a copy of the index.js key handler in the dev page. Real phones not run, touch is emulated. Small Text Size not checked.
 - Screenshots deleted from the scratchpad to save disk. Re-run the ui_*.py scripts to get them again.
+
+## Fix round after review 2 (in progress, restart from here)
+Working from the failure list in `features-review.md`, Review 2. Scratch scripts in the scratchpad `features/fix2/`. Status lines below are updated as each item lands.
+- Started 11:50 KST, Mac on battery (20%). Nothing changed yet.

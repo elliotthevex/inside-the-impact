@@ -1,6 +1,6 @@
 # Sim and AI notes
 
-Status: stopped at the 72% usage line, not finished. Code runs and is in a working state. Files: `gfx/arena/sim.js`, `gfx/arena/ai.js`, `gfx/dev/simtest.html`.
+Status: balance pass done on top of this, see `gfx/dev/notes/balance.md` for the current table and numbers. Tables in this file below the how-to are older and kept as history: they were measured before the harness used the rig's reach and the game's 60 fps loop.
 
 ## How to use
 ```js
@@ -14,7 +14,7 @@ for (const e of m.events) dispatch(e); m.events.length = 0;
 ```
 - Reach: `setReach({ jab, cross, hook, upper, bodyL, bodyR, body, minSep })` at load, with the rig's measured values. Defaults 1.12, 1.15, .98, .88, 1.02, 1.02, minSep .72.
 - `punch` in Input is one shot: pass it only on the frame of the press. `slip` and `getUp` count rising edges. Getting up is mashing `getUp`, so the view maps punch key presses to `getUp` while `me.down`. `down.up` is 0..1 progress.
-- Bots for the dev page: `createBot(name, { seed, kind })`, names idle, spam, mixed, skilled, turtle. Same `decide` signature as the AI.
+- Bots for the dev page: `createBot(name, { seed, kind })`, names idle, spam, mixed, skilled, turtle, learner, runner, guardjab. Same `decide` signature as the AI.
 
 ## Contract details the module map left open
 - `slip` is seconds left (number, 0 when not slipping); extras `slipT` elapsed, `slipDir` [x,z]. `stun` is seconds left. Extra `stagger` is seconds left.
@@ -61,7 +61,7 @@ Next, in this order:
 4. The skilled bot's slip evades only about .5% of the AI's punches. It does slip, on a read of the step-in, but it rarely matters. The AI slipping the player's punches is about .1% against skilled and 2% against hook spam. Slip is real in the rules and thin in play.
 5. Whiff rates near 50% for skilled and AI are high.
 Not measured at all: whether the style shift by round reads as a style (no punch mix per round in the report), and any human playing it. Blocks by punch kind were measured on the older code only: skilled blocked AI jab 9.8%, cross 11.5%, hook 4.3%, upper 2.6%; AI blocked skilled jab 18.4%, cross 13.5%, hook 8%. Guard does not stop body shots, by design (x.9), they can only be stepped away from. On normal the 180 ms delay means jab and cross can only be blocked by a guard already up, never by reacting.
-- Real reach values from the rig have not been applied. Numbers will shift when `setReach` is called with them: re-run the table.
+- The harness now calls `setReach` with `arena/reach.json` before any match and plays the game's 60 fps frame loop on the real ring (half 2.9, corners 2.5).
 - `TUNE` values and punch numbers are the live ones in `sim.js`.
 
 ## Fast tuning without Chrome

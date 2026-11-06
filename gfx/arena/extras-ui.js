@@ -34,6 +34,13 @@ export function applySettings(scope) {
   scope.classList.toggle('ax-rm', reducedMotion());
 }
 
+/* extras.css did not load, so this open dialog has no layout: without this it would sit in the flow, behind the canvas, with the game waiting on it.
+   Plain, but on top and usable. Does nothing when the stylesheet is in. */
+export function rawFallback(el) {
+  if (getComputedStyle(el).position === 'absolute') return;
+  Object.assign(el.style, { position: 'absolute', inset: '0', zIndex: '9', overflow: 'auto', touchAction: 'pan-y', padding: '12px', background: 'rgba(3,4,6,.9)', color: '#f3efe6', font: '16px/1.35 system-ui,sans-serif' });
+}
+
 /* Loaded the way hud.js loads arena.css: find the link or add it, then wait for it, and never hang on a failed load. */
 export function ensureCss() {
   return Promise.all(SHEETS.map(([name, href]) => {

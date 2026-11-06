@@ -10,7 +10,7 @@
 
    Each line says only what is true of that level in ai.js, and says nothing numeric because those numbers are still being tuned.
    The check for these sentences against LEVELS, and against what each level really does in play, is in the same notes. */
-import { applySettings, coarsePointer, ensureCss, esc, scopeOf } from './extras-ui.js';
+import { applySettings, coarsePointer, ensureCss, esc, rawFallback, scopeOf } from './extras-ui.js';
 
 export const STORE_KEY = 'iti-arena-level';
 export const LEVELS = ['easy', 'normal', 'hard'];
@@ -44,7 +44,7 @@ export function createFightMenu(rootEl, opts = {}) {
   el.setAttribute('aria-modal', 'true');
   el.setAttribute('aria-label', 'Pick your rival');
   el.tabIndex = -1;
-  el.style.display = 'none'; // until the stylesheets are in: no raw markup flashes
+  el.style.display = 'none'; // closed. Held here, not left to the stylesheet, so a closed menu stays hidden even if extras.css never loads
   el.innerHTML = `
 <div class="ax-card ax-x-menu-card">
   <div class="ax-title ax-x-menu-title">Pick your rival</div>
@@ -106,7 +106,9 @@ export function createFightMenu(rootEl, opts = {}) {
         break;
       case 'Tab': {
         e.preventDefault();
-        const all = [...plates, exitBtn], i = all.indexOf(document.activeElement), to = all[(i + (e.shiftKey ? -1 : 1) + all.length) % all.length];
+        const all = [...plates, exitBtn], i = all.indexOf(document.activeElement);
+        /* focus on the dialog itself, after a click on the card: back goes to Exit, forward to the marked plate, so the mark does not jump */
+        const to = i < 0 ? (e.shiftKey ? exitBtn : plateOf(level)) : all[(i + (e.shiftKey ? -1 : 1) + all.length) % all.length];
         if (to === exitBtn) exitBtn.focus(); else focusLevel(to.dataset.level);
         break;
       }
@@ -128,10 +130,12 @@ export function createFightMenu(rootEl, opts = {}) {
   el.addEventListener('focusin', onFocusIn);
 
   let cssIn = false;
-  const ready = ensureCss().then(() => { cssIn = true; if (!destroyed) { el.style.display = ''; if (open) enter(); } });
+  const ready = ensureCss().then(() => { cssIn = true; if (!destroyed && open) enter(); });
 
   function enter() {
+    el.style.display = '';
     el.classList.add('is-on');
+    rawFallback(el);
     focusLevel(level);
   }
   function show() {
@@ -148,6 +152,7 @@ export function createFightMenu(rootEl, opts = {}) {
     window.removeEventListener('keydown', onKey, true);
     window.removeEventListener('keyup', onKeyUp, true);
     el.classList.remove('is-on');
+    el.style.display = 'none';
     if (el.contains(document.activeElement)) document.activeElement.blur(); // so a later Space, the slip key, cannot press a hidden button
   }
   function destroy() {
