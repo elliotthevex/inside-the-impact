@@ -6,7 +6,7 @@
  * so the page sat on the loading screen forever.
  *
  * Run it in the browser pane against the LOCAL file before deploying:
- *   1. open file:///…/inside-the-impact.html
+ *   1. open file:///…/index.html
  *   2. wait ~9s for the boot screen to clear
  *   3. paste this whole file into the JS console / javascript_tool
  * It returns {pass, failures, checks}. Deploy only on pass: true.

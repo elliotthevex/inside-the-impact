@@ -2,15 +2,17 @@
 # Pre-deploy gate for Inside the Impact.
 #
 # Two layers, because one is not enough:
-#   1. jscheck.py  — parses every <script>. Catches typos and bad escapes.
+#   1. jscheck.py  — parses every script the page has, including game.js.
+#                    Catches typos and bad escapes.
 #   2. smoke.js    — runs in a real browser. Catches the init crashes that
 #                    parse fine, which is what actually took the site down.
 #
-# Usage, from the repo root's parent (where inside-the-impact.html lives):
-#   sh site/tools/predeploy.sh inside-the-impact.html
+# Usage:
+#   sh tools/predeploy.sh             checks this repo's index.html
+#   sh tools/predeploy.sh PAGE.html   checks another copy of the page
 set -e
-FILE="${1:-inside-the-impact.html}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
+FILE="${1:-$DIR/../index.html}"
 
 echo "── 1/2  parse check ─────────────────────────────"
 python3 -I "$DIR/jscheck.py" "$FILE"

@@ -1,7 +1,7 @@
 # Street Fight 3D: build design
 
 The 1v1 Arena card in Mode Select opens a complete 3D boxing game. It lives in `site/gfx/arena/`, is lazy-loaded on click,
-and needs WebGL2. The old canvas arena (`a3*` in `site/index.html`) stays untouched as the fallback.
+and needs WebGL2. The old canvas arena (`a3*` in `site/game.js`) stays untouched as the fallback.
 
 Purpose of the whole game: a boxing safety-education game for a college extracurricular. It teaches injury recognition
 through play. Keep that in the arena: a hidden head-exposure counter, postural warning signs, and a referee stoppage.
@@ -11,7 +11,7 @@ through play. Keep that in the arena: a hidden head-exposure counter, postural w
   ring, props and people are real geometry with PBR materials.
 - Nothing fake: no control, button or feature that does not work. Never mark something done that was not tested.
 - Career simulation untouched. `site/tools/parity.js` must return `3bea3b59`, `site/tools/smoke.js` must pass. Edit
-  `site/index.html` only for the small launch hook. Do not change `a3*` (another session is fixing it on its own branch).
+  `site/game.js` only for the small launch hook. Do not change `a3*` (another session is fixing it on its own branch).
 - Not gory: sweat and impact flashes, no blood.
 - No new dependencies beyond the vendored Three.js r187 in `site/vendor/three` (`three`, `three/addons/`). No build step.
 - Plain language in any on-screen text. No emoji in new UI.
@@ -100,10 +100,10 @@ Additive reactions: head snap by hit direction, body fold, stagger, plus face mo
 Sweat follows fatigue. Winner raises a hand. Rig reads sim state and events only. Getters: `headWorld()`, `chestWorld()`, `gloveWorld('L'|'R')`.
 
 ### Camera, HUD, audio, effects
-Camera: Tekken-style. Side-on to the fighters' line, framing both, distance grows with separation, slow orbit that follows the line and never flips sides abruptly, player stays on the left. Hide near-side ropes when they block the view. Auto-focus DOF on the midpoint, with the men and the canvas around them always sharp and almost deep focus on wide shots. Impact kick and shake honour settings (`ST.camerashake`, `ST.motion`, `uiPrefs.shake`, `uiPrefs.motion`; read how `index.html` uses them). Slow motion on a knockout unless reduced motion is on.
+Camera: Tekken-style. Side-on to the fighters' line, framing both, distance grows with separation, slow orbit that follows the line and never flips sides abruptly, player stays on the left. Hide near-side ropes when they block the view. Auto-focus DOF on the midpoint, with the men and the canvas around them always sharp and almost deep focus on wide shots. Impact kick and shake honour settings (`ST.camerashake`, `ST.motion`, `uiPrefs.shake`, `uiPrefs.motion`; read how `game.js` uses them). Slow motion on a knockout unless reduced motion is on.
 HUD: Tekken-inspired. Large mirrored health bars across the top with a lagging damage chunk, stamina bars under them, names, round pips, a big centre clock, ROUND n / FIGHT / KO / DOWN and count banners as lower thirds so the men stay visible (top zone on tall screens), combo counter. Condensed font self-hosted from Google Fonts (Barlow Condensed, OFL) in `assets/fonts`. Respect Text Size via `ST.textsize`. Touch buttons on coarse pointers.
 Effects: hit-stop 40-90 ms by power, sweat spray particles, a brief light flash at contact, canvas dust, rope wobble on contact with ropes, damage flash on the HUD. No blood.
-Audio: WebAudio synthesis only, no files. Punch thuds by type and blocked, whoosh, canvas foot squeaks, bell, crowd bed that swells on big shots, count. Honour `ST.fxvol` and `uiPrefs.sound`; read how `index.html` uses them.
+Audio: WebAudio synthesis only, no files. Punch thuds by type and blocked, whoosh, canvas foot squeaks, bell, crowd bed that swells on big shots, count. Honour `ST.fxvol` and `uiPrefs.sound`; read how `game.js` uses them.
 
 ### Room
 A real basement fight venue, 18 m by 18 m, ceiling about 4.5 m. Ring centred: 6.4 m platform, 0.75 m high, canvas with scuffs, four posts with coloured pads (blue corner, red corner, two neutral), three taped ropes each side with sag, apron, steps, stools and buckets in the corners. Breeze-block or brick walls, wet concrete floor, pipes, ducts, cables, beams. Poly Haven models and textures, CC0 (`hanging_industrial_lamp`, `caged_hanging_light`, `modular_industrial_pipes_01`, `modular_airduct_circular_01`, `metal_stool_01`, `wooden_bucket_01`, `concrete_block_wall_02`, and similar; check sizes, stay lean). One strong warm key with shadow over the ring on a swaying lamp, dim bulbs around, haze cones, dust. A low HDRI environment for reflections only. Benches and a seated and standing crowd of Rocketbox people, baked to static poses and instanced, dark and out of focus, with a small shader sway.

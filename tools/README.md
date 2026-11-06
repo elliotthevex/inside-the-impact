@@ -6,21 +6,27 @@ second is the one that matters.
 ## 1. `jscheck.py` — does it parse?
 
 ```sh
-python3 -I site/tools/jscheck.py inside-the-impact.html
+python3 -I site/tools/jscheck.py site/index.html
 ```
 
-Pulls every `<script>` out of the page, wraps each body in an uncalled
-function and hands it to JavaScriptCore via `osascript -l JavaScript`.
-Only syntax errors surface; no browser globals are touched.
+Reads every `<script>` the page has, inline or a local `src` such as
+`game.js`, wraps each body in an uncalled function and hands it to
+JavaScriptCore via `osascript -l JavaScript`. Only syntax errors surface; no
+browser globals are touched. A missing local script or stylesheet fails, and
+so does a page with no scripts at all, so the check cannot pass by reading
+nothing. A commented-out tag does not count as a script.
 
 Caught: `\"gym\"` inside a `${}` interpolation, where backslash escapes
 do not apply and the stray backslash killed the whole script.
 
 ## 2. `smoke.js` — does it actually start?
 
-Serve it over HTTP rather than opening the file directly. The build is
-now too large for the browser pane's `file://` snapshot, and a real
-origin also gives you working `localStorage`, which `data:` URLs block:
+Serve it over HTTP rather than opening the file directly. The page needs
+`style.css` and `game.js` beside it, and a real origin also gives you working
+`localStorage`, which `data:` URLs block. `serve.py` serves the repo root and
+sends `no-store`, so a reload after an edit runs what is on disk. A plain
+`http.server` can run the old `game.js` from the browser cache, and then these
+checks pass on code that is no longer there:
 
 ```sh
 python3 tools/serve.py        # http://127.0.0.1:8781
@@ -61,7 +67,8 @@ Verified against a rebuilt copy of that regression: `jscheck.py` printed
 ## 3. `parity.js` — did the simulation move?
 
 ```
-open http://127.0.0.1:8090/inside-the-impact.html   # wait for boot
+python3 tools/serve.py        # http://127.0.0.1:8781
+open http://127.0.0.1:8781/   # wait for boot
 paste site/tools/parity.js into the console
 ```
 

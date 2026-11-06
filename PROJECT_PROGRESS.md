@@ -13,6 +13,9 @@ Another session, "AAA fighting game screenshot", ran in this folder and shares t
 ## Scope note
 The user's latest brief is Street Fight 3D, a complete 1v1 arena game. It takes priority over the earlier whole-game overhaul brief, which is parked, not cancelled, and saved at `gfx/dev/overhaul-brief.md`.
 
+## Page layout
+The page is three files. `index.html` is markup only, `style.css` holds every style in the original cascade order, and `game.js` holds every page script, including the career game, the old canvas arena and the launch hook for the 3D one. Older notes in `gfx/dev/notes/` and the parked `gfx/dev/overhaul-brief.md` that say `index.html` for code now mean `game.js`.
+
 ## Done and tested
 - World, fighters, rules, AI, HUD, camera, effects and sound run as one game (commit `ad04b5b`).
 - 13 bot matches through real key events on the real page, on high, medium and low, with rematch, pause, touch emulation, settings and all four fallbacks to the old canvas arena. Numbers are in `gfx/dev/notes/integrate.md`.
@@ -34,12 +37,12 @@ Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the sessio
 5. Adversarial playtest and fix pass on the final balance. Note from balance: 98% of normal mixed matches reach round 3 and only 24.5% end stopped, so check that a new player actually sees a stoppage. Note from polish: there is no referee figure, so the stoppage is told only by the graphic and caption.
 6. Performance and low-end preset: measure with everything on and with nothing else running, adaptive quality, GPU memory on low, missing-extension fallbacks.
 7. Prune `vendor/` and unused assets, final checkpoint. Remove the `.lab`, `.dl` and `.scratch` symlinks from the project root.
-8. Ask the user before anything goes to `main`. A release also has to sync `upload/` with the whole tree.
+8. Ask the user before anything goes to `main`. A release also has to sync `upload/` with the whole tree, which now includes `style.css` and `game.js`. Decide on deep URLs before release: the host answers any unknown path with `index.html`, so at `/foo/bar/` the relative `game.js` and `style.css` get HTML back and the page sticks on an unstyled Loading screen. The old single file ran there. Nothing links to such a URL. The likely fix is a `_redirects` file with `/*/game.js /game.js 200` and `/*/style.css /style.css 200`, untested because only Cloudflare can run it, so try it on a preview deployment first. Root-absolute paths are not the fix: they break `file://` and subfolder testing.
 
 ## Known bugs
 - Listed for the polish pass in its script. Anything it leaves goes here.
 - Tooling trap: rerunning `gear_tex.py` overwrites the new glove textures. Run `glove_tex.py` after it.
-- The old canvas arena has measured combat defects. Commit `c81903e` on branch `arena-combat-fixes` addresses them, unmerged until the user decides.
+- The old canvas arena has measured combat defects. Commit `c81903e` on branch `arena-combat-fixes` addresses them, unmerged until the user decides. It edits the old single-file `index.html`, so after the split a plain merge conflicts, and `-X ours` or `-X theirs` exits 0 with a wrong result: never use those. This recipe was tested in a scratch clone: `git merge --no-commit --no-ff arena-combat-fixes; git checkout --ours -- index.html; git add index.html; git show c81903e --format= -- index.html | sed -e '1,4s#a/index.html#a/game.js#' -e '1,4s#b/index.html#b/game.js#' > x.patch; git apply --index x.patch; git commit`.
 
 ## Not verified
 - No human has played it, and nobody on this side can listen to the sound. `gfx/dev/sound.html` is there for a person to judge it.
@@ -47,7 +50,7 @@ Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the sessio
 - 60 Hz never seen on a real display. macOS Low Power Mode is on, which is the user's setting, so every fps number is lower than a normal Mac would give.
 
 ## Files changed
-New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `CREDITS.md`, `ASSET_LIST.md`, `PROJECT_PROGRESS.md`. `index.html` has only the head loader with its injected import map, the launch line and the `hotkeysBlocked` selector.
+New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `CREDITS.md`, `ASSET_LIST.md`, `PROJECT_PROGRESS.md`. The page's own code changed only in the head loader with its injected import map, the launch line and the `hotkeysBlocked` selector, all now in `game.js`.
 
 ## Last successful test
 About 11:50 KST on 2026-11-06, by the polish agent on its final code: three whole matches on the real page through real key events (high and low), parse check, parity `3bea3b59`, smoke test 20 run and passing. Parse check rerun at the stop. `sim.js` and `ai.js` changed shortly before that run.
