@@ -3241,38 +3241,38 @@ window.__openRealArena=function(fallback){
 
         /* night sky over a wet street */
         const sky = ctx.createLinearGradient(0, 0, 0, ground);
-        sky.addColorStop(0, "#3d2c58"); sky.addColorStop(.5, "#6d4a68"); sky.addColorStop(1, "#b4736a");
+        sky.addColorStop(0, "#221831"); sky.addColorStop(.5, "#3e2b44"); sky.addColorStop(1, "#6b4348");
         ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
         /* far skyline, slow parallax */
         for (let i = -8; i < 20; i++) {
           const bw = 120, bx = toX(i * bw * 1.3 - camx * .55);
           const bh = ground * (.22 + rnd(i * 3.1) * .34);
-          b(bx, ground - bh, bw * sc * 1.1, bh, "#3c2f56");
+          b(bx, ground - bh, bw * sc * 1.1, bh, "#241c36");
           for (let r = 0; r < 6; r++) for (let c = 0; c < 3; c++) {
             if ((i * 7 + r * 3 + c) % 3) continue;
-            b(bx + (6 + c * 13) * sc, ground - bh + (10 + r * 16) * sc, 7 * sc, 9 * sc, "#ffd98a");
+            b(bx + (6 + c * 13) * sc, ground - bh + (10 + r * 16) * sc, 7 * sc, 9 * sc, "#e8bf72");
           }
         }
         /* shutters and a wall behind the action */
         for (let i = -10; i < 24; i++) {
           const wx = i * 180, px = toX(wx - camx * .18);
-          b(px, ground - 230 * sc, 170 * sc, 230 * sc, i % 2 ? "#50425f" : "#5d4c6d");
-          b(px + 14 * sc, ground - 160 * sc, 142 * sc, 130 * sc, "#3a3048");
-          for (let k = 0; k < 8; k++) b(px + 14 * sc, ground - 158 * sc + k * 17 * sc, 142 * sc, 7 * sc, "#564768");
+          b(px, ground - 230 * sc, 170 * sc, 230 * sc, i % 2 ? "#3a2f47" : "#43374f");
+          b(px + 14 * sc, ground - 160 * sc, 142 * sc, 130 * sc, "#271f33");
+          for (let k = 0; k < 8; k++) b(px + 14 * sc, ground - 158 * sc + k * 17 * sc, 142 * sc, 7 * sc, "#3c3150");
           if (i % 2 === 0) {
             b(px + 70 * sc, ground - 256 * sc, 8 * sc, 30 * sc, "#2a2a2a");
             b(px + 52 * sc, ground - 266 * sc, 44 * sc, 16 * sc, "#fff0c0");
             const g = ctx.createRadialGradient(px + 74 * sc, ground - 250 * sc, 2, px + 74 * sc, ground - 250 * sc, 230 * sc);
-            g.addColorStop(0, "rgba(255,214,130,.42)"); g.addColorStop(1, "rgba(255,214,130,0)");
+            g.addColorStop(0, "rgba(255,214,130,.30)"); g.addColorStop(1, "rgba(255,214,130,0)");
             ctx.fillStyle = g; ctx.fillRect(px - 120 * sc, ground - 330 * sc, 380 * sc, 340 * sc);
           }
         }
         /* road */
-        b(0, ground, W, H - ground, "#453b4c");
-        b(0, ground, W, 4, "#6b5c78");
+        b(0, ground, W, H - ground, "#2b2434");
+        b(0, ground, W, 4, "#463c54");
         for (let i = -14; i < 28; i++) {
           const px = toX(i * 120);
-          b(px, ground + (H - ground) * .45, 64 * sc, 4 * sc, "rgba(236,226,196,.38)");
+          b(px, ground + (H - ground) * .45, 64 * sc, 4 * sc, "rgba(236,226,196,.26)");
         }
 
         /* ── fighters ── */
@@ -3355,7 +3355,7 @@ window.__openRealArena=function(fallback){
           else if (fx2 > W - 8) { b(W - 16, ground - 70, 10, 10, "#e8453a"); }
         }
         const v = ctx.createRadialGradient(W / 2, H * .55, Math.min(W, H) * .42, W / 2, H * .55, H);
-        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.20)");
+        v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.32)");
         ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
       }
 
