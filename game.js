@@ -614,7 +614,7 @@ window.__openRealArena=function(fallback){
         $("#cv").style.display = "none";
         $("#sub").textContent = "";
         $("#m").innerHTML =
-          `<section class="title-screen landing-screen"><div class="title-kicker">A BOXING DECISION SIMULATION</div><h1>INSIDE THE IMPACT</h1><button class="b p title-start" onclick="instructions()">START COACHING ▶<small>Read the instructions before your first camp decision</small></button><div class="title-credit">Created by Joohyun Lee</div></section>`;
+          `<section class="title-screen landing-screen"><div class="title-kicker">A BOXING DECISION SIMULATION</div><h1>INSIDE THE IMPACT</h1><button class="b p title-start" onclick="instructions()">START COACHING ▶<small>Read the instructions before your first camp decision</small></button><div class="title-credit">Created by Joohyun Lee and Elliot Jeong</div></section>`;
         window.scrollTo(0, 0);
       }
       let instructionPage = 0;
@@ -7080,7 +7080,7 @@ window.__openRealArena=function(fallback){
         $("#cv").style.display = "none";
         $("#sub").textContent = "Credits";
         $("#m").innerHTML =
-          `<div class="c res" style="text-align:center;padding:28px 16px"><div class="w" style="font-size:12px;letter-spacing:.16em">INSIDE THE IMPACT</div><h2 style="font-size:22px;margin:18px 0">A game about<br>the impact of every choice</h2><div style="height:2px;background:var(--wn);margin:20px auto;max-width:180px"></div><p class="mu" style="letter-spacing:.12em;text-transform:uppercase">Created by</p><p class="w" style="font-size:21px;font-weight:900;margin:8px 0 18px">Joohyun Lee</p><p class="mu">Thank you for playing — and for putting fighter safety first.</p></div><button class="b p" onclick="newGame()">Coach again</button>`;
+          `<div class="c res" style="text-align:center;padding:28px 16px"><div class="w" style="font-size:12px;letter-spacing:.16em">INSIDE THE IMPACT</div><h2 style="font-size:22px;margin:18px 0">A game about<br>the impact of every choice</h2><div style="height:2px;background:var(--wn);margin:20px auto;max-width:180px"></div><p class="mu" style="letter-spacing:.12em;text-transform:uppercase">Created by</p><p class="w" style="font-size:21px;font-weight:900;margin:8px 0 18px">Joohyun Lee and Elliot Jeong</p><p class="mu">Thank you for playing — and for putting fighter safety first.</p></div><button class="b p" onclick="newGame()">Coach again</button>`;
         window.scrollTo(0, 0);
       }
       function end(t) {
