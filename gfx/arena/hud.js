@@ -670,6 +670,11 @@ export function createHud(rootEl, opts = {}) {
     const still = Math.abs(e.clientX - t.x) < 10 && Math.abs(e.clientY - t.y) < 10 && b.offsetParent;
     if (b.disabled || (!still && (!over || !b.contains(over)))) return;
     clickAfter = performance.now() + 450; /* the click that may follow this lift could land on a panel that has just opened under the finger */
+    if (b.dataset.act === 'exit') { /* or, with the arena gone on this lift, on the page under the finger */
+      const eat = (c) => { c.stopPropagation(); c.preventDefault(); };
+      addEventListener('click', eat, { capture: true, once: true });
+      setTimeout(() => removeEventListener('click', eat, true), 450);
+    }
     act(b.dataset.act);
   };
   const onTapCancel = (e) => { tapping.delete(e.pointerId); };
