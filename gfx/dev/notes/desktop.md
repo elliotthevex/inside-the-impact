@@ -1,6 +1,7 @@
 # A fight on a computer: cursor, focus, fullscreen, graphics, sound, Q, big monitors
 
-Status: all eight items built and looked at on the real page. Code committed on realistic-3d. The Mac's lid closed at 01:15:42 on 2026-11-08, which stopped the last regression runs: see "Not yet re-run".
+Status: done. All eight items built and looked at on the real page, gates pass, a whole match on high by real keys ran to the end panel. Code committed on realistic-3d, not pushed.
+The Mac's lid closed at 01:15:42 on 2026-11-08 and it then woke for about 40 s every 17 minutes. The last checks (t8.py, t9.py) were run in those windows with waits on the monotonic clock, so sleep did not count as waiting.
 Restart: read this file and `gfx/arena/desktop.js`. Test scripts are in the scratchpad `desktop/`: t1 cursor, t2 focus, t3b and t6 fullscreen and Esc, t4 graphics, t5 sound, t7 big monitors (`t7.py large` for large text), gates.sh, cfg_main.js (the whole match on high), play_q.js with cfg_q.js (a match guarding with Q). They use fl.py and common.py from the flows audit.
 
 ## Decisions
@@ -28,7 +29,13 @@ Restart: read this file and `gfx/arena/desktop.js`. Test scripts are in the scra
 - Guard: Q held raises the guard to 1, also after a pause while still held. A whole match on low with the bot guarding only by Q: skilled bot won by KO. Shift still works: pause flow check and the match on high.
 - Big monitors: every HUD element's rectangle relative to the screen at 2560x1440 and 3840x2160 against 1920x1080, in round, fight, note, down, pause, load, time, TKO, end: none off by more than 0.4% of the screen, apart from a count number caught mid animation. Frames looked at for each state at all four sizes.
 - Key list: Shift and Q on load, hint and pause. F and M on the pause panel only, on their own row.
-- Gates at commit 2178f81: jscheck ALL SCRIPTS PARSE, smoke pass true, 20 run. Whole match on high by real keys on the real page, bot mixed, seed 97201: ended by TKO in round 3, end panel, gl error 0, no page errors.
+- Gates on the final code (2178f81, nothing but notes changed after): jscheck ALL SCRIPTS PARSE, parity 3bea3b59, smoke pass true, 20 run. Whole match on high by real keys on the real page, bot mixed, seed 97201: ended by TKO in round 3, end panel, gl error 0, no page errors.
+- Touch at 844x390 (t8): no fullscreen icon, no Graphics or Sound row, no note, no --ax-k, pause icon 44 px as before, touch note unchanged. F and M do nothing, the cursor never hides, a blur does not pause. Jab button, stick, Guard, pause icon and Resume by real touch events all work.
+- Large Text at 3840x2160 against 1920x1080 (t8): no element off by more than 0.4% of the screen in the fight or the pause panel. Frames looked at.
+- Reduced Motion (t8): the cursor hides, M's note shows at full opacity with no transition, M in the pause panel clears it. Camera Shake off still reaches the camera.
+- Away while loading (t8): a blur during the load screen that is still away when the fight is ready starts it paused; Esc resumes.
+- Context restore (t8, t9): options disabled while the picture is lost, enabled again after restore. Low, High and Medium after a restore all draw correctly (frames looked at). The first switch after a restore leaves one INVALID_OPERATION (1282) flag: three.js deletes the old film targets, whose GL objects belong to the lost context. Later switches and play read 0. Not fixed: harmless, and the adaptive step had the same path before.
+- Fallback (t8): an asset that fails lands in the old arena, no overlay left, cursor auto. Two opens and exits add 14 listeners, exactly what Mode Select alone adds twice: nothing from the arena.
 
 ## Known limits
 - A GPU that cannot draw the film path shows black on a manual High or Medium. The panel still works and Auto or Low brings the picture back. Auto never picks those there.
