@@ -14,10 +14,12 @@ document.head.appendChild(Object.assign(document.createElement("script"),{type:"
 window.__openRealArena=(function(){
   var SLOW_S=20,IMPORT_S=45; /* seconds on screen: when to say the line is slow, and when to give up on a module that never arrives */
   var WHY={net:"Could not reach the fight. Check your connection.",old:"This browser is too old for the 3D fight.",gl:"The graphics stopped. Closing other apps may help.",other:"The 3D fight could not start."};
-  var run=null,mod=null,screen=null,histOn=false,skipPop=false;
+  var run=null,mod=null,screen=null,histOn=false,skipPop=false,pushLater=false;
   /* Android back and the iOS edge swipe: one history entry while this is open, so back closes it to the lobby instead of leaving the site. */
-  function pushHist(){if(histOn)return;try{history.pushState({arena3d:1},"");histOn=true;}catch(e){histOn=false;}}
-  function dropHist(){if(!histOn)return;histOn=false;skipPop=true;history.back();}
+  /* A back still on its way and a push on top of it can make the browser leave the document, so a push waits for the back to land. */
+  function pushHist(){if(histOn)return;if(skipPop){pushLater=true;return;}try{history.pushState({arena3d:1},"");histOn=true;}catch(e){histOn=false;}}
+  function backLanded(){skipPop=false;if(pushLater){pushLater=false;pushHist();}}
+  function dropHist(){pushLater=false;if(!histOn)return;histOn=false;skipPop=true;history.back();setTimeout(function(){if(skipPop)backLanded();},1500);}
   function coarse(){try{return matchMedia("(pointer: coarse)").matches;}catch(e){return false;}}
   /* "old" when this browser can never run it, "gl" when it should be able to but has no context to give right now. */
   function unsupported(){
@@ -122,7 +124,7 @@ window.__openRealArena=(function(){
     if(e.key==="Escape"){e.preventDefault();e.stopPropagation();closeAll();}
     if(e.key==="Tab"){e.preventDefault();var b=[].slice.call(screen.querySelectorAll("button")),i=b.indexOf(document.activeElement);b[(i+(e.shiftKey?-1:1)+b.length)%b.length].focus();}
   },true);
-  window.addEventListener("popstate",function(){if(skipPop){skipPop=false;return;}if(histOn){histOn=false;closeAll();}});
+  window.addEventListener("popstate",function(){if(skipPop){backLanded();return;}if(histOn){histOn=false;closeAll();}});
   return open;
 })();
 
