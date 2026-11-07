@@ -88,8 +88,16 @@ const sideHtml = (id) => `
   <div class="ax-plate"><span class="ax-corner"></span><span class="ax-name"></span><span class="ax-tired">Tired</span><span class="ax-pips"></span></div>
 </div>`;
 
+/* a browser or a frame that refuses fullscreen gets no icon and no key line for it */
+const canFullscreen = () => { try { return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled); } catch (e) { return false; } };
 const kv = (keys, label) => `<span class="ax-kv">${keys.map((k) => `<span class="ax-key">${k}</span>`).join('')}<span>${label}</span></span>`;
-const keysHtml = () => `<div class="ax-keys">${kv(['W', 'A', 'S', 'D'], 'Move')}${kv(['J'], 'Jab')}${kv(['K'], 'Cross')}${kv(['L'], 'Hook')}${kv(['U'], 'Uppercut')}${kv(['I'], 'Body left')}${kv(['O'], 'Body right')}${kv(['Shift'], 'Guard')}${kv(['Space'], 'Slip')}${kv(['Esc'], 'Pause')}</div>`;
+const keysHtml = (more = '') => `<div class="ax-keys">${kv(['W', 'A', 'S', 'D'], 'Move')}${kv(['J'], 'Jab')}${kv(['K'], 'Cross')}${kv(['L'], 'Hook')}${kv(['U'], 'Uppercut')}${kv(['I'], 'Body left')}${kv(['O'], 'Body right')}${kv(['Shift', 'Q'], 'Guard')}${kv(['Space'], 'Slip')}${kv(['Esc'], 'Pause')}${more}</div>`;
+const prefsHtml = () => `<div class="ax-prefs">
+  <div class="ax-pref" role="group" aria-label="Graphics"><span class="ax-pref-l">Graphics</span>${[['auto', 'Auto'], ['high', 'High'], ['medium', 'Medium'], ['low', 'Low']].map(([v, l]) => `<button class="ax-btn ax-opt" type="button" data-act="gfx-${v}" aria-pressed="false"><span>${l}</span></button>`).join('')}</div>
+  <div class="ax-pref" role="group" aria-label="Sound"><span class="ax-pref-l">Sound</span><button class="ax-btn ax-opt ax-opt-sound" type="button" data-act="sound" aria-pressed="true"><span>On</span></button></div>
+  <div class="ax-pref-why"></div>
+</div>`;
+const FS_ICON = '<svg class="ax-fsicon" viewBox="0 0 13 13" aria-hidden="true"><path class="ax-fs-in" d="M1 4.5V1h3.5M8.5 1H12v3.5M12 8.5V12H8.5M4.5 12H1V8.5"/><path class="ax-fs-out" d="M4.5 1v3.5H1M12 4.5H8.5V1M8.5 12V8.5H12M1 8.5h3.5V12"/></svg>';
 const touchNote = '<div class="ax-touchnote">Left thumb moves you. Right thumb punches, guards and slips.</div>';
 
 const TEMPLATE = (touch) => `
@@ -98,7 +106,7 @@ const TEMPLATE = (touch) => `
 <div class="ax-lb ax-lb-t"></div><div class="ax-lb ax-lb-b"></div>
 <div class="ax-top">
   ${sideHtml('p')}
-  <div class="ax-clockbox">
+  <div class="ax-clockbox${!touch && canFullscreen() ? ' has-fs' : ''}">
     <svg class="ax-clockplate" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       <defs><linearGradient id="ax-plate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a0b0d"/><stop offset=".7" stop-color="#191b20"/><stop offset="1" stop-color="#25272d"/></linearGradient></defs>
       <path d="M0 0H100L83 100H17Z" fill="url(#ax-plate)"/>
@@ -107,6 +115,7 @@ const TEMPLATE = (touch) => `
     <div class="ax-clock"></div>
     <div class="ax-rlabel"></div>
     <button class="ax-pausebtn" type="button" data-act="pause" aria-label="Pause" tabindex="-1"></button>
+    ${!touch && canFullscreen() ? `<button class="ax-fsbtn" type="button" data-act="fullscreen" aria-label="Fullscreen" tabindex="-1">${FS_ICON}</button>` : ''}
   </div>
   ${sideHtml('o')}
 </div>
@@ -122,6 +131,7 @@ const TEMPLATE = (touch) => `
   </div>
 </div>
 <div class="ax-cap" aria-hidden="true"></div>
+${touch ? '' : '<div class="ax-note" aria-hidden="true"></div>'}
 ${touch ? '' : `<div class="ax-hint is-off" aria-hidden="true"><div class="ax-hint-in">${keysHtml()}</div></div>`}
 ${touch ? `<div class="ax-touch">
   <div class="ax-stickzone" aria-label="Move"><div class="ax-stick is-rest"><div class="ax-knob"></div></div></div>
@@ -135,12 +145,13 @@ ${touch ? `<div class="ax-touch">
   <div class="ax-card">
     <div class="ax-title">Paused</div>
     <div class="ax-pause-note" role="status"></div>
-    <div class="ax-pause-keys">${touch ? touchNote : keysHtml()}</div>
+    <div class="ax-pause-keys">${touch ? touchNote : keysHtml('<span class="ax-keys-br"></span>' + (canFullscreen() ? kv(['F'], 'Fullscreen') : '') + kv(['M'], 'Mute'))}</div>
     <div class="ax-btnrow">
       <button class="ax-btn ax-btn-go" type="button" data-act="resume"><span>Resume</span></button>
       <button class="ax-btn" type="button" data-act="rematch"><span>Restart</span></button>
       <button class="ax-btn" type="button" data-act="exit"><span>Exit</span></button>
     </div>
+    ${touch ? '' : prefsHtml()}
   </div>
 </div>
 <div class="ax-panel ax-end" role="dialog" aria-modal="true" aria-label="Fight result">
@@ -199,6 +210,8 @@ export function createHud(rootEl, opts = {}) {
   const endTitle = endPanel.querySelector('.ax-title'), endHow = q('.ax-how'), endScore = q('.ax-score'), endStats = q('.ax-stats'), endReport = q('.ax-report'), endCarry = q('.ax-carry');
   const load = q('.ax-load'), loadFill = q('.ax-load-fill'), loadPct = q('.ax-load-pct'), loadLabel = q('.ax-load-label'), loadTip = q('.ax-load-tip'), loadNote = q('.ax-load-note'), loadTitle = q('.ax-load-title');
   const resumeBtn = pausePanel.querySelector('[data-act="resume"]'), pauseNote = q('.ax-pause-note');
+  const noteEl = q('.ax-note'), gfxBtns = qa('.ax-opt[data-act^="gfx-"]'), soundBtn = q('.ax-opt-sound'), prefWhy = q('.ax-pref-why');
+  let noteT = 0, gfxLock = false, soundLock = false;
   /* the title is one unbroken word pair: until the condensed font arrives a wider one must still fit the screen */
   function fitLoadTitle() {
     if (destroyed) return;
@@ -452,6 +465,7 @@ export function createHud(rootEl, opts = {}) {
     if (!m || destroyed) return;
     if (m !== match) attach(m);
     const d = dt > 0 ? Math.min(dt, .25) : 0;
+    if (noteT > 0 && (noteT -= d) <= 0) noteEl.classList.remove('is-on');
     for (let i = 0; i < queue.length; i++) handle(queue[i], m);
     queue.length = 0;
     if (m.state !== lastState) enterState(m.state, lastState, m);
@@ -566,11 +580,29 @@ export function createHud(rootEl, opts = {}) {
   }
   /* The GPU went away. 'wait': Resume cannot work yet. 'gone': it did not come back in time, so only Restart and Exit are left. null: all is well again. */
   function setPicture(state) {
+    for (const b of gfxBtns) b.disabled = gfxLock || !!state; /* no picture, nothing to change it on */
     pauseNote.textContent = state === 'wait' ? 'The picture stopped. Getting it back.' : state === 'gone' ? 'The picture did not come back.' : '';
     resumeBtn.disabled = !!state;
     resumeBtn.hidden = state === 'gone';
     if (paused && (!state || !pausePanel.contains(document.activeElement) || document.activeElement.disabled)) { const first = pausePanel.querySelector('.ax-btn:not([disabled])'); if (first) first.focus({ preventScroll: true }); }
   }
+  /* The pause panel's two choices. index.js owns what they mean: this only shows them. A setting on the page that overrules one greys it out and says so. */
+  function writeWhy() { if (prefWhy) prefWhy.textContent = [gfxLock ? 'Low Detail is on' : '', soundLock ? 'Sound is off in settings' : ''].filter(Boolean).join('. '); }
+  function setGraphics(choice, locked) {
+    gfxLock = !!locked;
+    for (const b of gfxBtns) { b.setAttribute('aria-pressed', b.dataset.act === 'gfx-' + choice ? 'true' : 'false'); b.disabled = gfxLock || resumeBtn.disabled; }
+    writeWhy();
+  }
+  function setSound(on, locked) {
+    soundLock = !!locked;
+    if (!soundBtn) return;
+    soundBtn.firstChild.textContent = on ? 'On' : 'Off';
+    soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    soundBtn.disabled = soundLock;
+    writeWhy();
+  }
+  /* a short word under the clock, for a key pressed with no panel up */
+  function note(text) { if (!noteEl) return; noteEl.textContent = text; noteEl.classList.add('is-on'); noteT = 1.2; say(text); }
   /* The picture went away during the end graphic: the result does not wait for frames that are not coming. */
   function finish(m) {
     if (destroyed || !m || m.state !== 'over' || endShown) return;
@@ -652,6 +684,9 @@ export function createHud(rootEl, opts = {}) {
     else if (a === 'resume') { setPaused(false); emit('resume'); }
     else if (a === 'rematch') { reset(); emit('rematch'); }
     else if (a === 'exit') { setPaused(false); emit('exit'); }
+    else if (a === 'fullscreen') { if (opts.onFullscreen) opts.onFullscreen(); }
+    else if (a === 'sound') { if (opts.onSound) opts.onSound(); }
+    else if (a.startsWith('gfx-')) { if (opts.onGraphics) opts.onGraphics(a.slice(4)); }
   }
   /* A browser makes no click from a tap while another finger is down, and a thumb is usually on the stick, so on touch the buttons act on the lift themselves. */
   let clickAfter = 0;
@@ -694,7 +729,7 @@ export function createHud(rootEl, opts = {}) {
     e.preventDefault();
   };
   // Clicking the pause icon must not leave focus on it, or Space (slip) would press it.
-  const noFocus = (e) => { if (e.target.closest && e.target.closest('.ax-pausebtn')) e.preventDefault(); };
+  const noFocus = (e) => { if (e.target.closest && e.target.closest('.ax-pausebtn,.ax-fsbtn')) e.preventDefault(); };
   hud.addEventListener('click', onClick);
   hud.addEventListener('pointerdown', onTapDown);
   hud.addEventListener('pointerup', onTapUp);
@@ -820,12 +855,23 @@ export function createHud(rootEl, opts = {}) {
   /* a short line under the bar, for a load that has gone quiet */
   function setLoadNote(text) { if (!destroyed && loadNote.textContent !== (text || '')) loadNote.textContent = text || ''; }
 
+  /* A big monitor at normal scale: the HUD grows with the screen, so it reads the same size as at 1920x1080. At that size and below, and on touch, nothing is set. */
+  function fitScreen() {
+    if (destroyed || touch) return;
+    const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+    if (k > 1) scope.style.setProperty('--ax-k', k.toFixed(4)); else scope.style.removeProperty('--ax-k');
+  }
+  fitScreen();
+
   addEventListener('resize', fitLoadTitle);
+  addEventListener('resize', fitScreen);
   function destroy() {
     if (destroyed) return;
     destroyed = true;
     clearTimeout(loadTimer);
     removeEventListener('resize', fitLoadTitle);
+    removeEventListener('resize', fitScreen);
+    scope.style.removeProperty('--ax-k');
     if (cleanupTouch) cleanupTouch();
     hud.removeEventListener('click', onClick);
     hud.removeEventListener('pointerdown', onTapDown);
@@ -839,7 +885,7 @@ export function createHud(rootEl, opts = {}) {
   }
 
   return {
-    update, onEvent, showLoading, setLoadNote, destroy, setPaused, setPicture, finish, reset, stick, el: hud, ready, heldAgain: () => heldAgain(), dropFingers: () => dropFingers(),
+    update, onEvent, showLoading, setLoadNote, destroy, setPaused, setPicture, setGraphics, setSound, note, finish, reset, stick, el: hud, ready, heldAgain: () => heldAgain(), dropFingers: () => dropFingers(),
     get paused() { return paused; },
   };
 }

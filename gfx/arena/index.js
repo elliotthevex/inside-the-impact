@@ -12,13 +12,14 @@
    Frame order: input, sim (fixed step inside, under hit-stop and slow motion), rig, events to everything, HUD, audio, effects, camera, stage, render.
    Sim time and rig time stop during hit-stop and slow down in slow motion. HUD, effects, camera and audio run on real time. */
 import { createHud } from './hud.js';
+import { wireDesktop } from './desktop.js';
 
 const BASE = new URL('.', import.meta.url);
 const asset = (p) => new URL(p, BASE).href;
 const PUNCH_KEYS = { KeyJ: 'jab', KeyK: 'cross', KeyL: 'hook', KeyU: 'upper', KeyI: 'bodyL', KeyO: 'bodyR' };
 const HAND = { jab: 'L', cross: 'R', hook: 'L', upper: 'R', bodyL: 'L', bodyR: 'R' };
-const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'Space', ...Object.keys(PUNCH_KEYS)]);
-const KEY_TO_CODE = { w: 'KeyW', a: 'KeyA', s: 'KeyS', d: 'KeyD', j: 'KeyJ', k: 'KeyK', l: 'KeyL', u: 'KeyU', i: 'KeyI', o: 'KeyO', ' ': 'Space', shift: 'ShiftLeft', escape: 'Escape', tab: 'Tab' };
+const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'KeyQ', 'Space', ...Object.keys(PUNCH_KEYS)]);
+const KEY_TO_CODE = { w: 'KeyW', a: 'KeyA', s: 'KeyS', d: 'KeyD', j: 'KeyJ', k: 'KeyK', l: 'KeyL', u: 'KeyU', i: 'KeyI', o: 'KeyO', q: 'KeyQ', f: 'KeyF', m: 'KeyM', ' ': 'Space', shift: 'ShiftLeft', escape: 'Escape', tab: 'Tab' };
 const STALL_MS = 90000;   // this long on screen with nothing arriving counts as a failed load. Time behind another app does not count, and a slow line that still delivers is not a stall
 const SLOW_MS = 20000;    // this long on screen with a flat bar and the load screen says so
 const CODE_FILES = 24;    // about how many script files a first visit fetches, so the bar moves while they arrive
@@ -86,7 +87,7 @@ function playerInput(S, m) {
   const l = Math.hypot(ax, ay); if (l > 1) { ax /= l; ay /= l; }
   const b = S.cam.basis();
   I.mx = b.rx * ax + b.fx * ay; I.mz = b.rz * ax + b.fz * ay;
-  I.guard = K.has('ShiftLeft') || K.has('ShiftRight');
+  I.guard = K.has('ShiftLeft') || K.has('ShiftRight') || K.has('KeyQ'); /* Q because five quick Shift taps open Sticky Keys on Windows */
   I.slip = K.has('Space') || S.q.slip; S.q.slip = false;   // a tap shorter than a frame still counts
   I.punch = null; I.getUp = false;
   if (m.p.down) {
@@ -193,6 +194,8 @@ function wireInput(S) {
     S.shift = e.shiftKey;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const code = codeOf(e);
+    if (code === 'KeyQ') S.qHeld = true;
+    if (S.desk && S.desk.key(code, e)) return;
     if (code === 'Escape') {
       e.preventDefault(); e.stopPropagation();
       if (e.repeat) return;
@@ -204,7 +207,7 @@ function wireInput(S) {
     const panel = panelOn(S);
     if (panel) {
       /* buttons keep their ordinary keys; the page behind must not see them and focus must not wander out of the panel */
-      if (code === 'Tab') { e.preventDefault(); const b = [...panel.querySelectorAll('.ax-btn')], i = b.indexOf(document.activeElement); b[(i + (e.shiftKey ? -1 : 1) + b.length) % b.length].focus(); }
+      if (code === 'Tab') { e.preventDefault(); const b = [...panel.querySelectorAll('.ax-btn:not([disabled])')], i = b.indexOf(document.activeElement); b[(i + (e.shiftKey ? -1 : 1) + b.length) % b.length].focus(); }
       if (!(e.target && panel.contains(e.target))) e.stopPropagation();
       return;
     }
@@ -218,7 +221,8 @@ function wireInput(S) {
     S.shift = e.shiftKey;
     const code = codeOf(e);
     S.keys.delete(code);
-    if (e.key === 'Meta' || /^Meta/.test(code)) { S.keys.clear(); if (e.shiftKey) S.keys.add('ShiftLeft'); } /* macOS sends no key up for anything released while Cmd is held */
+    if (code === 'KeyQ') S.qHeld = false;
+    if (e.key === 'Meta' || /^Meta/.test(code)) { S.keys.clear(); S.qHeld = false; if (e.shiftKey) S.keys.add('ShiftLeft'); } /* macOS sends no key up for anything released while Cmd is held */
     const panel = panelOn(S);
     if (!(panel && e.target && panel.contains(e.target))) e.stopPropagation();
   };
@@ -233,7 +237,7 @@ function wireInput(S) {
   S.onRestored = () => { if (!S.closed && S.ready) pictureBack(S); };
   S.canvas.addEventListener('webglcontextlost', S.onLost);
   S.canvas.addEventListener('webglcontextrestored', S.onRestored);
-  S.onBlur = () => { clearInput(S); S.shift = false; if (S.hud) S.hud.dropFingers(); };
+  S.onBlur = () => { clearInput(S); S.shift = false; S.qHeld = false; if (S.hud) S.hud.dropFingers(); };
   /* no browser menu, callout or selection from a long press or a right click on the fight */
   S.onNoMenu = (e) => e.preventDefault();
   for (const n of ['contextmenu', 'selectstart', 'dragstart', 'gesturestart']) S.root.addEventListener(n, S.onNoMenu);
@@ -275,6 +279,7 @@ function pause(S, fromHud) {
   clearInput(S);
   S.engine.stop();
   S.audio.setPaused(true);
+  if (S.desk) S.desk.sync();
 }
 function resume(S, fromHud) {
   if (!S.paused || S.lost || S.rebuilding) return;
@@ -282,9 +287,11 @@ function resume(S, fromHud) {
   if (!fromHud) S.hud.setPaused(false);
   /* a pause cleared the keys, but Shift does not repeat and a finger may still be on Guard */
   if (S.shift) S.keys.add('ShiftLeft');
+  if (S.qHeld) S.keys.add('KeyQ');
   S.hud.heldAgain();
   S.audio.setPaused(false);
   if (!S.opts.manual && !S.frozen) S.engine.start();
+  if (S.desk) S.desk.sync();
 }
 function rematch(S) {
   if (S.lost) { reopen(S); return; }
@@ -292,6 +299,7 @@ function rematch(S) {
   newMatch(S);
   if (S.paused) { S.paused = false; S.audio.setPaused(false); }
   if (!S.opts.manual && !S.frozen) S.engine.start();
+  if (S.desk) S.desk.sync();
 }
 
 /* ---------- the GPU goes away ---------- */
@@ -404,11 +412,13 @@ async function load(S) {
     touch: opts.touch,
     onPause: () => pause(S, true), onResume: () => resume(S, true),
     onRematch: () => rematch(S), onExit: () => closeArena(),
-    onEndPanel: (on) => { if (S.cam) S.cam.setShift(on ? 0.2 : 0); },
+    onEndPanel: (on) => { if (S.cam) S.cam.setShift(on ? 0.2 : 0); if (S.desk) S.desk.sync(); },
+    onFullscreen: () => S.desk.fullscreen(), onGraphics: (v) => S.desk.pickGraphics(v), onSound: () => S.desk.toggleSound(),
     onInput: (code, down) => {
       if (down) { if (S.ready && !panelOn(S)) press(S, code, false); } else S.keys.delete(code);
     },
   });
+  S.desk = wireDesktop(S, { pause: () => pause(S) });
   S.hud.showLoading(0.01, 'Loading');
   await S.hud.ready; check(S);
   if (opts.onScreen) opts.onScreen();
@@ -439,7 +449,7 @@ async function load(S) {
     const { THREE } = mods;
 
     const settings = S.settings = readSettings();
-    const engine = S.engine = new mods.engine.Engine(S.canvas, { quality: opts.quality || 'auto', adaptive: opts.adaptive, reducedMotion: settings.reduced, st: settings.st });
+    const engine = S.engine = new mods.engine.Engine(S.canvas, { quality: opts.quality || S.desk.startQuality(), adaptive: opts.adaptive, reducedMotion: settings.reduced, st: settings.st });
     let shaderFailed = null;
     engine.renderer.debug.onShaderError = (gl, program, vs, fs) => { shaderFailed = gl.getShaderInfoLog(vs) || gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(program) || 'shader error'; console.error('[arena] shader failed:', String(shaderFailed).slice(0, 800)); };
     if (settings.st && settings.st.shadows === false) engine.renderer.shadowMap.enabled = false;
@@ -479,6 +489,7 @@ async function load(S) {
     engine.listeners.add(S.onQuality);
     S.audio = mods.audio.createAudio({ enabled: settings.sound, volume: settings.volume, lite: engine.q.name === 'low', ctx: opts.audioCtx || undefined });
     S.audio.setHidden(document.hidden);
+    S.desk.applyChoices();
     newMatch(S);
     S.hold = 0;
     frame(S, 0);           // real bones and a real camera, so the shaders and the first frame see what the fight sees
@@ -517,6 +528,7 @@ async function load(S) {
   S.hud.showLoading(1);
   if (S.audio.unlock) S.audio.unlock();
   if (!opts.manual) S.engine.start();
+  S.desk.start();
 }
 
 async function createStageInto(S, mods, engine, mgr) {
@@ -533,6 +545,7 @@ function teardown(S, { keepSound = false, quiet = false } = {}) {
   clearInterval(S.stallTimer); clearInterval(S.lostTimer);
   if (S.netWatch) S.netWatch.disconnect();
   unwireInput(S);
+  if (S.desk) safe(() => S.desk.destroy());
   if (S.engine) { S.engine.stop(); if (S.onQuality) S.engine.listeners.delete(S.onQuality); }
   if (S.audio) safe(() => S.audio.destroy({ keepCtx: keepSound }));
   if (!keepSound && S.opts.audioCtx && S.opts.audioCtx.state !== 'closed') S.opts.audioCtx.close().catch(() => {});

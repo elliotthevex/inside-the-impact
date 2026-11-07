@@ -252,6 +252,29 @@
 .arena-x .ax-pause-keys .ax-keys{gap:.42em .9em}
 .arena-x .ax-touchnote{text-align:center;font-weight:500;font-size:calc(clamp(14.5px,1.5vw,19px)*var(--ax-ts));color:#ddd8cc;line-height:1.3}
 
+/* ── on a computer ──────────────────────────────────────────────────── */
+/* a big monitor at normal scale: hud.js sets --ax-k above 1920x1080. Viewport units do not grow with zoom, so what is already sized by the screen stays right. The coach strip sits inside .ax-hud. */
+.arena-x .ax-hud,.arena-x .ax-x-menu,.arena-x .ax-x-notes{zoom:var(--ax-k,1)}
+.arena-x.ax-nocursor,.arena-x.ax-nocursor *{cursor:none!important}
+.arena-x .ax-clockbox.has-fs .ax-pausebtn{width:34px;margin-left:-34px}
+.arena-x .ax-fsbtn{position:absolute;left:50%;top:100%;width:34px;height:44px;pointer-events:auto;display:flex;align-items:flex-start;justify-content:center;padding-top:7px;opacity:.6}
+.arena-x .ax-fsbtn:hover,.arena-x .ax-fsbtn:focus-visible{opacity:1}
+.arena-x .ax-fsicon{display:block;width:13px;height:13px;overflow:visible;fill:none;stroke:#fff;stroke-width:2;filter:drop-shadow(0 1px 2px rgba(0,0,0,.9))}
+.arena-x .ax-fs-out,.arena-x.ax-fs .ax-fs-in{display:none}
+.arena-x.ax-fs .ax-fs-out{display:inline}
+.arena-x .ax-hud.is-over .ax-fsbtn{display:none}
+.arena-x .ax-note{position:absolute;z-index:5;left:50%;top:calc(var(--ax-top) + clamp(30px,5.3vw,86px)*1.05*var(--ax-ts) + clamp(26px,3.4vw,50px));transform:translateX(-50%);padding:.24em .8em;font-weight:700;font-size:calc(clamp(13px,1.2vw,17px)*var(--ax-ts));letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:var(--ax-bone);background:rgba(5,6,8,.74);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);opacity:0;pointer-events:none;transition:opacity .16s linear}
+.arena-x .ax-note.is-on{opacity:1}
+.arena-x .ax-keys-br{flex-basis:100%;height:0}
+.arena-x .ax-prefs{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:clamp(6px,.7vw,10px) clamp(14px,1.8vw,26px);margin-top:clamp(10px,1.3vw,18px);padding-top:clamp(9px,1.1vw,14px);border-top:1px solid rgba(255,255,255,.12)}
+.arena-x .ax-pref{display:flex;align-items:center;gap:clamp(4px,.45vw,7px)}
+.arena-x .ax-pref-l{margin-right:.3em;font-weight:700;font-size:calc(clamp(12px,1.05vw,15px)*var(--ax-ts));letter-spacing:.1em;text-transform:uppercase;color:var(--ax-mute)}
+.arena-x .ax-btn.ax-opt{flex:none;min-width:0;max-width:none;min-height:34px;padding:.2em .6em;font-weight:700;font-size:calc(clamp(14px,1.2vw,17px)*var(--ax-ts));letter-spacing:.03em}
+.arena-x .ax-opt-sound{min-width:3.4em}
+.arena-x .ax-btn.ax-opt[aria-pressed="true"]{color:#171107;background:linear-gradient(180deg,#fff0c0 0%,#f4c964 48%,#d79a2b 100%);box-shadow:none}
+.arena-x .ax-pref-why{flex-basis:100%;text-align:center;font-weight:500;font-size:calc(clamp(13px,1.1vw,15px)*var(--ax-ts));color:var(--ax-mute)}
+.arena-x .ax-pref-why:empty{display:none}
+
 /* the end panel docks to the side and the camera moves the men out from under it, so the result is read with the two of them in view */
 .arena-x .ax-end{justify-content:flex-end;background:linear-gradient(90deg,transparent 34%,rgba(3,4,6,.5) 58%,rgba(3,4,6,.8) 100%)}
 .arena-x .ax-end .ax-card{width:min(47vw,560px);margin:auto 0}

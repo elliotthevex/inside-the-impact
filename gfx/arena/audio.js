@@ -87,7 +87,7 @@ function crowdInWorker(specs, onWorker) {
 async function crowdHere(specs) { return { murmur: await renderCrowd(specs.murmur), roar: await renderCrowd(specs.roar), claps: renderClaps(specs.claps) }; }
 
 function inert() {
-  return { ready: Promise.resolve(), crowdReady: Promise.resolve(), onEvent() {}, update() {}, land() {}, unlock() {}, setPaused() {}, setHidden() {}, setVolume() {}, setEnabled() {}, newMatch() {}, destroy() {}, get ctx() { return null; } };
+  return { ready: Promise.resolve(), crowdReady: Promise.resolve(), onEvent() {}, update() {}, land() {}, unlock() {}, setPaused() {}, setHidden() {}, setVolume() {}, setEnabled() {}, setMuted() {}, newMatch() {}, destroy() {}, get ctx() { return null; } };
 }
 
 export function createAudio(opts = {}) {
@@ -102,7 +102,9 @@ export function createAudio(opts = {}) {
   const loops = []; /* what runs for ever, to stop by hand if the context outlives this */
 
   /* ---- graph ---- */
-  const master = ctx.createGain(); master.gain.value = enabled ? volume : 0;
+  let muted = false;
+  const level = () => (enabled && !muted ? volume : 0);
+  const master = ctx.createGain(); master.gain.value = level();
   const limiter = ctx.createDynamicsCompressor(); limiter.threshold.value = -3; limiter.knee.value = 3; limiter.ratio.value = 20; limiter.attack.value = 0.001; limiter.release.value = 0.12;
   master.connect(limiter); limiter.connect(ctx.destination);
   const hitBus = ctx.createGain();
@@ -263,8 +265,10 @@ export function createAudio(opts = {}) {
     unlock() { if (offline || !enabled || wired) return; wired = true; for (const n of wakeOn) window.addEventListener(n, wake, true); ctx.addEventListener('statechange', wake); wake(); },
     setPaused(on) { paused = !!on; settle(); },
     setHidden(on) { hidden = !!on; settle(); },
-    setVolume(v) { volume = v; master.gain.value = enabled ? volume : 0; },
-    setEnabled(on) { enabled = !!on; master.gain.value = enabled ? volume : 0; },
+    setVolume(v) { volume = v; master.gain.value = level(); },
+    setEnabled(on) { enabled = !!on; master.gain.value = level(); },
+    /* the player's M key. Everything keeps running underneath, so the crowd and the bell are where they should be when it comes back. */
+    setMuted(on) { muted = !!on; master.gain.setTargetAtTime(level(), ctx.currentTime, 0.012); },
     newMatch() { crowd.excite = 0.3; },
     destroy({ keepCtx = false } = {}) {
       if (destroyed) return; destroyed = true; if (wired) { wired = false; for (const n of wakeOn) window.removeEventListener(n, wake, true); ctx.removeEventListener('statechange', wake); } if (worker) { worker.terminate(); worker = null; }
