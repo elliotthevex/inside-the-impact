@@ -2,7 +2,10 @@
 
      const audio = createAudio({ enabled, volume });   // volume 0..1, from ST.fxvol / 100; enabled from uiPrefs.sound. opts.ctx lets a test pass an OfflineAudioContext
      audio.crowdReady                                  // a promise: the crowd is rendered once, in a worker, and fades in when it arrives
-     audio.onEvent(ev, when);  audio.update(match, dt, when);  audio.land(when);  audio.unlock();  audio.setPaused(on);  audio.newMatch();  audio.destroy();
+     audio.onEvent(ev, when);  audio.update(match, dt, when);  audio.land(when);  audio.unlock();  audio.setPaused(on);  audio.setHidden(on);  audio.newMatch();  audio.destroy({ keepCtx });
+
+   On a phone the context only starts inside a tap, so the launcher makes one in the card tap and passes it as ctx. While it is not running, sounds that come due are dropped rather than
+   queued: nothing mashes together and no bell rings at the first tap. unlock() listens for a gesture for the life of the arena, so a context interrupted by a phone call comes back.
 
    Graph: master -> limiter -> out. Hits go through a tanh shaper (harmonics, so a phone speaker still hears the thump) and send to a short synthesised basement
    reverb. The crowd bus is high-passed with a low-pass that opens as it gets excited. Nobody on the build side could listen to this: it is checked by measuring
@@ -84,17 +87,19 @@ function crowdInWorker(specs, onWorker) {
 async function crowdHere(specs) { return { murmur: await renderCrowd(specs.murmur), roar: await renderCrowd(specs.roar), claps: renderClaps(specs.claps) }; }
 
 function inert() {
-  return { ready: Promise.resolve(), crowdReady: Promise.resolve(), onEvent() {}, update() {}, land() {}, unlock() {}, setPaused() {}, setVolume() {}, setEnabled() {}, newMatch() {}, destroy() {}, get ctx() { return null; } };
+  return { ready: Promise.resolve(), crowdReady: Promise.resolve(), onEvent() {}, update() {}, land() {}, unlock() {}, setPaused() {}, setHidden() {}, setVolume() {}, setEnabled() {}, newMatch() {}, destroy() {}, get ctx() { return null; } };
 }
 
 export function createAudio(opts = {}) {
   const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
-  if (!opts.ctx && !AC) return inert();
+  if (!opts.ctx && (!AC || opts.enabled === false)) return inert(); /* sound off: no context at all, so nothing touches the phone's audio */
   let ctx;
   try { ctx = opts.ctx || new AC({ latencyHint: 'interactive' }); } catch (e) { return inert(); }
   let enabled = opts.enabled !== false, volume = opts.volume ?? 0.7, destroyed = false;
   const lite = !!opts.lite, sr = ctx.sampleRate, offline = typeof OfflineAudioContext !== 'undefined' && ctx instanceof OfflineAudioContext;
   const rnd = rngOf(opts.seed ?? 4242), rr = (a, b) => a + (b - a) * rnd();
+  const live = () => offline || ctx.state === 'running'; /* a context that is not running would save everything up and play it all at once when it wakes */
+  const loops = []; /* what runs for ever, to stop by hand if the context outlives this */
 
   /* ---- graph ---- */
   const master = ctx.createGain(); master.gain.value = enabled ? volume : 0;
@@ -175,14 +180,14 @@ export function createAudio(opts = {}) {
   const crowd = { murmur: null, roar: null, claps: null, excite: 0, base: 0, acc: 0, started: false };
   function crowdVoice(data) {
     const b = ctx.createBuffer(2, data.L.length, data.sr); b.copyToChannel(data.L, 0); b.copyToChannel(data.R, 1);
-    const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; s.loop = true; g.gain.value = 0; s.connect(g); g.connect(crowdIn); s.start(ctx.currentTime, rnd() * (data.L.length / data.sr));
+    const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = b; s.loop = true; g.gain.value = 0; s.connect(g); g.connect(crowdIn); s.start(ctx.currentTime, rnd() * (data.L.length / data.sr)); loops.push(s);
     return { s, g };
   }
   let worker = null;
   const crowdReady = (async () => {
     if (!enabled || opts.noCrowd) return;
     /* room tone: low rumble under everything */
-    const rt = ctx.createBufferSource(), rl = ctx.createBiquadFilter(), rg = ctx.createGain(); rt.buffer = noise; rt.loop = true; rl.type = 'lowpass'; rl.frequency.value = 340; rg.gain.value = 0.02; rt.connect(rl); rl.connect(rg); rg.connect(master); rt.start();
+    const rt = ctx.createBufferSource(), rl = ctx.createBiquadFilter(), rg = ctx.createGain(); rt.buffer = noise; rt.loop = true; rl.type = 'lowpass'; rl.frequency.value = 340; rg.gain.value = 0.02; rt.connect(rl); rl.connect(rg); rg.connect(master); rt.start(); loops.push(rt);
     const sr2 = 22050, n = lite ? 8 : 16;
     const specs = {
       murmur: { seconds: lite ? 6 : 8, sr: sr2, talkers: n, f0: [88, 180], syl: [0.12, 0.36], gap: 0.3, vowels: VOWELS, seed: 1234 },
@@ -198,7 +203,7 @@ export function createAudio(opts = {}) {
   function excite(v) { crowd.excite = Math.min(1.4, crowd.excite + v); }
 
   function onEvent(ev, when) {
-    if (!enabled || destroyed) return;
+    if (!enabled || destroyed || !live()) return;
     const t = now(when);
     switch (ev.type) {
       case 'hit': punch(ev, t); excite((ev.power || 0) * (ev.clean ? 0.42 : 0.2) + (ev.counter ? 0.12 : 0)); break;
@@ -223,7 +228,7 @@ export function createAudio(opts = {}) {
 
   /* a body landing on the canvas: index.js calls this when the rig's pelvis gets there */
   function land(when) {
-    if (!enabled || destroyed) return;
+    if (!enabled || destroyed || !live()) return;
     const t = now(when);
     tone(t, 'sine', 84, 36, 0.16, 0.003, 0.3, 0.6);
     burst(t, 'lowpass', 420, 0.7, 0.002, 0.13, 1.2);
@@ -233,7 +238,7 @@ export function createAudio(opts = {}) {
 
   /* levels from the state of the fight, set about 12 times a second */
   function update(match, dt, when) {
-    if (!enabled || destroyed || !crowd.started) return;
+    if (!enabled || destroyed || !crowd.started || !live()) return;
     crowd.excite = Math.max(0, crowd.excite - dt * crowd.excite / 2.1 - dt * 0.02);
     crowd.acc += dt; if (crowd.acc < 0.08) return; crowd.acc = 0;
     const st = match.state; let base = st === 'fight' ? 0.42 : st === 'down' ? 0.72 : st === 'over' ? 0.66 : st === 'break' ? 0.34 : 0.4;
@@ -246,24 +251,25 @@ export function createAudio(opts = {}) {
     crowdLP.frequency.setTargetAtTime(1500 + e * 3200, t, k);
   }
 
-  /* ---- autoplay: a context may start suspended until a gesture ---- */
-  const unlockOn = ['pointerdown', 'touchend', 'keydown'];
-  let unlocked = false;
-  const tryUnlock = () => { if (destroyed) return; if (ctx.state === 'suspended' && !paused && ctx.resume) { ctx.resume().catch(() => {}); } if (ctx.state === 'running') removeUnlock(); };
-  const removeUnlock = () => { if (unlocked) { unlocked = false; for (const n of unlockOn) window.removeEventListener(n, tryUnlock, true); } };
-  let paused = false;
+  /* ---- a context may start suspended, and iOS can stop it at any time: a phone call, Siri, another app ---- */
+  const wakeOn = ['pointerdown', 'pointerup', 'touchend', 'mousedown', 'keydown', 'click'];
+  let wired = false, paused = false, hidden = false;
+  const wake = () => { if (!destroyed && !paused && !hidden && ctx.state !== 'running' && ctx.state !== 'closed' && ctx.resume) ctx.resume().catch(() => {}); };
+  const settle = () => { if (offline || destroyed) return; if (paused || hidden) { if (ctx.state === 'running' && ctx.suspend) ctx.suspend().catch(() => {}); } else wake(); };
 
   return {
     ready: Promise.resolve(), crowdReady,
     onEvent, update, land,
-    unlock() { if (offline || !enabled || unlocked) return; unlocked = true; for (const n of unlockOn) window.addEventListener(n, tryUnlock, true); tryUnlock(); },
-    setPaused(on) { paused = !!on; if (offline || destroyed) return; if (paused) { if (ctx.suspend) ctx.suspend().catch(() => {}); } else if (ctx.resume) ctx.resume().catch(() => {}); },
+    unlock() { if (offline || !enabled || wired) return; wired = true; for (const n of wakeOn) window.addEventListener(n, wake, true); ctx.addEventListener('statechange', wake); wake(); },
+    setPaused(on) { paused = !!on; settle(); },
+    setHidden(on) { hidden = !!on; settle(); },
     setVolume(v) { volume = v; master.gain.value = enabled ? volume : 0; },
     setEnabled(on) { enabled = !!on; master.gain.value = enabled ? volume : 0; },
     newMatch() { crowd.excite = 0.3; },
-    destroy() {
-      if (destroyed) return; destroyed = true; removeUnlock(); if (worker) { worker.terminate(); worker = null; }
-      if (!offline && ctx.close) ctx.close().catch(() => {});
+    destroy({ keepCtx = false } = {}) {
+      if (destroyed) return; destroyed = true; if (wired) { wired = false; for (const n of wakeOn) window.removeEventListener(n, wake, true); ctx.removeEventListener('statechange', wake); } if (worker) { worker.terminate(); worker = null; }
+      if (keepCtx) { for (const s of loops) { try { s.stop(); } catch (e) { /* never started */ } } limiter.disconnect(); return; } /* the next try at opening uses the same context */
+      if (!offline && ctx.close && ctx.state !== 'closed') ctx.close().catch(() => {});
     },
     get ctx() { return ctx; },
   };

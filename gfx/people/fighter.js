@@ -6,36 +6,37 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { makeSkin } from './skin.js';
 import { buildGloveGeometry } from './glove.js';
 import { withCharLight } from './charlight.js';
+import { shrinkImage } from '../world/kit.js';
 
 export { setCharLight } from './charlight.js';
 
 const BASE = new URL('../../assets/people/', import.meta.url).href;
 const shared = { gltf: null, tex: {}, gloves: null, face: {} };
 const tl = new THREE.TextureLoader();
-function loadTex(mgr, url, srgb, aniso = 4) {
-  return new Promise((ok, err) => { (mgr ? new THREE.TextureLoader(mgr) : tl).load(url, (t) => { t.flipY = false; t.anisotropy = aniso; if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; ok(t); }, undefined, err); });
+function loadTex(mgr, url, srgb, aniso = 4, max = 0) {
+  return new Promise((ok, err) => { (mgr ? new THREE.TextureLoader(mgr) : tl).load(url, (t) => { t.image = shrinkImage(t.image, max); t.flipY = false; t.anisotropy = aniso; if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; ok(t); }, undefined, err); });
 }
 const TRUNKS_GAIN = new THREE.Vector3(0.75, 0.75, 0.75), SKIN_GAIN_A = new THREE.Vector3(1.2, 1.2, 1.2);
 const SKIN_GAIN_B = new THREE.Vector3(2.3, 2.8, 3.1), SKIN_GAIN_B_BODY = new THREE.Vector3(2.8, 3.4, 3.8);
 export const CORNER = { blue: { trunks: 0x173a9c, stripe: '#e8e6df', glove: 0x123a9e }, red: { trunks: 0x8e1712, stripe: '#e8e6df', glove: 0x9a130e } };
 
 export async function preloadFighter(q = { tex: 2048 }, mgr) {
-  const sz = q.tex >= 2048 ? 2048 : 1024; const a = q.aniso || 4;
-  if (shared.gltf && shared.sz === sz) { shared.smoothHead = q.name !== 'low'; return shared; }
+  const sz = q.tex >= 2048 ? 2048 : 1024; const a = q.aniso || 4; const low = q.name === 'low' ? q.tex : 0, lowGlove = low ? q.texGlove : 0;
+  if (shared.gltf && shared.sz === sz && shared.low === low) { shared.smoothHead = q.name !== 'low'; return shared; }
   const [gltf, bd, bn, bs, hd, hn, hs, gd, gn, gr, tn, tr, od, on, or] = await Promise.all([
-    new GLTFLoader(mgr).loadAsync(BASE + 'fighter.glb'),
-    loadTex(mgr, `${BASE}m021_body_d_${sz}.webp`, true, a), loadTex(mgr, `${BASE}m021_body_n_${sz}.webp`, false, a), loadTex(mgr, `${BASE}m021_body_s_${sz}.webp`, false, a),
-    loadTex(mgr, `${BASE}m021_head_d_${sz}.webp`, true, a), loadTex(mgr, `${BASE}m021_head_n_${sz}.webp`, false, a), loadTex(mgr, `${BASE}m021_head_s_${sz}.webp`, false, a),
-    loadTex(mgr, BASE + 'glove_d.webp', true, a), loadTex(mgr, BASE + 'glove_n.webp', false, a), loadTex(mgr, BASE + 'glove_r.webp', false, a),
-    loadTex(mgr, BASE + 'trunks_n.webp', false, a), loadTex(mgr, BASE + 'trunks_r.webp', false, a),
-    loadTex(mgr, BASE + 'boot_d.webp', true, a), loadTex(mgr, BASE + 'boot_n.webp', false, a), loadTex(mgr, BASE + 'boot_r.webp', false, a),
+    new GLTFLoader(mgr).loadAsync(BASE + 'fighter.glb', mgr && mgr.alive),
+    loadTex(mgr, `${BASE}m021_body_d_${sz}.webp`, true, a, low), loadTex(mgr, `${BASE}m021_body_n_${sz}.webp`, false, a, low), loadTex(mgr, `${BASE}m021_body_s_${sz}.webp`, false, a, low),
+    loadTex(mgr, `${BASE}m021_head_d_${sz}.webp`, true, a, low), loadTex(mgr, `${BASE}m021_head_n_${sz}.webp`, false, a, low), loadTex(mgr, `${BASE}m021_head_s_${sz}.webp`, false, a, low),
+    loadTex(mgr, BASE + 'glove_d.webp', true, a, lowGlove), loadTex(mgr, BASE + 'glove_n.webp', false, a, lowGlove), loadTex(mgr, BASE + 'glove_r.webp', false, a, lowGlove),
+    loadTex(mgr, BASE + 'trunks_n.webp', false, a, low), loadTex(mgr, BASE + 'trunks_r.webp', false, a, low),
+    loadTex(mgr, BASE + 'boot_d.webp', true, a, low), loadTex(mgr, BASE + 'boot_n.webp', false, a, low), loadTex(mgr, BASE + 'boot_r.webp', false, a, low),
   ]);
   /* the opponent: same mesh, another man's face and skin. See tools/gfx/second_face.py */
   const [bd2, hd2, hn2, hs2, faceBin] = await Promise.all([
-    loadTex(mgr, `${BASE}m007b_body_d_${sz}.webp`, true, a), loadTex(mgr, `${BASE}m007b_head_d_${sz}.webp`, true, a), loadTex(mgr, `${BASE}m007b_head_n_${sz}.webp`, false, a), loadTex(mgr, `${BASE}m007b_head_s_${sz}.webp`, false, a),
+    loadTex(mgr, `${BASE}m007b_body_d_${sz}.webp`, true, a, low), loadTex(mgr, `${BASE}m007b_head_d_${sz}.webp`, true, a, low), loadTex(mgr, `${BASE}m007b_head_n_${sz}.webp`, false, a, low), loadTex(mgr, `${BASE}m007b_head_s_${sz}.webp`, false, a, low),
     fetch(BASE + 'm007b_face.bin').then((r) => r.arrayBuffer()),
   ]);
-  Object.assign(shared, { gltf, sz, tex: { bd, bn, bs, hd, hn, hs, gd, gn, gr, tn, tr, od, on, or, b: { bd: bd2, hd: hd2, hn: hn2, hs: hs2 } } });
+  Object.assign(shared, { gltf, sz, low, tex: { bd, bn, bs, hd, hn, hs, gd, gn, gr, tn, tr, od, on, or, b: { bd: bd2, hd: hd2, hn: hn2, hs: hs2 } } });
   shared.face.b = faceBin; shared.smoothHead = q.name !== 'low'; shared.heads = {};
   shared.gloves = { L: buildGloveGeometry(-1), R: buildGloveGeometry(1) };
   return shared;
@@ -49,7 +50,7 @@ function trunksMap(color, stripe) {
   x.fillStyle = stripe; x.fillRect(0, band * 0.36, 1024, band * 0.12); x.fillRect(0, band * 0.62, 1024, band * 0.12);
   x.fillStyle = stripe; for (const u of [0.25, 0.75]) x.fillRect(u * 1024 - 11, band, 22, 512 - band);
   x.fillStyle = '#0d0d10'; for (const u of [0.25, 0.75]) { x.fillRect(u * 1024 - 22, band, 8, 512 - band); x.fillRect(u * 1024 + 14, band, 8, 512 - band); }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.wrapS = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+  const t = new THREE.CanvasTexture(shrinkImage(c, shared.low)); t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.wrapS = THREE.RepeatWrapping; t.anisotropy = 4; return t;
 }
 
 /* Move the head's vertices to another person's shape. Only this mesh's copy of the vertex data changes: the body keeps its own. */

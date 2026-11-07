@@ -8,11 +8,131 @@
 
 /* Street Fight 3D loads on click. The import map is added from here because tools/jscheck.py parses every script block as JavaScript. */
 document.head.appendChild(Object.assign(document.createElement("script"),{type:"importmap",textContent:JSON.stringify({imports:{three:"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/addons/"}})}));
-window.__openRealArena=function(fallback){
-  var gl=null;try{gl=document.createElement("canvas").getContext("webgl2");var x=gl&&gl.getExtension("WEBGL_lose_context");if(x)x.loseContext();}catch(e){gl=null;}
-  if(!gl)return fallback();
-  import("./gfx/arena/index.js").then(function(m){return m.openArena({onFail:function(){fallback();}});}).catch(function(e){console.warn("[arena] falling back to the canvas arena:",e);fallback();});
-};
+/* The way into the 3D fight, and the way out when it cannot start. All of this has to work when nothing of the arena has arrived, so it lives here and its styles in style.css.
+   The old canvas arena has no touch controls, so on a device whose main pointer is coarse every failure ends in a small panel with a plain reason, Try again and Back.
+   With a keyboard and a fine pointer the old arena stays as the fallback, with one line saying why. */
+window.__openRealArena=(function(){
+  var SLOW_S=20,IMPORT_S=45; /* seconds on screen: when to say the line is slow, and when to give up on a module that never arrives */
+  var WHY={net:"Could not reach the fight. Check your connection.",old:"This browser is too old for the 3D fight.",gl:"The graphics stopped. Closing other apps may help.",other:"The 3D fight could not start.",stopped:"The fight stopped. Sorry about that."};
+  var run=null,mod=null,screen=null,histOn=false,skipPop=false,pushLater=false,lineCheck=null;
+  /* Android back and the iOS edge swipe: one history entry while this is open, so back closes it to the lobby instead of leaving the site. */
+  /* A back still on its way and a push on top of it can make the browser leave the document, so a push waits for the back to land. */
+  function pushHist(){if(histOn)return;if(skipPop){pushLater=true;return;}try{history.pushState({arena3d:1},"");histOn=true;}catch(e){histOn=false;}}
+  function backLanded(){skipPop=false;if(pushLater){pushLater=false;pushHist();}}
+  function dropHist(){pushLater=false;if(!histOn)return;histOn=false;skipPop=true;history.back();setTimeout(function(){if(skipPop)backLanded();},1500);}
+  function coarse(){try{return matchMedia("(pointer: coarse)").matches;}catch(e){return false;}}
+  /* "old" when this browser can never run it, "gl" when it should be able to but has no context to give right now. */
+  function unsupported(){
+    if(!window.WebGL2RenderingContext||!window.HTMLScriptElement||!HTMLScriptElement.supports||!HTMLScriptElement.supports("importmap"))return "old";
+    var gl=null;try{gl=document.createElement("canvas").getContext("webgl2");var x=gl&&gl.getExtension("WEBGL_lose_context");if(x)x.loseContext();}catch(e){gl=null;}
+    return gl?null:"gl";
+  }
+  /* The tap is the one moment iOS lets a sound context start, so the context is made here and handed to the arena. A silent start inside the tap wakes the older ones. */
+  function soundForThisTap(){
+    var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+    try{
+      if(uiPrefs&&uiPrefs.sound===false)return null;
+      if(ST&&Number(ST.fxvol)===0)return null;
+      var c=new AC({latencyHint:"interactive"});
+      c.resume().catch(function(){});
+      var s=c.createBufferSource();s.buffer=c.createBuffer(1,1,c.sampleRate);s.connect(c.destination);s.start(0);
+      return c;
+    }catch(e){return null;}
+  }
+  function endSound(r){if(r.ctx&&r.ctx.state!=="closed")r.ctx.close().catch(function(){});r.ctx=null;}
+  function clearScreen(){if(screen){screen.remove();screen=null;}}
+  function showWait(line){
+    clearScreen();
+    screen=document.createElement("div");screen.className="arena-wait";
+    screen.innerHTML='<button class="af-exit" type="button">Exit</button><div class="af-title">Street Fight</div><div class="af-why" role="status"></div>';
+    screen.querySelector(".af-why").textContent=line||"Loading";
+    screen.querySelector(".af-exit").addEventListener("click",closeAll);
+    document.body.appendChild(screen);
+  }
+  function showPanel(kind,retry){
+    clearScreen();
+    screen=document.createElement("div");screen.className="arena-fail";
+    screen.innerHTML='<div class="af-card" role="alertdialog" aria-modal="true" aria-label="Street Fight"><div class="af-title">Street Fight</div><div class="af-why"></div><div class="af-row"></div></div>';
+    screen.querySelector(".af-why").textContent=WHY[kind]||WHY.other;
+    var row=screen.querySelector(".af-row");
+    var add=function(label,go,fn){var b=document.createElement("button");b.type="button";b.className=go?"af-btn af-go":"af-btn";b.innerHTML="<span>"+label+"</span>";b.addEventListener("click",fn);row.appendChild(b);};
+    if(retry)add("Try again",true,retry);
+    add("Back",!retry,closeAll);
+    document.body.appendChild(screen);
+    row.querySelector("button").focus({preventScroll:true});
+  }
+  /* Nothing left open: the arena, this screen, or an open still on its way. */
+  function closeAll(){
+    stopCheck();
+    var r=run;run=null;
+    if(r){r.over=true;clearInterval(r.timer);}
+    clearScreen();
+    if(mod)mod.closeArena();
+    if(r)endSound(r);
+    dropHist();
+  }
+  function failed(r,e,kind){
+    if(r.over)return; /* the player has already left */
+    r.over=true;clearInterval(r.timer);if(run===r)run=null;
+    endSound(r);
+    console.warn("[arena] could not start:",e);
+    kind=kind||(e&&e.kind)||(e instanceof SyntaxError?"old":"net");
+    if(!coarse()){clearScreen();dropHist();r.fallback();simpleNote(kind);return;}
+    showPanel(kind,kind==="old"?null:function(){if(e&&e.hung)freshPage(kind,r.fallback);else open(r.fallback);});
+  }
+  function simpleNote(kind){
+    var a=document.querySelector(".arena3");if(!a)return;
+    var n=document.createElement("div");n.className="a3-note";n.textContent="This is the simple version. The 3D fight "+(kind==="stopped"?"stopped.":"could not start.");a.appendChild(n);
+  }
+  /* A request the browser never finished keeps later ones for that file waiting on it, and only a new page lets go of it. So look first, and reload only if the line answers. */
+  function freshPage(kind,fallback){
+    stopCheck();
+    showWait("Checking the connection");
+    var again=function(){showPanel(kind,function(){freshPage(kind,fallback);});};
+    var ctl=lineCheck=new AbortController(),t=setTimeout(function(){ctl.abort();},8000);
+    var done=function(go){clearTimeout(t);if(lineCheck!==ctl)return;lineCheck=null;go();};
+    fetch("./gfx/arena/index.js",{cache:"no-store",signal:ctl.signal}).then(function(x){done(function(){if(x.ok)location.reload();else again();});},function(){done(again);});
+  }
+  /* The player left: whatever that look at the line finds out, nothing reloads and no panel comes back. */
+  function stopCheck(){var c=lineCheck;lineCheck=null;if(c)c.abort();}
+  function open(fallback){
+    if(run)return;
+    stopCheck();
+    var r={fallback:fallback,over:false,imported:false,timer:0};
+    var why=unsupported();
+    if(why)return failed(r,new Error("3D fight unsupported: "+why),why);
+    run=r;
+    r.ctx=soundForThisTap();
+    pushHist();
+    showWait();
+    var seen=0,giveUp=null,limit=new Promise(function(_,no){giveUp=no;});
+    limit.catch(function(){});
+    /* seconds on screen, counted in ticks, so time behind another app is not time spent waiting */
+    r.timer=setInterval(function(){
+      if(document.hidden)return;
+      seen++;
+      if(seen===SLOW_S&&screen)screen.querySelector(".af-why").textContent="Slow connection. Still trying.";
+      if(seen>=IMPORT_S&&!r.imported)giveUp(Object.assign(new Error("arena import timed out"),{kind:"net",hung:true}));
+    },1000);
+    var opts={
+      audioCtx:r.ctx,
+      onScreen:function(){if(!r.over){clearInterval(r.timer);clearScreen();}},
+      onClosed:function(){if(run===r){run=null;r.over=true;clearInterval(r.timer);clearScreen();dropHist();}},
+      onFail:function(e){failed(r,e);},
+    };
+    Promise.race([import("./gfx/arena/index.js"),limit]).then(function(m){
+      mod=m;r.imported=true;
+      return r.over?null:m.openArena(opts);
+    }).catch(function(e){failed(r,e);});
+  }
+  window.addEventListener("keydown",function(e){
+    if(!screen)return;
+    if(e.key==="Escape"){e.preventDefault();e.stopPropagation();closeAll();}
+    if(e.key==="Tab"){e.preventDefault();var b=[].slice.call(screen.querySelectorAll("button")),i=b.indexOf(document.activeElement);b[(i+(e.shiftKey?-1:1)+b.length)%b.length].focus();}
+  },true);
+  window.addEventListener("popstate",function(){if(skipPop){backLanded();return;}if(histOn){histOn=false;closeAll();}});
+  return open;
+})();
 
 /* ── Static page buttons ─────────────────────────────────── */
 
@@ -2739,6 +2859,14 @@ window.__openRealArena=function(fallback){
       }
 
       /* ── open / close ─────────────────────────────────────────── */
+      /* With a Korean keyboard in Hangul mode e.key is a Hangul letter, or "Process" on Windows, so only then read which key it is by position. Other layouts keep meaning what they say. */
+      function latinKey(e) {
+        const k = e.key || "", c = e.code || "";
+        if (k !== "Process" && !/^[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]$/.test(k)) return k;
+        if (/^Key[A-Z]$/.test(c)) return c.slice(3).toLowerCase();
+        if (/^Digit\d$/.test(c)) return c.slice(5);
+        return c === "Space" ? " " : /^Shift/.test(c) ? "Shift" : c || k;
+      }
       function openArena3D() {
         document.querySelectorAll(".arena3").forEach((n) => n.remove());
         const el = document.createElement("div");
@@ -2803,7 +2931,7 @@ window.__openRealArena=function(fallback){
       const a3Open = () => !!document.querySelector(".arena3");
       window.addEventListener("keydown", (e) => {
         if (!a3Open()) return;
-        const k = e.key.toLowerCase();
+        const k = latinKey(e).toLowerCase();
         if (k === "escape") { e.preventDefault(); return closeArena3D(); }
         if (["w", "a", "s", "d", "shift"].includes(k)) { A3.keys.add(k); e.preventDefault(); }
         if (k === " ") { a3Sidestep(); e.preventDefault(); }
@@ -2818,7 +2946,7 @@ window.__openRealArena=function(fallback){
       });
       window.addEventListener("keyup", (e) => {
         if (!a3Open()) return;
-        A3.keys.delete(e.key.toLowerCase());
+        A3.keys.delete(latinKey(e).toLowerCase());
       });
       window.addEventListener("blur", () => A3.keys.clear());
 
@@ -3764,7 +3892,7 @@ window.__openRealArena=function(fallback){
       }
       function hotkeysBlocked() {
         if (document.querySelector(".st-key.binding")) return true;
-        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3,.arena-x")) return true;
+        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3,.arena-x,.arena-wait,.arena-fail")) return true;
         return !!document.querySelector("dialog[open]");
       }
       window.addEventListener("keydown", (e) => {
@@ -3773,7 +3901,7 @@ window.__openRealArena=function(fallback){
         if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || "")) return;
         if (t && t.isContentEditable) return;
         if (hotkeysBlocked()) return;
-        const k = e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key;
+        const key = latinKey(e), k = key === " " ? "Space" : key.length === 1 ? key.toUpperCase() : key;
         for (const id in CTRL_ACTIONS) {
           if (ST[id] && ST[id] === k) {
             if (CTRL_ACTIONS[id]()) e.preventDefault();

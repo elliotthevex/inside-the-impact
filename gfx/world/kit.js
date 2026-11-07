@@ -25,17 +25,34 @@ export const RING = {
 };
 export const ROOM = { half: 9, height: 4.5 };
 
-let mgr; const texCache = new Map(); const modelCache = new Map(); const pending = [];
-export function setLoader(m) { mgr = m || undefined; }
-/* Resolves when every texture asked for so far has arrived. Clones made before that share the image once it does. */
-export function texturesReady() { return Promise.all(pending); }
+let mgr; let texMax = 0; const texCache = new Map(); const modelCache = new Map(); const pending = new Map();
+/* Each open starts here. A failure from an earlier open is forgotten, and whatever is still on its way stays waited for. maxTex: the longest side a texture may have, on the low preset; 0 leaves files as they come. */
+export function setLoader(m, maxTex = 0) { mgr = m || undefined; texMax = maxTex; for (const [k, e] of pending) if (e.failed) pending.delete(k); }
+/* Phones run out of memory first. The image drawn down into a canvas at once, so the full-size pixels can go. The canvas stays: it is what a restored GPU context uploads again from. */
+export function shrinkImage(img, max) {
+  const w = img.width, h = img.height, k = max / Math.max(w, h);
+  if (!max || !(k < 1)) return img;
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+  const x = c.getContext('2d', { willReadFrequently: true }); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; x.drawImage(img, 0, 0, c.width, c.height);
+  if (img.close) img.close();
+  return c;
+}
+function shrinkModel(g, max) {
+  const seen = new Set();
+  g.scene.traverse((n) => { for (const m of n.material ? [].concat(n.material) : []) for (const k of Object.keys(m)) { const t = m[k]; if (t && t.isTexture && t.image && !seen.has(t.source)) { seen.add(t.source); t.image = shrinkImage(t.image, max); t.needsUpdate = true; } } });
+  return g;
+}
+/* Resolves when every texture asked for in this open has arrived, or rejects if one failed. Clones made before that share the image once it does. */
+export function texturesReady() { return Promise.all([...pending.values()].map((e) => e.arrive)); }
 
 function loadTex(file, srgb, aniso = 4) {
-  const key = file + (srgb ? ':s' : '');
+  const key = file + (srgb ? ':s' : '') + (texMax ? ':' + texMax : ''), max = texMax;
   if (!texCache.has(key)) {
     const t = new THREE.Texture();
-    const fetch = (tries, ok, err) => new THREE.ImageLoader(mgr).load(TEX + file, (img) => { t.image = img; t.needsUpdate = true; ok(t); }, undefined, (e) => { if (tries > 0) setTimeout(() => fetch(tries - 1, ok, err), 500); else err(e); });
-    pending.push(new Promise((ok, err) => fetch(2, ok, err)));
+    const fetch = (tries, ok, err) => new THREE.ImageLoader(mgr).load(TEX + file, (img) => { t.image = shrinkImage(img, max); t.needsUpdate = true; ok(t); }, undefined, (e) => { if (tries > 0) setTimeout(() => fetch(tries - 1, ok, err), 500); else err(e); });
+    /* A file that fails its tries leaves no empty texture behind, so the next open asks for it again. The rejection stays in pending for this open's texturesReady to see. */
+    const entry = { failed: false, arrive: new Promise((ok, err) => fetch(2, ok, err)) }; pending.set(key, entry);
+    entry.arrive.then(() => { if (pending.get(key) === entry) pending.delete(key); }, () => { entry.failed = true; texCache.delete(key); });
     t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = aniso; if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     texCache.set(key, t);
   }
@@ -279,8 +296,13 @@ ${KIND === 2 ? 'uniform sampler2D uContact;' : ''}${NB ? `uniform vec3 uBulbP[${
 }
 
 export async function loadModel(id) {
-  if (!modelCache.has(id)) modelCache.set(id, new GLTFLoader(mgr).loadAsync(`${MODELS}${id}/${id}_1k.gltf`).catch(() => new Promise((ok) => setTimeout(ok, 500)).then(() => new GLTFLoader(mgr).loadAsync(`${MODELS}${id}/${id}_1k.gltf`))));
-  const g = await modelCache.get(id); const meshes = {};
+  const key = id + ':' + texMax, max = texMax;
+  if (!modelCache.has(key)) {
+    const url = `${MODELS}${id}/${id}_1k.gltf`, get = () => new GLTFLoader(mgr).loadAsync(url, mgr && mgr.alive);
+    const arrive = get().catch(() => new Promise((ok) => setTimeout(ok, 500)).then(get)).then((g) => (max ? shrinkModel(g, max) : g));
+    modelCache.set(key, arrive); arrive.catch(() => modelCache.delete(key)); /* a model that fails leaves nothing behind either */
+  }
+  const g = await modelCache.get(key); const meshes = {};
   g.scene.traverse((n) => {
     if (!n.isMesh) return; meshes[n.name] = n; n.castShadow = false; n.receiveShadow = true;
     /* Real transmission makes three draw every opaque object a second time, each frame. These are tiny lamp glasses: plain alpha looks the same. */
@@ -534,7 +556,7 @@ function partOf(name, k, localY, localZ) {
 }
 /* Returns { seated, lean, stand, crossed, cheer } as indexed BufferGeometries with position, normal, aPart. */
 export async function loadCrowdGeometry(cell = 0.07) {
-  const gltf = await new GLTFLoader(mgr).loadAsync(PERSON); const out = {};
+  const gltf = await new GLTFLoader(mgr).loadAsync(PERSON, mgr && mgr.alive); const out = {};
   for (const [poseName, P] of Object.entries(POSES)) {
     const root = cloneSkinned(gltf.scene); root.updateMatrixWorld(true); const bones = {}; const meshes = [];
     root.traverse((n) => { if (n.isBone) bones[n.name] = n; if (n.isSkinnedMesh) meshes.push(n); });

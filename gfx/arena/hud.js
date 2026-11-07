@@ -13,6 +13,8 @@
 
 const CSS_HREF = new URL('./arena.css', import.meta.url).href;
 const CARRY_KEY = 'arena.carry.shown';
+const CSS_WAIT = 15;       // seconds on screen for one try at the stylesheet
+const FONT_WAIT = 1500;    // ms the load screen waits for its fonts before going up anyway
 let carryShown = false; // falls back to this when sessionStorage is blocked
 
 const CHUNK_HOLD = 0.42;   // seconds the damage chunk waits before draining
@@ -53,21 +55,23 @@ function textSize() {
     return (st && st.textsize) || 'normal';
   } catch (e) { return 'normal'; }
 }
+/* Without the stylesheet the fight would run unseen under the lobby, so this rejects and the load fails: one retry, for a sheet that failed or hung. Seconds behind another app do not count. */
 function ensureCss() {
-  let link = null;
-  for (const l of document.querySelectorAll('link[rel="stylesheet"]')) if (/arena\.css(\?|$)/.test(l.href)) link = l;
-  if (link && link.sheet) return Promise.resolve();
-  if (!link) {
-    link = document.createElement('link');
+  const old = [...document.querySelectorAll('link[rel="stylesheet"]')].filter((l) => /arena\.css(\?|$)/.test(l.href));
+  if (old.some((l) => l.sheet)) return Promise.resolve();
+  old.forEach((l) => l.remove());
+  const one = (href) => new Promise((ok, no) => {
+    const link = document.createElement('link');
+    let seen = 0, tick = 0;
+    const done = (err) => { clearInterval(tick); if (err) { link.remove(); no(err); } else ok(); };
+    tick = setInterval(() => { if (!document.hidden && ++seen >= CSS_WAIT) done(Object.assign(new Error('arena.css timed out'), { hung: true })); }, 1000);
     link.rel = 'stylesheet';
-    link.href = CSS_HREF;
+    link.href = href;
+    link.addEventListener('load', () => done());
+    link.addEventListener('error', () => done(new Error('arena.css failed')));
     document.head.appendChild(link);
-  }
-  return new Promise((res) => {
-    link.addEventListener('load', res, { once: true });
-    link.addEventListener('error', res, { once: true });
-    setTimeout(res, 2500);
   });
+  return one(CSS_HREF).catch(() => one(CSS_HREF + '?again=1')).catch((e) => { throw Object.assign(e, { kind: 'net' }); });
 }
 function loadFonts() {
   if (!document.fonts || !document.fonts.load) return Promise.resolve();
@@ -120,7 +124,7 @@ const TEMPLATE = (touch) => `
 <div class="ax-cap" aria-hidden="true"></div>
 ${touch ? '' : `<div class="ax-hint is-off" aria-hidden="true"><div class="ax-hint-in">${keysHtml()}</div></div>`}
 ${touch ? `<div class="ax-touch">
-  <div class="ax-stickzone" aria-label="Move"><div class="ax-stick"><div class="ax-knob"></div></div></div>
+  <div class="ax-stickzone" aria-label="Move"><div class="ax-stick is-rest"><div class="ax-knob"></div></div></div>
   <div class="ax-tbtns">
     ${TOUCH_PUNCHES.map(([l, c, k, x]) => `<button class="ax-tb${x}" type="button" data-code="${c}" data-key="${k}">${l}</button>`).join('')}
     <button class="ax-tb ax-tb-guard" type="button" data-code="ShiftLeft" data-key="Shift">Guard</button>
@@ -130,6 +134,7 @@ ${touch ? `<div class="ax-touch">
 <div class="ax-panel ax-pause" role="dialog" aria-modal="true" aria-label="Paused">
   <div class="ax-card">
     <div class="ax-title">Paused</div>
+    <div class="ax-pause-note" role="status"></div>
     <div class="ax-pause-keys">${touch ? touchNote : keysHtml()}</div>
     <div class="ax-btnrow">
       <button class="ax-btn ax-btn-go" type="button" data-act="resume"><span>Resume</span></button>
@@ -153,11 +158,13 @@ ${touch ? `<div class="ax-touch">
   </div>
 </div>
 <div class="ax-load" role="status" aria-label="Loading">
+  <button class="ax-load-exit" type="button" data-act="exit">Exit</button>
   <div class="ax-load-in">
     <div class="ax-load-kick">Inside the Impact</div>
     <div class="ax-load-title">Street Fight</div>
     <div class="ax-load-bar"><span class="ax-load-fill"></span></div>
     <div class="ax-load-row"><span class="ax-load-label">Loading</span><span class="ax-load-pct">0%</span></div>
+    <div class="ax-load-note"></div>
     <div class="ax-load-keys">${touch ? touchNote : keysHtml()}</div>
     <div class="ax-load-tip"></div>
   </div>
@@ -180,7 +187,8 @@ export function createHud(rootEl, opts = {}) {
   scope.classList.toggle('ax-rm', reduced);
 
   let destroyed = false;
-  const ready = Promise.all([ensureCss().then(() => { if (!destroyed) hud.style.display = ''; }), loadFonts()]).then(() => undefined);
+  /* fonts come after the stylesheet, which is what names them, and a slow font does not hold the fight back */
+  const ready = ensureCss().then(() => { if (!destroyed) { hud.style.display = ''; fitLoadTitle(); } return Promise.race([loadFonts(), new Promise((ok) => setTimeout(ok, FONT_WAIT))]); }).then(() => { fitLoadTitle(); });
 
   /* ── element refs ─────────────────────────────────────────────────── */
   const sr = q('.ax-sr'), vig = q('.ax-vig'), white = q('.ax-white');
@@ -189,7 +197,15 @@ export function createHud(rootEl, opts = {}) {
   const hint = q('.ax-hint');
   const pausePanel = q('.ax-pause'), endPanel = q('.ax-end');
   const endTitle = endPanel.querySelector('.ax-title'), endHow = q('.ax-how'), endScore = q('.ax-score'), endStats = q('.ax-stats'), endReport = q('.ax-report'), endCarry = q('.ax-carry');
-  const load = q('.ax-load'), loadFill = q('.ax-load-fill'), loadPct = q('.ax-load-pct'), loadLabel = q('.ax-load-label'), loadTip = q('.ax-load-tip');
+  const load = q('.ax-load'), loadFill = q('.ax-load-fill'), loadPct = q('.ax-load-pct'), loadLabel = q('.ax-load-label'), loadTip = q('.ax-load-tip'), loadNote = q('.ax-load-note'), loadTitle = q('.ax-load-title');
+  const resumeBtn = pausePanel.querySelector('[data-act="resume"]'), pauseNote = q('.ax-pause-note');
+  /* the title is one unbroken word pair: until the condensed font arrives a wider one must still fit the screen */
+  function fitLoadTitle() {
+    if (destroyed) return;
+    loadTitle.style.fontSize = '';
+    const room = loadTitle.parentElement.clientWidth, w = loadTitle.scrollWidth;
+    if (room > 0 && w > room) loadTitle.style.fontSize = (parseFloat(getComputedStyle(loadTitle).fontSize) * room / w * 0.98).toFixed(1) + 'px';
+  }
   loadTip.textContent = TIPS[Math.floor(Math.random() * TIPS.length) % TIPS.length];
 
   const makeSide = (id) => {
@@ -535,7 +551,7 @@ export function createHud(rootEl, opts = {}) {
     panel.classList.toggle('is-on', on);
     if (panel === endPanel) clearTimeout(panelFocus);
     if (on) {
-      const first = panel.querySelector('.ax-btn');
+      const first = panel.querySelector('.ax-btn:not([disabled])');
       const focus = () => { if (first && panel.classList.contains('is-on')) first.focus({ preventScroll: true }); };
       /* Space is the slip key. A player still fighting when the end panel opens would press Rematch and never read the report, so focus waits for the hands to stop. */
       if (panel === endPanel) panelFocus = setTimeout(focus, 900); else focus();
@@ -547,6 +563,19 @@ export function createHud(rootEl, opts = {}) {
     paused = !!on;
     if (paused && endShown) paused = false; // the end panel already has the exit and rematch buttons
     showPanel(pausePanel, paused);
+  }
+  /* The GPU went away. 'wait': Resume cannot work yet. 'gone': it did not come back in time, so only Restart and Exit are left. null: all is well again. */
+  function setPicture(state) {
+    pauseNote.textContent = state === 'wait' ? 'The picture stopped. Getting it back.' : state === 'gone' ? 'The picture did not come back.' : '';
+    resumeBtn.disabled = !!state;
+    resumeBtn.hidden = state === 'gone';
+    if (paused && (!state || !pausePanel.contains(document.activeElement) || document.activeElement.disabled)) { const first = pausePanel.querySelector('.ax-btn:not([disabled])'); if (first) first.focus({ preventScroll: true }); }
+  }
+  /* The picture went away during the end graphic: the result does not wait for frames that are not coming. */
+  function finish(m) {
+    if (destroyed || !m || m.state !== 'over' || endShown) return;
+    update(m, 0);
+    showEnd(m, readResult(m));
   }
   function showEnd(m, r) {
     endShown = true;
@@ -618,20 +647,47 @@ export function createHud(rootEl, opts = {}) {
     scope.dispatchEvent(new CustomEvent('arena:' + name, { bubbles: true }));
   }
   function act(a) {
+    if (a === 'resume' && resumeBtn.disabled) return;
     if (a === 'pause') { setPaused(true); emit('pause'); }
     else if (a === 'resume') { setPaused(false); emit('resume'); }
     else if (a === 'rematch') { reset(); emit('rematch'); }
     else if (a === 'exit') { setPaused(false); emit('exit'); }
   }
-  const onClick = (e) => {
+  /* A browser makes no click from a tap while another finger is down, and a thumb is usually on the stick, so on touch the buttons act on the lift themselves. */
+  let clickAfter = 0;
+  const tapping = new Map();
+  const onTapDown = (e) => {
+    if (e.pointerType !== 'touch') return;
     const b = e.target.closest && e.target.closest('[data-act]');
-    if (b && hud.contains(b)) act(b.dataset.act);
+    if (b && hud.contains(b)) tapping.set(e.pointerId, { b, x: e.clientX, y: e.clientY });
+  };
+  const onTapUp = (e) => {
+    const t = tapping.get(e.pointerId);
+    if (!t) return;
+    tapping.delete(e.pointerId);
+    const b = t.b, over = document.elementFromPoint(e.clientX, e.clientY);
+    /* a finger that stayed put still means the button it pressed, even if the panel moved under it: the line about the picture comes and goes */
+    const still = Math.abs(e.clientX - t.x) < 10 && Math.abs(e.clientY - t.y) < 10 && b.offsetParent;
+    if (b.disabled || (!still && (!over || !b.contains(over)))) return;
+    clickAfter = performance.now() + 450; /* the click that may follow this lift could land on a panel that has just opened under the finger */
+    if (b.dataset.act === 'exit') { /* or, with the arena gone on this lift, on the page under the finger */
+      const eat = (c) => { c.stopPropagation(); c.preventDefault(); };
+      addEventListener('click', eat, { capture: true, once: true });
+      setTimeout(() => removeEventListener('click', eat, true), 450);
+    }
+    act(b.dataset.act);
+  };
+  const onTapCancel = (e) => { tapping.delete(e.pointerId); };
+  const onClick = (e) => {
+    if (performance.now() < clickAfter) return;
+    const b = e.target.closest && e.target.closest('[data-act]');
+    if (b && !b.disabled && hud.contains(b)) act(b.dataset.act);
   };
   const onPanelKey = (e) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
     const panel = e.target.closest && e.target.closest('.ax-panel');
     if (!panel) return;
-    const btns = [...panel.querySelectorAll('.ax-btn')];
+    const btns = [...panel.querySelectorAll('.ax-btn:not([disabled])')];
     const i = btns.indexOf(document.activeElement);
     const step = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
     btns[(i + step + btns.length) % btns.length].focus();
@@ -640,12 +696,15 @@ export function createHud(rootEl, opts = {}) {
   // Clicking the pause icon must not leave focus on it, or Space (slip) would press it.
   const noFocus = (e) => { if (e.target.closest && e.target.closest('.ax-pausebtn')) e.preventDefault(); };
   hud.addEventListener('click', onClick);
+  hud.addEventListener('pointerdown', onTapDown);
+  hud.addEventListener('pointerup', onTapUp);
+  hud.addEventListener('pointercancel', onTapCancel);
   hud.addEventListener('keydown', onPanelKey);
   hud.addEventListener('mousedown', noFocus);
 
   /* ── touch ────────────────────────────────────────────────────────── */
   const stick = { x: 0, y: 0, active: false };
-  let cleanupTouch = null;
+  let cleanupTouch = null, heldAgain = () => {}, dropFingers = () => {};
   if (touch) cleanupTouch = wireTouch();
   function send(code, key, down) {
     if (opts.onInput) opts.onInput(code, down);
@@ -658,17 +717,14 @@ export function createHud(rootEl, opts = {}) {
     let id = null, ox = 0, oy = 0, rect = null;
     const R = () => base.offsetWidth * .34;
     const setDir = (code, on) => { if (held[code] !== on) { held[code] = on; send(code, keyOf[code], on); } };
-    const rest = () => {
-      const z = zone.getBoundingClientRect(), w = base.offsetWidth;
-      const pad = Math.max(12, w * .14);
-      moveBase(pad + w * .5, z.height - pad - w * .5);
-      knob.style.transform = 'none';
-    };
-    const moveBase = (x, y) => { base.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)'; };
+    /* The resting place is all in the stylesheet, so it needs no measuring and is right after a rematch or a rotate, when the layer may have been hidden. */
+    const rest = () => { if (id !== null) return; base.classList.add('is-rest'); base.style.transform = ''; knob.style.transform = 'none'; };
+    const moveBase = (x, y) => { base.classList.remove('is-rest'); base.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)'; };
     const down = (e) => {
+      if (id !== null && zone.hasPointerCapture && !zone.hasPointerCapture(id)) up({ pointerId: id }); /* a browser can lose a lift: a finger whose capture has gone is no longer here */
       if (id !== null) return;
       id = e.pointerId;
-      zone.setPointerCapture && zone.setPointerCapture(id);
+      try { zone.setPointerCapture(id); } catch (err) { /* that finger has already gone: the up handler sorts it out */ }
       rect = zone.getBoundingClientRect();
       const w = base.offsetWidth * .5;
       ox = Math.min(rect.width - w, Math.max(w, e.clientX - rect.left));
@@ -705,12 +761,15 @@ export function createHud(rootEl, opts = {}) {
       const b = e.currentTarget;
       b.setPointerCapture && b.setPointerCapture(e.pointerId);
       b.classList.add('is-down');
+      b.axFingers = (b.axFingers || 0) + 1; /* two fingers on one button: it stays pressed until the last one lifts */
       send(b.dataset.code, b.dataset.key, true);
       e.preventDefault();
     };
     const btnUp = (e) => {
       const b = e.currentTarget;
       if (!b.classList.contains('is-down')) return;
+      b.axFingers = Math.max(0, (b.axFingers || 1) - 1);
+      if (b.axFingers > 0) return;
       b.classList.remove('is-down');
       send(b.dataset.code, b.dataset.key, false);
     };
@@ -723,7 +782,13 @@ export function createHud(rootEl, opts = {}) {
     const noMenu = (e) => e.preventDefault();
     q('.ax-touch').addEventListener('contextmenu', noMenu);
     addEventListener('resize', rest);
-    ready.then(rest);
+    /* A pause clears the keys, but a finger may still be on Guard: on resume it counts again. A punch does not, or a held finger would throw one. */
+    heldAgain = () => { for (const b of btns) if (b.dataset.code === 'ShiftLeft' && b.classList.contains('is-down')) send(b.dataset.code, b.dataset.key, true); };
+    /* The window lost focus, and lifts may never reach us: start clean. A finger really still down just has to press again. */
+    dropFingers = () => {
+      if (id !== null) up({ pointerId: id });
+      for (const b of btns) if (b.classList.contains('is-down')) { b.axFingers = 0; b.classList.remove('is-down'); send(b.dataset.code, b.dataset.key, false); }
+    };
     return () => {
       removeEventListener('resize', rest);
       Object.keys(held).forEach((c) => setDir(c, false));
@@ -752,12 +817,20 @@ export function createHud(rootEl, opts = {}) {
     if (label) loadLabel.textContent = label;
   }
 
+  /* a short line under the bar, for a load that has gone quiet */
+  function setLoadNote(text) { if (!destroyed && loadNote.textContent !== (text || '')) loadNote.textContent = text || ''; }
+
+  addEventListener('resize', fitLoadTitle);
   function destroy() {
     if (destroyed) return;
     destroyed = true;
     clearTimeout(loadTimer);
+    removeEventListener('resize', fitLoadTitle);
     if (cleanupTouch) cleanupTouch();
     hud.removeEventListener('click', onClick);
+    hud.removeEventListener('pointerdown', onTapDown);
+    hud.removeEventListener('pointerup', onTapUp);
+    hud.removeEventListener('pointercancel', onTapCancel);
     hud.removeEventListener('keydown', onPanelKey);
     hud.removeEventListener('mousedown', noFocus);
     hud.remove();
@@ -766,7 +839,7 @@ export function createHud(rootEl, opts = {}) {
   }
 
   return {
-    update, onEvent, showLoading, destroy, setPaused, reset, stick, el: hud, ready,
+    update, onEvent, showLoading, setLoadNote, destroy, setPaused, setPicture, finish, reset, stick, el: hud, ready, heldAgain: () => heldAgain(), dropFingers: () => dropFingers(),
     get paused() { return paused; },
   };
 }
