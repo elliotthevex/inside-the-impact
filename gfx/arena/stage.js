@@ -142,11 +142,13 @@ export async function createStage(engine, loader) {
   const [crowdGeos, mLamp, mCage, mPipes, mDuct, mStool, mBucket, mTube, mBox, mDoor, mBarrel, env] = await Promise.all([
     loadCrowdGeometry(q.name === 'low' ? 0.095 : 0.07),
     loadModel('hanging_industrial_lamp'), loadModel('caged_hanging_light'), loadModel('modular_industrial_pipes_01'), loadModel('modular_airduct_circular_01'), loadModel('metal_stool_01'), loadModel('wooden_bucket_01'), loadModel('mounted_fluorescent_lights'), loadModel('utility_box_01'), loadModel('rollershutter_door'), loadModel('barrel_03'),
-    new HDRLoader(loader).loadAsync(HDRI),
+    new HDRLoader(loader).loadAsync(HDRI, loader && loader.alive),
   ]);
   await texturesReady();
   env.mapping = THREE.EquirectangularReflectionMapping;
-  const pm = new THREE.PMREMGenerator(engine.renderer); const envRT = pm.fromEquirectangular(env); scene.environment = envRT.texture; scene.environmentIntensity = 0.26; env.dispose(); pm.dispose();
+  /* a render target's pixels do not survive a lost context, so env keeps its pixels in memory and this can run again */
+  let envRT = null; const bakeEnv = () => { const pm = new THREE.PMREMGenerator(engine.renderer); const rt = pm.fromEquirectangular(env); if (envRT) envRT.dispose(); envRT = rt; scene.environment = rt.texture; env.dispose(); pm.dispose(); };
+  bakeEnv(); scene.environmentIntensity = 0.26;
 
   /* key lamp, and the real point lights the fighters see */
   const lamp = hangingLamp(mLamp, { anchorY: ROOM.height + 0.42, target: [0, RING.canvasY, 0], shadow: q.shadow, intensity: KEY, angle: 1.16, penumbra: 0.5, decay: 1.15, calm: engine.reducedMotion }); scene.add(lamp.group);
@@ -280,6 +282,8 @@ export async function createStage(engine, loader) {
     /* A fighter hit that side: amount in metres of push, along in -1..1 along the side. */
     ropeHit(side, amount = 0.05, along = 0) { const s = ropeState[side]; s.v += amount * 12; ring.ropes[side].material.userData.u.uWobAt.value = along; },
     kickLamp(power = 1) { lamp.kick(power); },
+    /* After a context restore. three uploads geometry and images again by itself; this is the one thing it cannot rebuild. */
+    rebuildEnv: bakeEnv,
     applyQuality(nq) {
       const L = lamp.light; if (L.shadow.mapSize.x !== nq.shadow) { L.shadow.mapSize.set(nq.shadow, nq.shadow); if (L.shadow.map) { L.shadow.map.dispose(); L.shadow.map = null; } }
       bulbs.forEach((l, i) => { l.visible = i < nq.bulbs; }); cool.visible = nq.name !== 'low';

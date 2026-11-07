@@ -78,7 +78,8 @@ export class Engine {
     this.resize(); this.post = new Post(r, this.q); this._syncExposure();
     this._onResize = () => this.resize(); window.addEventListener('resize', this._onResize);
     this._onLost = (e) => { e.preventDefault(); this.stop(); this.contextLost = true; };
-    canvas.addEventListener('webglcontextlost', this._onLost);
+    this._onBack = () => { this.contextLost = false; };
+    canvas.addEventListener('webglcontextlost', this._onLost); canvas.addEventListener('webglcontextrestored', this._onBack);
   }
   get quality() { return this.q.name; }
   _size() {
@@ -150,7 +151,7 @@ export class Engine {
     }
   }
   dispose() {
-    this.stop(); window.removeEventListener('resize', this._onResize); this.canvas.removeEventListener('webglcontextlost', this._onLost);
+    this.stop(); window.removeEventListener('resize', this._onResize); this.canvas.removeEventListener('webglcontextlost', this._onLost); this.canvas.removeEventListener('webglcontextrestored', this._onBack);
     this.post.dispose(); this.listeners.clear(); this.renderer.dispose();
   }
 }

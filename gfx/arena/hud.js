@@ -13,6 +13,8 @@
 
 const CSS_HREF = new URL('./arena.css', import.meta.url).href;
 const CARRY_KEY = 'arena.carry.shown';
+const CSS_WAIT = 15;       // seconds on screen for one try at the stylesheet
+const FONT_WAIT = 1500;    // ms the load screen waits for its fonts before going up anyway
 let carryShown = false; // falls back to this when sessionStorage is blocked
 
 const CHUNK_HOLD = 0.42;   // seconds the damage chunk waits before draining
@@ -53,21 +55,23 @@ function textSize() {
     return (st && st.textsize) || 'normal';
   } catch (e) { return 'normal'; }
 }
+/* Without the stylesheet the fight would run unseen under the lobby, so this rejects and the load fails: one retry, for a sheet that failed or hung. Seconds behind another app do not count. */
 function ensureCss() {
-  let link = null;
-  for (const l of document.querySelectorAll('link[rel="stylesheet"]')) if (/arena\.css(\?|$)/.test(l.href)) link = l;
-  if (link && link.sheet) return Promise.resolve();
-  if (!link) {
-    link = document.createElement('link');
+  const old = [...document.querySelectorAll('link[rel="stylesheet"]')].filter((l) => /arena\.css(\?|$)/.test(l.href));
+  if (old.some((l) => l.sheet)) return Promise.resolve();
+  old.forEach((l) => l.remove());
+  const one = (href) => new Promise((ok, no) => {
+    const link = document.createElement('link');
+    let seen = 0, tick = 0;
+    const done = (err) => { clearInterval(tick); if (err) { link.remove(); no(err); } else ok(); };
+    tick = setInterval(() => { if (!document.hidden && ++seen >= CSS_WAIT) done(Object.assign(new Error('arena.css timed out'), { hung: true })); }, 1000);
     link.rel = 'stylesheet';
-    link.href = CSS_HREF;
+    link.href = href;
+    link.addEventListener('load', () => done());
+    link.addEventListener('error', () => done(new Error('arena.css failed')));
     document.head.appendChild(link);
-  }
-  return new Promise((res) => {
-    link.addEventListener('load', res, { once: true });
-    link.addEventListener('error', res, { once: true });
-    setTimeout(res, 2500);
   });
+  return one(CSS_HREF).catch(() => one(CSS_HREF + '?again=1')).catch((e) => { throw Object.assign(e, { kind: 'net' }); });
 }
 function loadFonts() {
   if (!document.fonts || !document.fonts.load) return Promise.resolve();
@@ -130,6 +134,7 @@ ${touch ? `<div class="ax-touch">
 <div class="ax-panel ax-pause" role="dialog" aria-modal="true" aria-label="Paused">
   <div class="ax-card">
     <div class="ax-title">Paused</div>
+    <div class="ax-pause-note" role="status"></div>
     <div class="ax-pause-keys">${touch ? touchNote : keysHtml()}</div>
     <div class="ax-btnrow">
       <button class="ax-btn ax-btn-go" type="button" data-act="resume"><span>Resume</span></button>
@@ -153,11 +158,13 @@ ${touch ? `<div class="ax-touch">
   </div>
 </div>
 <div class="ax-load" role="status" aria-label="Loading">
+  <button class="ax-load-exit" type="button" data-act="exit">Exit</button>
   <div class="ax-load-in">
     <div class="ax-load-kick">Inside the Impact</div>
     <div class="ax-load-title">Street Fight</div>
     <div class="ax-load-bar"><span class="ax-load-fill"></span></div>
     <div class="ax-load-row"><span class="ax-load-label">Loading</span><span class="ax-load-pct">0%</span></div>
+    <div class="ax-load-note"></div>
     <div class="ax-load-keys">${touch ? touchNote : keysHtml()}</div>
     <div class="ax-load-tip"></div>
   </div>
@@ -180,7 +187,8 @@ export function createHud(rootEl, opts = {}) {
   scope.classList.toggle('ax-rm', reduced);
 
   let destroyed = false;
-  const ready = Promise.all([ensureCss().then(() => { if (!destroyed) hud.style.display = ''; }), loadFonts()]).then(() => undefined);
+  /* fonts come after the stylesheet, which is what names them, and a slow font does not hold the fight back */
+  const ready = ensureCss().then(() => { if (!destroyed) { hud.style.display = ''; fitLoadTitle(); } return Promise.race([loadFonts(), new Promise((ok) => setTimeout(ok, FONT_WAIT))]); }).then(() => { fitLoadTitle(); });
 
   /* ── element refs ─────────────────────────────────────────────────── */
   const sr = q('.ax-sr'), vig = q('.ax-vig'), white = q('.ax-white');
@@ -189,7 +197,15 @@ export function createHud(rootEl, opts = {}) {
   const hint = q('.ax-hint');
   const pausePanel = q('.ax-pause'), endPanel = q('.ax-end');
   const endTitle = endPanel.querySelector('.ax-title'), endHow = q('.ax-how'), endScore = q('.ax-score'), endStats = q('.ax-stats'), endReport = q('.ax-report'), endCarry = q('.ax-carry');
-  const load = q('.ax-load'), loadFill = q('.ax-load-fill'), loadPct = q('.ax-load-pct'), loadLabel = q('.ax-load-label'), loadTip = q('.ax-load-tip');
+  const load = q('.ax-load'), loadFill = q('.ax-load-fill'), loadPct = q('.ax-load-pct'), loadLabel = q('.ax-load-label'), loadTip = q('.ax-load-tip'), loadNote = q('.ax-load-note'), loadTitle = q('.ax-load-title');
+  const resumeBtn = pausePanel.querySelector('[data-act="resume"]'), pauseNote = q('.ax-pause-note');
+  /* the title is one unbroken word pair: until the condensed font arrives a wider one must still fit the screen */
+  function fitLoadTitle() {
+    if (destroyed) return;
+    loadTitle.style.fontSize = '';
+    const room = loadTitle.parentElement.clientWidth, w = loadTitle.scrollWidth;
+    if (room > 0 && w > room) loadTitle.style.fontSize = (parseFloat(getComputedStyle(loadTitle).fontSize) * room / w * 0.98).toFixed(1) + 'px';
+  }
   loadTip.textContent = TIPS[Math.floor(Math.random() * TIPS.length) % TIPS.length];
 
   const makeSide = (id) => {
@@ -535,7 +551,7 @@ export function createHud(rootEl, opts = {}) {
     panel.classList.toggle('is-on', on);
     if (panel === endPanel) clearTimeout(panelFocus);
     if (on) {
-      const first = panel.querySelector('.ax-btn');
+      const first = panel.querySelector('.ax-btn:not([disabled])');
       const focus = () => { if (first && panel.classList.contains('is-on')) first.focus({ preventScroll: true }); };
       /* Space is the slip key. A player still fighting when the end panel opens would press Rematch and never read the report, so focus waits for the hands to stop. */
       if (panel === endPanel) panelFocus = setTimeout(focus, 900); else focus();
@@ -547,6 +563,19 @@ export function createHud(rootEl, opts = {}) {
     paused = !!on;
     if (paused && endShown) paused = false; // the end panel already has the exit and rematch buttons
     showPanel(pausePanel, paused);
+  }
+  /* The GPU went away. 'wait': Resume cannot work yet. 'gone': it did not come back in time, so only Restart and Exit are left. null: all is well again. */
+  function setPicture(state) {
+    pauseNote.textContent = state === 'wait' ? 'The picture stopped. Getting it back.' : state === 'gone' ? 'The picture did not come back.' : '';
+    resumeBtn.disabled = !!state;
+    resumeBtn.hidden = state === 'gone';
+    if (paused && (!state || !pausePanel.contains(document.activeElement) || document.activeElement.disabled)) { const first = pausePanel.querySelector('.ax-btn:not([disabled])'); if (first) first.focus({ preventScroll: true }); }
+  }
+  /* The picture went away during the end graphic: the result does not wait for frames that are not coming. */
+  function finish(m) {
+    if (destroyed || !m || m.state !== 'over' || endShown) return;
+    update(m, 0);
+    showEnd(m, readResult(m));
   }
   function showEnd(m, r) {
     endShown = true;
@@ -631,7 +660,7 @@ export function createHud(rootEl, opts = {}) {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
     const panel = e.target.closest && e.target.closest('.ax-panel');
     if (!panel) return;
-    const btns = [...panel.querySelectorAll('.ax-btn')];
+    const btns = [...panel.querySelectorAll('.ax-btn:not([disabled])')];
     const i = btns.indexOf(document.activeElement);
     const step = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
     btns[(i + step + btns.length) % btns.length].focus();
@@ -723,7 +752,7 @@ export function createHud(rootEl, opts = {}) {
     const noMenu = (e) => e.preventDefault();
     q('.ax-touch').addEventListener('contextmenu', noMenu);
     addEventListener('resize', rest);
-    ready.then(rest);
+    ready.then(rest, () => {});
     return () => {
       removeEventListener('resize', rest);
       Object.keys(held).forEach((c) => setDir(c, false));
@@ -752,6 +781,9 @@ export function createHud(rootEl, opts = {}) {
     if (label) loadLabel.textContent = label;
   }
 
+  /* a short line under the bar, for a load that has gone quiet */
+  function setLoadNote(text) { if (!destroyed && loadNote.textContent !== (text || '')) loadNote.textContent = text || ''; }
+
   function destroy() {
     if (destroyed) return;
     destroyed = true;
@@ -766,7 +798,7 @@ export function createHud(rootEl, opts = {}) {
   }
 
   return {
-    update, onEvent, showLoading, destroy, setPaused, reset, stick, el: hud, ready,
+    update, onEvent, showLoading, setLoadNote, destroy, setPaused, setPicture, finish, reset, stick, el: hud, ready,
     get paused() { return paused; },
   };
 }

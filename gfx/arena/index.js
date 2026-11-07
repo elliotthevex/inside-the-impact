@@ -19,7 +19,10 @@ const PUNCH_KEYS = { KeyJ: 'jab', KeyK: 'cross', KeyL: 'hook', KeyU: 'upper', Ke
 const HAND = { jab: 'L', cross: 'R', hook: 'L', upper: 'R', bodyL: 'L', bodyR: 'R' };
 const GAME_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'Space', ...Object.keys(PUNCH_KEYS)]);
 const KEY_TO_CODE = { w: 'KeyW', a: 'KeyA', s: 'KeyS', d: 'KeyD', j: 'KeyJ', k: 'KeyK', l: 'KeyL', u: 'KeyU', i: 'KeyI', o: 'KeyO', ' ': 'Space', shift: 'ShiftLeft', escape: 'Escape', tab: 'Tab' };
-const STALL_MS = 30000;   // this long with no asset arriving counts as a failed load
+const STALL_MS = 90000;   // this long on screen with nothing arriving counts as a failed load. Time behind another app does not count, and a slow line that still delivers is not a stall
+const SLOW_MS = 20000;    // this long on screen with a flat bar and the load screen says so
+const CODE_FILES = 24;    // about how many script files a first visit fetches, so the bar moves while they arrive
+const LOST_WAIT = 8;      // seconds on screen to wait for a lost GPU context before offering a fresh start
 const HOLD = 0.45;        // seconds after the load screen starts to fade before the sim starts
 const STEP = 1 / 120;     // the sim's fixed step
 
@@ -46,10 +49,11 @@ function makeProgress(S) {
   /* each phase is a real thing that finishes; the bar never goes backward because the HUD holds its maximum */
   const W = { code: 0.12, assets: 0.62, build: 0.1, compile: 0.14, frame: 0.02 }; const done = { code: 0, assets: 0, build: 0, compile: 0, frame: 0 };
   return {
-    last: performance.now(), label: 'Loading',
+    idle: 0, flat: 0, label: 'Loading',
+    alive() { this.idle = 0; }, /* data is still coming in, whether or not the bar can show it */
     set(part, v, label) {
       if (label) this.label = label;
-      if (v > done[part]) { done[part] = Math.min(1, v); this.last = performance.now(); if (v >= 1) S.loadMarks[part] = Math.round(this.last - S.t0); }
+      if (v > done[part]) { done[part] = Math.min(1, v); this.idle = 0; this.flat = 0; if (S.hud) S.hud.setLoadNote(''); if (v >= 1) S.loadMarks[part] = Math.round(performance.now() - S.t0); }
       let p = 0; for (const k in W) p += W[k] * done[k];
       if (S.hud && !S.closed) S.hud.showLoading(Math.min(0.995, Math.max(0.01, p)), this.label);
     },
@@ -212,8 +216,23 @@ function wireInput(S) {
   };
   /* inside the overlay the key has been handled by the time it bubbles here: stop it reaching the page's listeners */
   S.onRootKey = (e) => e.stopPropagation();
+  S.onLost = (e) => {
+    e.preventDefault(); /* or the browser never gives it back */
+    if (S.closed) return;
+    console.warn('[arena] WebGL context lost');
+    if (S.ready) pictureLost(S); else if (S.failLoad) S.failLoad(Object.assign(new Error('webgl context lost'), { kind: 'gl' }));
+  };
+  S.onRestored = () => { if (!S.closed && S.ready) pictureBack(S); };
+  S.canvas.addEventListener('webglcontextlost', S.onLost);
+  S.canvas.addEventListener('webglcontextrestored', S.onRestored);
   S.onBlur = () => clearInput(S);
-  S.onVisibility = () => { if (document.hidden && S.ready && !S.paused && !panelOn(S)) pause(S); };
+  /* sound stops behind another app or tab in every state, the end panel included */
+  S.onVisibility = () => {
+    if (S.audio) S.audio.setHidden(document.hidden);
+    if (!document.hidden) return;
+    S.sawHidden = true;
+    if (S.ready && !S.paused && !panelOn(S)) pause(S);
+  };
   S.onResize = () => { if (S.ready && S.engine && !S.engine.running) { S.engine.resize(); S.cam.update(S.match, S.rigP, S.rigO, 0); S.engine.render(1e-4); } };
   window.addEventListener('keydown', S.onKeyDown, true);
   window.addEventListener('keyup', S.onKeyUp, true);
@@ -226,6 +245,8 @@ function wireInput(S) {
 
 function unwireInput(S) {
   if (!S.onKeyDown) return;
+  S.canvas.removeEventListener('webglcontextlost', S.onLost);
+  S.canvas.removeEventListener('webglcontextrestored', S.onRestored);
   window.removeEventListener('keydown', S.onKeyDown, true);
   window.removeEventListener('keyup', S.onKeyUp, true);
   S.root.removeEventListener('keydown', S.onRootKey);
@@ -245,25 +266,97 @@ function pause(S, fromHud) {
   S.audio.setPaused(true);
 }
 function resume(S, fromHud) {
-  if (!S.paused) return;
+  if (!S.paused || S.lost || S.rebuilding) return;
   S.paused = false;
   if (!fromHud) S.hud.setPaused(false);
   S.audio.setPaused(false);
   if (!S.opts.manual && !S.frozen) S.engine.start();
 }
 function rematch(S) {
+  if (S.lost) { reopen(S); return; }
   S.hud.reset();
   newMatch(S);
   if (S.paused) { S.paused = false; S.audio.setPaused(false); }
   if (!S.opts.manual && !S.frozen) S.engine.start();
 }
 
+/* ---------- the GPU goes away ---------- */
+/* Phones take the context away: behind another app, or short of memory. The fight is plain numbers and loses nothing, so it waits with the pause panel up.
+   When the context comes back three uploads geometry and images by itself and the same fight goes on. If it does not come back, Restart starts over on a new canvas. */
+function pictureLost(S) {
+  if (S.lost) return;
+  S.lost = true; S.backTurn = (S.backTurn || 0) + 1;
+  S.engine.stop();
+  if (S.match.state === 'over') S.hud.finish(S.match); /* a finished fight keeps its result */
+  else if (!panelOn(S)) pause(S);
+  S.hud.setPicture('wait');
+  let seen = 0;
+  clearInterval(S.lostTimer);
+  S.lostTimer = setInterval(() => { if (!document.hidden && ++seen >= LOST_WAIT) { clearInterval(S.lostTimer); S.hud.setPicture('gone'); } }, 1000);
+}
+async function pictureBack(S) {
+  clearInterval(S.lostTimer);
+  if (!S.lost) return;
+  const turn = S.backTurn = (S.backTurn || 0) + 1;
+  S.lost = false; S.rebuilding = true;
+  S.hud.setPicture('wait');
+  /* this listener was added before three's own, which has to rebuild its state first */
+  await new Promise((ok) => setTimeout(ok, 0));
+  if (S.closed || S.lost || turn !== S.backTurn) return;
+  try { S.stage.rebuildEnv(); await S.engine.precompile(); } catch (e) { console.warn('[arena] while restoring the picture:', e); }
+  if (S.closed || S.lost || turn !== S.backTurn) return;
+  S.rebuilding = false;
+  S.engine.render(1e-4);
+  S.hud.setPicture(null);
+  if (!S.paused && !S.opts.manual && !S.frozen) S.engine.start(); /* the end panel keeps its living picture behind it */
+}
+/* Everything over again on a new canvas, with the same options and the same sound. */
+function reopen(S) {
+  const o = S.opts;
+  teardown(S, { keepSound: true, quiet: true });
+  openArena(o).catch((e) => { console.warn('[arena] could not start again:', e); if (o.onFail) o.onFail(e); });
+}
+
 /* ---------- open ---------- */
+function whenVisible() {
+  if (!document.hidden) return Promise.resolve();
+  return new Promise((ok) => { const f = () => { if (!document.hidden) { document.removeEventListener('visibilitychange', f); ok(); } }; document.addEventListener('visibilitychange', f); });
+}
+/* Plain words for what went wrong: 'gl', 'net', 'old', or 'other' for anything else. The launcher turns them into a sentence. */
+function named(S, e) {
+  const err = e instanceof Error ? e : new Error('load failed: ' + String((e && e.type) || e));
+  if (err.kind) return err;
+  let lost = false; try { lost = !!(S.engine && S.engine.renderer.getContext().isContextLost()); } catch (x) { lost = false; }
+  const msg = String(err.message);
+  err.kind = lost || /webgl|shader|context/i.test(msg) ? 'gl' : err instanceof SyntaxError ? 'old' : /load failed|fetch|import|network|\.json|\.bin|\.hdr|\.glb/i.test(msg) || !(e instanceof Error) ? 'net' : 'other';
+  return err;
+}
+
 export async function openArena(options = {}) {
   if (session) return session.handle;
   const opts = { ...(typeof window !== 'undefined' && window.__arenaOpts ? window.__arenaOpts : {}), ...options };
+  for (let tries = 0; ; tries++) {
+    const S = begin(opts);
+    try {
+      await load(S);
+      return S.closed ? null : S.handle;
+    } catch (err) {
+      if (S.torn) return null;
+      /* The whole load gets one more go by itself, or two if the page went behind another app meanwhile, because iOS drops a background page's requests. A request that hung would only hang again. */
+      if (err.hung || err.kind === 'old' || !(tries < 1 || (tries < 2 && S.sawHidden))) { teardown(S, { quiet: true }); throw err; }
+      console.warn('[arena] load failed, trying again:', err);
+      S.closed = true;
+      await whenVisible();
+      if (S.torn) return null;
+      teardown(S, { keepSound: true, quiet: true });
+    }
+  }
+}
+
+function begin(opts) {
   const root = document.createElement('div');
   root.className = 'arena-x';
+  root.style.cssText = 'position:fixed;inset:0;z-index:90;overflow:hidden;background:#050507'; /* arena.css says the same: this holds until it arrives */
   root.setAttribute('role', 'application');
   root.setAttribute('aria-label', 'Street Fight');
   const canvas = document.createElement('canvas');
@@ -273,16 +366,11 @@ export async function openArena(options = {}) {
   const S = session = {
     t0: performance.now(), loadMarks: {}, opts, root, canvas, closed: false, ready: false, paused: false, frozen: false, keys: new Set(), q: { punch: null, slip: false, ups: 0, lastUp: false },
     input: { mx: 0, mz: 0, guard: false, punch: null, slip: false, getUp: false }, matchNo: 0, frames: 0, jsMs: 0, jsPeak: 0, hitStop: 0, slow: null, hold: 0, bank: 0, botName: opts.bot || null, botKind: opts.botKind || 'jab', bot: null, tap: null,
+    lost: false, rebuilding: false, sawHidden: !!document.hidden,
   };
   S.handle = makeHandle(S);
   wireInput(S);
-  try {
-    await load(S);
-  } catch (err) {
-    teardown(S);
-    throw err;
-  }
-  return S.closed ? null : S.handle;
+  return S;
 }
 
 const check = (S) => { if (S.closed) throw Object.assign(new Error('closed'), { closed: true }); };
@@ -290,6 +378,7 @@ const check = (S) => { if (S.closed) throw Object.assign(new Error('closed'), { 
 async function load(S) {
   const { opts } = S;
   const prog = makeProgress(S);
+  const lost = new Promise((_, no) => { S.failLoad = no; }); lost.catch(() => {});
   S.hud = createHud(S.root, {
     touch: opts.touch,
     onPause: () => pause(S, true), onResume: () => resume(S, true),
@@ -301,11 +390,26 @@ async function load(S) {
   });
   S.hud.showLoading(0.01, 'Loading');
   await S.hud.ready; check(S);
+  if (opts.onScreen) opts.onScreen();
 
-  /* a network that stops answering must not leave the player on a load screen for ever */
-  let phaseNet = true;
-  const stall = new Promise((_, no) => { S.stallTimer = setInterval(() => { if (phaseNet && performance.now() - prog.last > STALL_MS) no(new Error('arena load stalled')); }, 2000); });
+  /* A network that stops answering must not leave the player on a load screen for ever. The clock counts in ticks while the page is on screen, so time behind another app is not time spent waiting. */
+  let phaseNet = true, tLast = performance.now(), jsSeen = 0;
+  const stall = new Promise((_, no) => {
+    S.stallTimer = setInterval(() => {
+      const now = performance.now(), d = Math.min(now - tLast, 1500); tLast = now;
+      if (document.hidden) { S.sawHidden = true; return; }
+      if (!phaseNet) return;
+      prog.idle += d; prog.flat += d;
+      if (prog.flat > SLOW_MS) S.hud.setLoadNote('Slow connection. Still loading.');
+      if (prog.idle > STALL_MS) no(Object.assign(new Error('arena load stalled'), { kind: 'net', hung: true }));
+    }, 1000);
+  });
   stall.catch(() => {});
+  /* any file finishing is a sign of life; script files also move the bar, since a first visit spends a while on them and three is one big file */
+  try {
+    S.netWatch = new PerformanceObserver((list) => { for (const e of list.getEntries()) { prog.alive(); if (phaseNet && /\.js(\?|$)/.test(e.name)) { jsSeen++; prog.set('code', Math.min(0.95, jsSeen / CODE_FILES)); } } });
+    S.netWatch.observe({ type: 'resource' });
+  } catch (e) { S.netWatch = null; }
   const work = (async () => {
     const list = [['THREE', 'three'], ['engine', '../core/engine.js'], ['stage', './stage.js'], ['fighter', '../people/fighter.js'], ['anim', '../people/anim.js'], ['rig', '../people/rig.js'], ['sim', './sim.js'], ['ai', './ai.js'], ['cam', './fightcam.js'], ['fx', './fx.js'], ['audio', './audio.js']];
     let nDone = 0; const mods = {};
@@ -318,21 +422,15 @@ async function load(S) {
     let shaderFailed = null;
     engine.renderer.debug.onShaderError = (gl, program, vs, fs) => { shaderFailed = gl.getShaderInfoLog(vs) || gl.getShaderInfoLog(fs) || gl.getProgramInfoLog(program) || 'shader error'; console.error('[arena] shader failed:', String(shaderFailed).slice(0, 800)); };
     if (settings.st && settings.st.shadows === false) engine.renderer.shadowMap.enabled = false;
-    S.onLost = () => {
-      /* the GPU took the context away: nothing here survives that, so hand back to the page, which can fall back */
-      if (S.closed) return;
-      console.warn('[arena] WebGL context lost');
-      const onFail = opts.onFail; closeArena(); if (onFail) onFail(new Error('webgl context lost'));
-    };
-    S.canvas.addEventListener('webglcontextlost', S.onLost);
 
     const mgr = new THREE.LoadingManager();
+    mgr.alive = () => prog.alive();
     mgr.onProgress = (url, loaded, total) => prog.set('assets', loaded / Math.max(1, total), 'Loading the venue');
     let netErr = null; mgr.onError = (url) => { netErr = url; };
     const counted = (url, fn) => { mgr.itemStart(url); return fn().finally(() => mgr.itemEnd(url)); };
     const [reach, clips] = await Promise.all([
       counted('reach', () => fetch(asset('./reach.json')).then((r) => { if (!r.ok) throw new Error('reach.json ' + r.status); return r.json(); })),
-      counted('clips', () => mods.anim.loadClips(asset('../../assets/anim/clips.json'))),
+      counted('clips', () => mods.anim.loadClips(asset('../../assets/anim/clips.json'), mgr.alive)),
       mods.fighter.preloadFighter(engine.q, mgr),
       createStageInto(S, mods, engine, mgr),
     ]);
@@ -358,7 +456,8 @@ async function load(S) {
     mods.fighter.setCharLight(engine.q);
     S.onQuality = (q) => { if (S.fx.applyQuality) S.fx.applyQuality(q); mods.fighter.setCharLight(q); };
     engine.listeners.add(S.onQuality);
-    S.audio = mods.audio.createAudio({ enabled: settings.sound, volume: settings.volume, lite: engine.q.name === 'low' });
+    S.audio = mods.audio.createAudio({ enabled: settings.sound, volume: settings.volume, lite: engine.q.name === 'low', ctx: opts.audioCtx || undefined });
+    S.audio.setHidden(document.hidden);
     newMatch(S);
     S.hold = 0;
     frame(S, 0);           // real bones and a real camera, so the shaders and the first frame see what the fight sees
@@ -375,13 +474,15 @@ async function load(S) {
     prog.set('frame', 1);
     S.hold = HOLD;
   })();
+  work.catch(() => {}); /* whatever it says after the race is over is not news */
   try {
-    await Promise.race([work, stall]);
+    await Promise.race([work, stall, lost]);
   } catch (e) {
     if (S.closed || (e && e.closed)) return; /* closed by the player while loading: not a failure, nothing to fall back to */
-    throw e;
+    throw named(S, e);
   } finally {
     clearInterval(S.stallTimer);
+    if (S.netWatch) S.netWatch.disconnect();
   }
   if (S.closed) return;
   S.ready = true;
@@ -398,15 +499,16 @@ async function createStageInto(S, mods, engine, mgr) {
 }
 
 /* ---------- close ---------- */
-function teardown(S) {
+function teardown(S, { keepSound = false, quiet = false } = {}) {
   if (S.torn) return;
   S.torn = true; S.closed = true; S.ready = false;
   const safe = (fn) => { try { fn(); } catch (e) { console.warn('[arena] while closing:', e); } };
-  clearInterval(S.stallTimer);
+  clearInterval(S.stallTimer); clearInterval(S.lostTimer);
+  if (S.netWatch) S.netWatch.disconnect();
   unwireInput(S);
-  if (S.onLost) S.canvas.removeEventListener('webglcontextlost', S.onLost);
   if (S.engine) { S.engine.stop(); if (S.onQuality) S.engine.listeners.delete(S.onQuality); }
-  if (S.audio) safe(() => S.audio.destroy());
+  if (S.audio) safe(() => S.audio.destroy({ keepCtx: keepSound }));
+  if (!keepSound && S.opts.audioCtx && S.opts.audioCtx.state !== 'closed') S.opts.audioCtx.close().catch(() => {});
   if (S.fx && S.fx.dispose) safe(() => S.fx.dispose());
   if (S.hud) safe(() => S.hud.destroy());
   if (S.fp) safe(() => S.fp.dispose());
@@ -421,6 +523,7 @@ function teardown(S) {
   S.canvas.width = S.canvas.height = 1;
   S.root.remove();
   if (session === S) session = null;
+  if (!quiet && S.opts.onClosed) safe(() => S.opts.onClosed());
 }
 
 export function closeArena() { if (session) teardown(session); }
@@ -431,7 +534,7 @@ function makeHandle(S) {
   return {
     get match() { return S.match; }, get engine() { return S.engine; }, get stage() { return S.stage; }, get rigP() { return S.rigP; }, get rigO() { return S.rigO; },
     get cam() { return S.cam; }, get fx() { return S.fx; }, get audio() { return S.audio; }, get hud() { return S.hud; }, get mods() { return S.mods; }, get root() { return S.root; }, get ai() { return S.ai; },
-    get loadMarks() { return S.loadMarks; }, get ready() { return S.ready; }, get paused() { return S.paused; }, get frames() { return S.frames; }, get jsMs() { return S.jsMs; }, get jsPeak() { return S.jsPeak; }, get seed() { return S.seed; }, get hitStop() { return S.hitStop; }, get slow() { return S.slow; }, get settings() { return S.settings; },
+    get loadMarks() { return S.loadMarks; }, get ready() { return S.ready; }, get paused() { return S.paused; }, get lost() { return S.lost; }, get rebuilding() { return S.rebuilding; }, get frames() { return S.frames; }, get jsMs() { return S.jsMs; }, get jsPeak() { return S.jsPeak; }, get seed() { return S.seed; }, get hitStop() { return S.hitStop; }, get slow() { return S.slow; }, get settings() { return S.settings; },
     resetPeak() { S.jsPeak = 0; },
     set tap(fn) { S.tap = fn; }, get tap() { return S.tap; },
     step(n = 1, dt = 1 / 60, o) { return S.engine.step(n, dt, o); },

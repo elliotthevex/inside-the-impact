@@ -8,11 +8,113 @@
 
 /* Street Fight 3D loads on click. The import map is added from here because tools/jscheck.py parses every script block as JavaScript. */
 document.head.appendChild(Object.assign(document.createElement("script"),{type:"importmap",textContent:JSON.stringify({imports:{three:"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/addons/"}})}));
-window.__openRealArena=function(fallback){
-  var gl=null;try{gl=document.createElement("canvas").getContext("webgl2");var x=gl&&gl.getExtension("WEBGL_lose_context");if(x)x.loseContext();}catch(e){gl=null;}
-  if(!gl)return fallback();
-  import("./gfx/arena/index.js").then(function(m){return m.openArena({onFail:function(){fallback();}});}).catch(function(e){console.warn("[arena] falling back to the canvas arena:",e);fallback();});
-};
+/* The way into the 3D fight, and the way out when it cannot start. All of this has to work when nothing of the arena has arrived, so it lives here and its styles in style.css.
+   The old canvas arena has no touch controls, so on a device whose main pointer is coarse every failure ends in a small panel with a plain reason, Try again and Back.
+   With a keyboard and a fine pointer the old arena stays as the fallback, with one line saying why. */
+window.__openRealArena=(function(){
+  var SLOW_S=20,IMPORT_S=45; /* seconds on screen: when to say the line is slow, and when to give up on a module that never arrives */
+  var WHY={net:"Could not reach the fight. Check your connection.",old:"This browser is too old for the 3D fight.",gl:"The graphics stopped. Closing other apps may help.",other:"The 3D fight could not start."};
+  var run=null,mod=null,screen=null;
+  function coarse(){try{return matchMedia("(pointer: coarse)").matches;}catch(e){return false;}}
+  /* "old" when this browser can never run it, "gl" when it should be able to but has no context to give right now. */
+  function unsupported(){
+    if(!window.WebGL2RenderingContext||!window.HTMLScriptElement||!HTMLScriptElement.supports||!HTMLScriptElement.supports("importmap"))return "old";
+    var gl=null;try{gl=document.createElement("canvas").getContext("webgl2");var x=gl&&gl.getExtension("WEBGL_lose_context");if(x)x.loseContext();}catch(e){gl=null;}
+    return gl?null:"gl";
+  }
+  /* The tap is the one moment iOS lets a sound context start, so the context is made here and handed to the arena. A silent start inside the tap wakes the older ones. */
+  function soundForThisTap(){
+    var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;
+    try{
+      if(uiPrefs&&uiPrefs.sound===false)return null;
+      if(ST&&Number(ST.fxvol)===0)return null;
+      var c=new AC({latencyHint:"interactive"});
+      c.resume().catch(function(){});
+      var s=c.createBufferSource();s.buffer=c.createBuffer(1,1,c.sampleRate);s.connect(c.destination);s.start(0);
+      return c;
+    }catch(e){return null;}
+  }
+  function endSound(r){if(r.ctx&&r.ctx.state!=="closed")r.ctx.close().catch(function(){});r.ctx=null;}
+  function clearScreen(){if(screen){screen.remove();screen=null;}}
+  function showWait(line){
+    clearScreen();
+    screen=document.createElement("div");screen.className="arena-wait";
+    screen.innerHTML='<button class="af-exit" type="button">Exit</button><div class="af-title">Street Fight</div><div class="af-why" role="status"></div>';
+    screen.querySelector(".af-why").textContent=line||"Loading";
+    screen.querySelector(".af-exit").addEventListener("click",closeAll);
+    document.body.appendChild(screen);
+  }
+  function showPanel(kind,retry){
+    clearScreen();
+    screen=document.createElement("div");screen.className="arena-fail";
+    screen.innerHTML='<div class="af-card" role="alertdialog" aria-modal="true" aria-label="Street Fight"><div class="af-title">Street Fight</div><div class="af-why"></div><div class="af-row"></div></div>';
+    screen.querySelector(".af-why").textContent=WHY[kind]||WHY.other;
+    var row=screen.querySelector(".af-row");
+    var add=function(label,go,fn){var b=document.createElement("button");b.type="button";b.className=go?"af-btn af-go":"af-btn";b.innerHTML="<span>"+label+"</span>";b.addEventListener("click",fn);row.appendChild(b);};
+    if(retry)add("Try again",true,retry);
+    add("Back",!retry,closeAll);
+    document.body.appendChild(screen);
+    row.querySelector("button").focus({preventScroll:true});
+  }
+  /* Nothing left open: the arena, this screen, or an open still on its way. */
+  function closeAll(){
+    var r=run;run=null;
+    if(r){r.over=true;clearInterval(r.timer);}
+    clearScreen();
+    if(mod)mod.closeArena();
+    if(r)endSound(r);
+  }
+  function failed(r,e,kind){
+    if(r.over)return; /* the player has already left */
+    r.over=true;clearInterval(r.timer);if(run===r)run=null;
+    endSound(r);
+    console.warn("[arena] could not start:",e);
+    kind=kind||(e&&e.kind)||(e instanceof SyntaxError?"old":"net");
+    if(!coarse()){clearScreen();r.fallback();simpleNote();return;}
+    showPanel(kind,kind==="old"?null:function(){if(e&&e.hung)freshPage(kind,r.fallback);else open(r.fallback);});
+  }
+  function simpleNote(){
+    var a=document.querySelector(".arena3");if(!a)return;
+    var n=document.createElement("div");n.className="a3-note";n.textContent="This is the simple version. The 3D fight could not start.";a.appendChild(n);
+  }
+  /* A request the browser never finished keeps later ones for that file waiting on it, and only a new page lets go of it. So look first, and reload only if the line answers. */
+  function freshPage(kind,fallback){
+    showWait("Checking the connection");
+    var again=function(){showPanel(kind,function(){freshPage(kind,fallback);});};
+    var ctl=new AbortController(),t=setTimeout(function(){ctl.abort();},8000);
+    fetch("./gfx/arena/index.js",{cache:"no-store",signal:ctl.signal}).then(function(x){clearTimeout(t);if(x.ok)location.reload();else again();},function(){clearTimeout(t);again();});
+  }
+  function open(fallback){
+    if(run)return;
+    var r={fallback:fallback,over:false,imported:false,timer:0};
+    var why=unsupported();
+    if(why)return failed(r,new Error("3D fight unsupported: "+why),why);
+    run=r;
+    r.ctx=soundForThisTap();
+    showWait();
+    var seen=0,giveUp=null,limit=new Promise(function(_,no){giveUp=no;});
+    limit.catch(function(){});
+    /* seconds on screen, counted in ticks, so time behind another app is not time spent waiting */
+    r.timer=setInterval(function(){
+      if(document.hidden)return;
+      seen++;
+      if(seen===SLOW_S&&screen)screen.querySelector(".af-why").textContent="Slow connection. Still trying.";
+      if(seen>=IMPORT_S&&!r.imported)giveUp(Object.assign(new Error("arena import timed out"),{kind:"net",hung:true}));
+    },1000);
+    var opts={
+      audioCtx:r.ctx,
+      onScreen:function(){if(!r.over){clearInterval(r.timer);clearScreen();}},
+      onClosed:function(){if(run===r){run=null;r.over=true;clearInterval(r.timer);clearScreen();}},
+      onFail:function(e){failed(r,e);},
+    };
+    Promise.race([import("./gfx/arena/index.js"),limit]).then(function(m){
+      mod=m;r.imported=true;
+      return r.over?null:m.openArena(opts);
+    }).catch(function(e){failed(r,e);});
+  }
+  window.addEventListener("keydown",function(e){if(screen&&e.key==="Escape"){e.preventDefault();e.stopPropagation();closeAll();}},true);
+  return open;
+})();
 
 /* ── Static page buttons ─────────────────────────────────── */
 
@@ -3764,7 +3866,7 @@ window.__openRealArena=function(fallback){
       }
       function hotkeysBlocked() {
         if (document.querySelector(".st-key.binding")) return true;
-        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3,.arena-x")) return true;
+        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3,.arena-x,.arena-wait,.arena-fail")) return true;
         return !!document.querySelector("dialog[open]");
       }
       window.addEventListener("keydown", (e) => {

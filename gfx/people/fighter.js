@@ -23,7 +23,7 @@ export async function preloadFighter(q = { tex: 2048 }, mgr) {
   const sz = q.tex >= 2048 ? 2048 : 1024; const a = q.aniso || 4;
   if (shared.gltf && shared.sz === sz) { shared.smoothHead = q.name !== 'low'; return shared; }
   const [gltf, bd, bn, bs, hd, hn, hs, gd, gn, gr, tn, tr, od, on, or] = await Promise.all([
-    new GLTFLoader(mgr).loadAsync(BASE + 'fighter.glb'),
+    new GLTFLoader(mgr).loadAsync(BASE + 'fighter.glb', mgr && mgr.alive),
     loadTex(mgr, `${BASE}m021_body_d_${sz}.webp`, true, a), loadTex(mgr, `${BASE}m021_body_n_${sz}.webp`, false, a), loadTex(mgr, `${BASE}m021_body_s_${sz}.webp`, false, a),
     loadTex(mgr, `${BASE}m021_head_d_${sz}.webp`, true, a), loadTex(mgr, `${BASE}m021_head_n_${sz}.webp`, false, a), loadTex(mgr, `${BASE}m021_head_s_${sz}.webp`, false, a),
     loadTex(mgr, BASE + 'glove_d.webp', true, a), loadTex(mgr, BASE + 'glove_n.webp', false, a), loadTex(mgr, BASE + 'glove_r.webp', false, a),
