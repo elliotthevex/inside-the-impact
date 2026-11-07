@@ -60,3 +60,10 @@ Scratchpad phone/audit: lib.js plus a scenario s_*.js through run.sh NAME SCENAR
 - Stopped because the Mac was at 6% battery on its last run: see the report for what that left unread.
 - Final code, play.js flow steps: pauseFlow, Reduced Motion, Camera Shake, settings (Low Detail, Effects, Shadows, Text Size), load screen, gym keys, mode leak, page check: 29 ok, 0 FAIL. Resize while paused and live quality: 4 ok. escEnd did not run (my step order closed the session first), so Esc on the end panel was not re-run. The fallbacks step was not re-run: its last check expects the old arena on a lost context, which is now wrong on purpose; a_fine, a_nowgl_fine and a_nowgl_touch in phone/audit/o cover that ground.
 - Written and never exercised: engine.onCrash (a frame that keeps throwing), the catch in pictureBack (a restore that fails), Tab inside the failure panel. In the old arena W through Hangul is proved, J only by sharing its code path, because my check of the punch read the wrong field.
+
+## After the check (phone-fixes-check.md): F1, F2, U1, U2
+Started 22:50 on 2026-11-07. In progress: if this line is still here, read the list below and go on from it. Scripts: scratchpad phone/check1 (c_hang.js, c_hang2.js, c_lost2.js, c_hid2.js; hq.sh is the queue; results o/NAME.txt, python3 -I j.py NAME prints one). The Simulator is not needed: none of these four was seen there.
+- F1: before the fix, proved by c_hang tryExit: Exit on "Checking the connection", 200 ms later the lobby is clean, 9.5 s later the failure panel is back over the lobby with hotkeys blocked.
+  Line answers, c_hang2 exitTap with the check's fetch held 3 s by a stub in the page, then 200: the page reloaded with the player on the lobby (console RELOADED, run timed out because the page was gone). Fix written in game.js: stopCheck() from closeAll, from open, from freshPage. Re-run queued: hq2.sh.
+- F2: fix written: kind 'stopped', own line on the panel and in the old arena's note. Re-run queued: c_crash, c_crashf.
+- U1, U2: c_lost2, c_hid2 running, then c_lost3, c_hid3.

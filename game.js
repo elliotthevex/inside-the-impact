@@ -13,8 +13,8 @@ document.head.appendChild(Object.assign(document.createElement("script"),{type:"
    With a keyboard and a fine pointer the old arena stays as the fallback, with one line saying why. */
 window.__openRealArena=(function(){
   var SLOW_S=20,IMPORT_S=45; /* seconds on screen: when to say the line is slow, and when to give up on a module that never arrives */
-  var WHY={net:"Could not reach the fight. Check your connection.",old:"This browser is too old for the 3D fight.",gl:"The graphics stopped. Closing other apps may help.",other:"The 3D fight could not start."};
-  var run=null,mod=null,screen=null,histOn=false,skipPop=false,pushLater=false;
+  var WHY={net:"Could not reach the fight. Check your connection.",old:"This browser is too old for the 3D fight.",gl:"The graphics stopped. Closing other apps may help.",other:"The 3D fight could not start.",stopped:"The fight stopped. Sorry about that."};
+  var run=null,mod=null,screen=null,histOn=false,skipPop=false,pushLater=false,lineCheck=null;
   /* Android back and the iOS edge swipe: one history entry while this is open, so back closes it to the lobby instead of leaving the site. */
   /* A back still on its way and a push on top of it can make the browser leave the document, so a push waits for the back to land. */
   function pushHist(){if(histOn)return;if(skipPop){pushLater=true;return;}try{history.pushState({arena3d:1},"");histOn=true;}catch(e){histOn=false;}}
@@ -63,6 +63,7 @@ window.__openRealArena=(function(){
   }
   /* Nothing left open: the arena, this screen, or an open still on its way. */
   function closeAll(){
+    stopCheck();
     var r=run;run=null;
     if(r){r.over=true;clearInterval(r.timer);}
     clearScreen();
@@ -76,22 +77,27 @@ window.__openRealArena=(function(){
     endSound(r);
     console.warn("[arena] could not start:",e);
     kind=kind||(e&&e.kind)||(e instanceof SyntaxError?"old":"net");
-    if(!coarse()){clearScreen();dropHist();r.fallback();simpleNote();return;}
+    if(!coarse()){clearScreen();dropHist();r.fallback();simpleNote(kind);return;}
     showPanel(kind,kind==="old"?null:function(){if(e&&e.hung)freshPage(kind,r.fallback);else open(r.fallback);});
   }
-  function simpleNote(){
+  function simpleNote(kind){
     var a=document.querySelector(".arena3");if(!a)return;
-    var n=document.createElement("div");n.className="a3-note";n.textContent="This is the simple version. The 3D fight could not start.";a.appendChild(n);
+    var n=document.createElement("div");n.className="a3-note";n.textContent="This is the simple version. The 3D fight "+(kind==="stopped"?"stopped.":"could not start.");a.appendChild(n);
   }
   /* A request the browser never finished keeps later ones for that file waiting on it, and only a new page lets go of it. So look first, and reload only if the line answers. */
   function freshPage(kind,fallback){
+    stopCheck();
     showWait("Checking the connection");
     var again=function(){showPanel(kind,function(){freshPage(kind,fallback);});};
-    var ctl=new AbortController(),t=setTimeout(function(){ctl.abort();},8000);
-    fetch("./gfx/arena/index.js",{cache:"no-store",signal:ctl.signal}).then(function(x){clearTimeout(t);if(x.ok)location.reload();else again();},function(){clearTimeout(t);again();});
+    var ctl=lineCheck=new AbortController(),t=setTimeout(function(){ctl.abort();},8000);
+    var done=function(go){clearTimeout(t);if(lineCheck!==ctl)return;lineCheck=null;go();};
+    fetch("./gfx/arena/index.js",{cache:"no-store",signal:ctl.signal}).then(function(x){done(function(){if(x.ok)location.reload();else again();});},function(){done(again);});
   }
+  /* The player left: whatever that look at the line finds out, nothing reloads and no panel comes back. */
+  function stopCheck(){var c=lineCheck;lineCheck=null;if(c)c.abort();}
   function open(fallback){
     if(run)return;
+    stopCheck();
     var r={fallback:fallback,over:false,imported:false,timer:0};
     var why=unsupported();
     if(why)return failed(r,new Error("3D fight unsupported: "+why),why);

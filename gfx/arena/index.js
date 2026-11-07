@@ -508,11 +508,11 @@ async function load(S) {
   if (S.closed) return;
   S.ready = true;
   S.engine.update = (dt) => frame(S, dt);
-  /* A fight that keeps throwing goes to the same place as one that could not start, unless it is already over: the result stays up. */
+  /* A fight that keeps throwing goes to the same place as one that could not start, with its own words, unless it is already over: the result stays up. */
   S.engine.onCrash = (e) => {
     console.error('[arena] the fight stopped:', e);
     if (S.hud.el.querySelector('.ax-end.is-on')) return;
-    const o = S.opts; teardown(S, { quiet: true }); if (o.onFail) o.onFail(Object.assign(e, { kind: e.kind || 'other' }));
+    const o = S.opts; teardown(S, { quiet: true }); if (o.onFail) o.onFail(Object.assign(e, { kind: e.kind || 'stopped' }));
   };
   S.hud.showLoading(1);
   if (S.audio.unlock) S.audio.unlock();
