@@ -138,3 +138,9 @@ HEAD 7, 13, 20. hud.js never reads fighter.head. coach.js, which index.js did no
 
 ### Not checked
 No human played. The real game with rigs was not run, as the brief forbids arena.html here. The clock jumped about an hour twice between my calls and other agents loaded the machine, so run times mean nothing here; results are unaffected because they are seeded. Reaction test n=30 per row. Random search rows use small samples and are only leads: the table rows above are n=200.
+
+## Round 2 (2026-11-07) - in progress
+Code under test: sim.js 76b331f7a3480570, ai.js 0ff0c613ca5e1e15 (uncommitted on realistic-3d), simtest.html c009adc5f8900614. Battery was 11% discharging at start; rows save per file so a restart resumes (`python3 table.py SEED 200 harness 6`). Logs in scratchpad balance/verify/out/r2_*.
+R2 step 1 done: table seeds 50000+ (harness rule), n=200, my own loop (vlib.js reads reach.json via setReach before any match; old round-1 rows were moved aside, not reused). Saved: scratchpad balance/verify/out/r2_ev50000.txt. 87 of 88 checks met; the one miss is my checker's "rounds of 60 s in decision matches" tick tolerance (known, not a game fault: 7 of 2130 rounds).
+Win % easy/normal/hard: mixed 48.5/25/1.5, learner 63.5/37/9, skilled 98.5/60.5/37, idle 0, turtle 0. Normal: mixed 201.9 s, learner 173.5 s; skilled r3 90%, decisions 35%, KO+TKO 37.5%, stopped 27.5%; mixed stopped 19%; stop median HP pooled 51.2 (player) 59.9 (AI); skilled whiff 26.8, AI whiff vs skilled 28.6; dead p90 3.92/4.52 s; slip 3.3%; jab R1/R3 2.21x vs skilled; body peak R2; dist R1-R2 .168 vs skilled; runner .5, guardjab 0; spam max normal 3.5 (hook), hard 1; every button lands.
+Next: table seeds 400000+ game rule (running), new policies pol2.js, simtest.html in Chrome, scripted slip, same-seed, reaction, contract.

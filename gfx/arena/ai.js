@@ -10,9 +10,9 @@ import { PUNCHES, REACH, HEAD, TUNE, STEP, makeRng } from './sim.js';
 
 /* react: seconds behind the fight. jitter: extra random delay. The others are chances per read. cadence scales the gap between attacks. */
 export const LEVELS = {
-  easy:   { react: .27, jitter: .05, guardRead: .15, spamRead: .5, slipRead: .10, backRead: .15, punish: .2, anticip: .2, cadence: 1.2, cadVar: .8, mistake: .20, finish: .35, speed: .86, upBonus: 0, ease: 2.6, press: 0, feast: .3, finishGap: .9, retreat: .6, spar: .75, hurtHead: 12, hurtHp: 5, leadAt: 7, threatAt: 6, lunge: .35, learn: 0, spareFrom: -200, lostLead: 0, spareHead: 99, budget: 0, felt: 0, routine: 0 },
-  normal: { react: .18, jitter: .03, guardRead: .34, spamRead: .6, slipRead: .22, backRead: .35, punish: .36, anticip: .33, cadence: 1.03, cadVar: .7, mistake: .08, finish: .6, speed: .96, upBonus: .1, ease: 1.6, press: .15, feast: .8, finishGap: .5, retreat: .9, spar: 1, hurtHead: 12, hurtHp: 10, leadAt: 6, threatAt: 5, lunge: .8, learn: .4, spareFrom: -6.5, lostLead: 2, spareHead: 3, budget: .12, felt: .8, routine: 1 },
-  hard:   { react: .13, jitter: .02, guardRead: .34, spamRead: .7, slipRead: .28, backRead: .4, punish: .38, anticip: .34, cadence: 1.03, cadVar: .5, mistake: .02, finish: .7, speed: .98, upBonus: .12, ease: .5, press: .3, feast: 1, finishGap: .25, retreat: 1, spar: 1, hurtHead: 12, hurtHp: 10, leadAt: 4, threatAt: 4.6, lunge: .8, learn: .6, spareFrom: -3, lostLead: 3, spareHead: 2, budget: .105, felt: .9, routine: 1 },
+  easy:   { react: .27, jitter: .05, guardRead: .15, spamRead: .5, slipRead: .10, backRead: .15, punish: .2, anticip: .2, cadence: 1.2, cadVar: .8, mistake: .20, finish: .35, speed: .86, upBonus: 0, ease: 2.6, press: 0, feast: .3, finishGap: .9, retreat: .6, spar: .75, hurtHead: 12, hurtHp: 5, leadAt: 7, threatAt: 6, lunge: .35, learn: 0, spareFrom: -200, lostLead: 0, spareHead: 99, budget: 0, felt: 0, routine: 0, gasSoft: .25 },
+  normal: { react: .185, jitter: .03, guardRead: .34, spamRead: .6, slipRead: .22, backRead: .35, punish: .36, anticip: .33, cadence: 1.03, cadVar: .7, mistake: .08, finish: .6, speed: .96, upBonus: .1, ease: 1.6, press: .15, feast: .8, finishGap: .5, retreat: .9, spar: 1, hurtHead: 14, hurtHp: 10, leadAt: 6, threatAt: 5, lunge: .8, learn: .4, spareFrom: -6.5, lostLead: 2, spareHead: 3, budget: .12, felt: .8, routine: 1, gasSoft: .08 },
+  hard:   { react: .14, jitter: .02, guardRead: .34, spamRead: .7, slipRead: .28, backRead: .4, punish: .38, anticip: .34, cadence: 1.03, cadVar: .5, mistake: .02, finish: .7, speed: .98, upBonus: .12, ease: .5, press: .3, feast: 1, finishGap: .25, retreat: 1, spar: 1, hurtHead: 12, hurtHp: 10, leadAt: 4, threatAt: 4.6, lunge: .8, learn: .6, spareFrom: -3, lostLead: 3, spareHead: 2, budget: .105, felt: .9, routine: 1, gasSoft: .2 },
 };
 
 /* A style is a way of fighting you can recognise from across the room. Round 1 he boxes, round 2 he comes through you, round 3 he waits to hurt you. */
@@ -35,9 +35,12 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 /* Heat 0..1 undoes that and more. It rises when the head load he took over the last threatFade seconds passes the level's threatAt (span threatSpan), or when he carries leadAt more load than the man (span leadSpan): gaps shrink by heatTempo, heavy plans grow by heatHeavy, punishing rises by heatPunish.
    Kite: the share of the man's punches after which he is moving away. Past kiteAt he stays on him, gaps shrink by kiteTempo, and the level's lunge is the chance of going in behind the punch with a cross from up to lungeReach beyond range.
    freqRate: how fast he learns what a man throws. The level's learn turns that into reads. reads: how much soft takes off his reads. waitSta: stamina he needs to keep waiting out a one-button man.
-   Routine: he learns the order of a man's punches. How often his guess is right (routineFrom, routineSpan) says how much of a routine the man has, and the level's routine says if he cares. A man with a routine is not spared at all: gaps shrink by routineTempo, punishing rises by routinePunish, and when he punishes a man who always leaves he steps kiteStep deeper into it. Past feltFrom he also goes on the punch he feels land, not the one he sees, by the level's felt.
+   Routine: he learns the order of a man's punches. How often his guess is right (routineFrom, routineSpan) says how much of a routine the man has, and the level's routine says if he cares. A man with a routine is not spared at all: gaps shrink by routineTempo, punishing rises by routinePunish, and when he punishes a man who always leaves he steps kiteStep deeper into it. Past feltFrom he also goes on the punch he feels land, not the one he sees, by the level's felt. routineSee takes that share off his delay, never under reactFloor: he sees a punch sooner when he knows which one is coming.
+   Heavy reads: a heavy punch that makes up more than heavyFrom of what the man throws (span heavySpan) gets read even while he is sparing, by heavyRead.
+   Tired men: under gasFrom on the man's bar (span gasSpan) sparing fades by the level's gasSoft. Emptying yourself is a real risk, so pacing pays.
+   waitMax: seconds per round he will wait out a one-button man. A man who keeps a floor under his bar never empties, so waiting for it would only lose the round.
    Budget: the level's budget is the head load per second a first-timer can put on him in round 1, budgetLate more after that. Past that line by budgetAt (span budgetSpan) the man gets heat, because no beginner hits like that. */
-export const TEMPER = { softFrom: .46, load: 3.6, tempo: .7, retreat: .6, close: .35, easeCap: 1.7, feastFloor: 34, threatFade: 20, threatSpan: 1.5, heatTempo: .45, heatPunish: .3, lungeReach: .42, kiteAt: .45, kiteTempo: .6, kiteStep: .35, heatHeavy: 3, freqRate: .12, reads: .7, leadSpan: 2, waitSta: 12, kdLead: 8, spareSpan: 2, spareHeadSpan: 2, routineRate: .07, routineFrom: .75, routineSpan: .12, routineTempo: .3, routinePunish: .3, feltFrom: .6, budgetAt: 1.5, budgetSpan: 2, budgetLate: .35 };
+export const TEMPER = { softFrom: .46, load: 3.6, tempo: .7, retreat: .6, close: .35, easeCap: 1.7, feastFloor: 34, threatFade: 20, threatSpan: 1.5, heatTempo: .45, heatPunish: .3, lungeReach: .42, kiteAt: .45, kiteTempo: .6, kiteStep: .35, heatHeavy: 3, freqRate: .12, reads: .7, leadSpan: 2, waitSta: 12, kdLead: 8, spareSpan: 2, spareHeadSpan: 2, routineRate: .07, routineFrom: .75, routineSpan: .12, routineTempo: .3, routinePunish: .3, feltFrom: .6, budgetAt: 1.5, budgetSpan: 2, budgetLate: .35, routineSee: .28, reactFloor: .13, heavyFrom: .2, heavySpan: .2, heavyRead: 1, gasFrom: 15, gasSpan: 10, waitMax: 8 };
 
 /* What a fighter has seen of the other one, indexed by time, so he can only act on the past. */
 function makeEye(size = 96) {
@@ -71,14 +74,14 @@ export function createAI({ difficulty = 'normal', seed = 1 } = {}) {
     round: 0, style: STYLES.jabber, plan: [], planT: 0, next: 0, circle: 1, circleT: 0,
     seenPid: 0, foeGuard: 0, throws: [], lastThrow: -9, punished: 0,
     spamUntil: 0, coverUntil: 0, guardUntil: 0, backUntil: 0, antUntil: 0, antNext: 0, outUntil: 0, slipNow: false,
-    taken: 0, hits: [], upFor: null, upAt: Infinity, upMash: 0, readNext: 0, finishing: false, landRate: .5, graded: 0, soft: 0, same: 0, lastKind: null, holdUntil: 0, chase: 0, threat: 0, heat: 0, lastHead: 0, freq: { jab: .17, cross: .17, hook: .17, upper: .17, bodyL: .17, bodyR: .17 }, kite: 0, endSeen: 0, hadPunch: false, lunge: false, took: 0, lastHp: 100, lost: 0, lead: 0, lastImm: 0, feltGo: 0, mk: {}, k1: '-', k2: '-', pred: .3, routine: 0,
+    taken: 0, hits: [], upFor: null, upAt: Infinity, upMash: 0, readNext: 0, finishing: false, landRate: .5, graded: 0, soft: 0, same: 0, lastKind: null, holdUntil: 0, chase: 0, threat: 0, heat: 0, lastHead: 0, freq: { jab: .17, cross: .17, hook: .17, upper: .17, bodyL: .17, bodyR: .17 }, kite: 0, endSeen: 0, hadPunch: false, lunge: false, took: 0, lastHp: 100, lost: 0, lead: 0, lastImm: 0, feltGo: 0, mk: {}, k1: '-', k2: '-', pred: .3, routine: 0, waited: 0,
   };
 
   function newRound(match, me, foe, now) {
     S.round = match.round;
     S.style = match.round <= 1 ? STYLES.jabber : match.round === 2 ? STYLES.presser : STYLES.hunter;
     S.plan.length = 0; S.next = now + .35 + rnd() * .4; S.coverUntil = 0; S.outUntil = 0; S.circle = rnd() < .5 ? 1 : -1; S.circleT = now + 1.5; S.seenPid = foe.thrown;
-    S.took = 0; S.lastHp = me.hp; S.lost = 0; for (const c of match.scores) { const a = c[me.id === 'p' ? 0 : 1], b = c[me.id === 'p' ? 1 : 0]; if (b > a) S.lost++; else if (a > b) S.lost--; }
+    S.waited = 0; S.took = 0; S.lastHp = me.hp; S.lost = 0; for (const c of match.scores) { const a = c[me.id === 'p' ? 0 : 1], b = c[me.id === 'p' ? 1 : 0]; if (b > a) S.lost++; else if (a > b) S.lost--; }
     eye.clear();
   }
 
@@ -137,7 +140,7 @@ export function createAI({ difficulty = 'normal', seed = 1 } = {}) {
     if (match.round !== S.round) newRound(match, me, foe, now);
     eye.see(now, foe);
 
-    const delay = L.react * (me.head >= HEAD.bad ? 1.5 : me.head >= HEAD.warn ? 1.25 : 1);
+    const delay = Math.max(TEMPER.reactFloor, L.react * (1 - S.routine * TEMPER.routineSee)) * (me.head >= HEAD.bad ? 1.5 : me.head >= HEAD.warn ? 1.25 : 1);
     const s = eye.at(now - delay), age = now - s.t; /* the sample he can see, and how old it really is on this frame */
     const px = s.x + s.vx * age, pz = s.z + s.vz * age;
     const dx = px - me.x, dz = pz - me.z, dist = Math.hypot(dx, dz) || 1e-3, nx = dx / dist, nz = dz / dist;
@@ -154,7 +157,7 @@ export function createAI({ difficulty = 'normal', seed = 1 } = {}) {
     S.lastHp = me.hp;
     S.lead = me.dealt - S.took + (s.kd - me.kd) * TEMPER.kdLead - S.lost * L.lostLead;
     const spare = clamp((S.lead - L.spareFrom) / TEMPER.spareSpan, 0, 1) * (1 - clamp((me.head - s.head - L.spareHead) / TEMPER.spareHeadSpan, 0, 1));
-    S.soft = L.spar * spare * clamp((S.landRate - TEMPER.softFrom) / .25, 0, 1) * (1 - clamp((me.head - L.hurtHead) / 8, 0, 1)) * clamp((me.hp - L.hurtHp) / 30, 0, 1) * (1 - S.heat) * (1 - S.routine);
+    S.soft = L.spar * spare * clamp((S.landRate - TEMPER.softFrom) / .25, 0, 1) * (1 - clamp((me.head - L.hurtHead) / 8, 0, 1)) * clamp((me.hp - L.hurtHp) / 30, 0, 1) * (1 - S.heat) * (1 - S.routine) * (1 - L.gasSoft * clamp((TEMPER.gasFrom - s.sta) / TEMPER.gasSpan, 0, 1));
     if (S.spamUntil > now || s.t - S.lastThrow > 4) S.soft = 0; /* a one-button man, or a man who is not fighting at all, gets the full fight */
     const soft = S.soft;
 
@@ -175,7 +178,8 @@ export function createAI({ difficulty = 'normal', seed = 1 } = {}) {
     if (me.stagger > 0 || (S.hits.length >= 3 && !spammer)) { if (S.coverUntil < now + .3) S.coverUntil = now + .9 + rnd() * 1.1; S.plan.length = 0; S.hits.length = 0; }
     const hurt = me.hp < 30 || me.head >= HEAD.bad;
     const covering = S.coverUntil > now && me.sta > 10;
-    const waitOut = spammer && S.throws.length >= 4 && s.sta >= 30 && me.sta > TEMPER.waitSta;
+    const waitOut = spammer && S.throws.length >= 4 && s.sta >= 30 && me.sta > TEMPER.waitSta && S.waited < TEMPER.waitMax;
+    if (waitOut) S.waited += dt;
     const gassed = me.sta < (feast && !(S.lastKind && PUNCHES[S.lastKind].drain) ? TEMPER.feastFloor : sty.floor);
     const free = !me.punch && me.stun <= 0;
 
@@ -190,7 +194,7 @@ export function createAI({ difficulty = 'normal', seed = 1 } = {}) {
       const P = PUNCHES[s.kind], left = s.contact - s.pt - age - rnd() * L.jitter, reach = REACH[s.kind];
       if (P.tgt === 'head') {
         const r = rnd();
-        const lower = 1 - soft * TEMPER.reads;
+        const lower = 1 - soft * TEMPER.reads * (P.heavy ? 1 - clamp((S.freq[s.kind] - TEMPER.heavyFrom) / TEMPER.heavySpan, 0, 1) * TEMPER.heavyRead : 1);
         if (left >= TUNE.slip.from && me.sta > TUNE.slip.sta + 10 && r < L.slipRead * sty.slip * lower) { S.slipNow = true; }
         else if (r < (L.slipRead * sty.slip + L.guardRead + L.learn * S.freq[s.kind] + (S.spamUntil > now ? L.spamRead : 0)) * lower) { if (left > -.02) S.guardUntil = now + Math.max(0, left) + .24; if (left > .03) S.holdUntil = now + left + .06; }
         else if (dist > reach - .16 && rnd() < L.backRead) S.backUntil = now + .22;
