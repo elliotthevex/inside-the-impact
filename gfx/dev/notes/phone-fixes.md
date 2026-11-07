@@ -1,12 +1,54 @@
 # Phone fixes: what strands real players
 
-Branch phone-fixes, worktree phone-fixes/. Finding numbers refer to audit-findings.md. Newest log entry at the bottom.
+Branch phone-fixes. Finding numbers refer to audit-findings.md. All of this was checked in headless Chrome with touch emulation, with acted-out conditions where noted. The iOS Simulator was not booted for this work: the next agent checks on it (list at the bottom). fps and timing from this Mac say little (Low Power Mode, other agents' Chrome).
 
-## Plan (order A to G, commit after each group)
-A failure panel, B context loss, C loading, D sound, E touch and keys, F frame rate, G memory on low. Then full matches, gates, final list.
+## How it fits together
+- game.js, window.__openRealArena: the launcher. Shows .arena-wait straight away in the card tap, makes the AudioContext there, pushes one history entry, imports index.js with a time limit, calls openArena with audioCtx, onScreen, onClosed, onFail. Any failure ends in failed(): on a coarse main pointer the panel .arena-fail (reason, Try again, Back; no Try again if the browser is too old), otherwise the old arena plus one line (.a3-note). Styles are in style.css, so they work without arena.css.
+- Error kinds: err.kind is net, gl, old or other; err.hung means a request never answered. After a hung failure Try again fetches index.js with no-store first and reloads the page if the line answers, because a request that never finished keeps later requests for that file waiting and only a new page lets go of it. A hung import or a stall is the only case that reloads.
+- index.js openArena: a loop of begin() and load(). Any load failure gets one more whole go by itself, two if the page went behind another app, none if it hung or the browser is too old. A retry is a whole new session object on a new canvas, so stale work stops at check(S) by itself; the sound context is kept across retries (keepSound).
+- Stall clock: ticks while the page is on screen, capped at 1.5 s a tick, so a frozen page or a busy main thread do not count. Any finished file (PerformanceObserver) and any bytes on FileLoader (mgr.alive, passed as onProgress) reset it. 90 s of nothing fails the load. A bar flat for 20 s shows "Slow connection. Still loading." Script files move the bar through the code phase.
+- Context lost in a fight (pictureLost): engine stops, pause panel up, Resume disabled, "The picture stopped. Getting it back." End graphic: goes straight to the end panel (hud.finish). End panel stays. 8 s on screen without a restore: "The picture did not come back.", Resume hidden, Restart and Exit left. Restored (pictureBack): stage.rebuildEnv bakes the PMREM target again, precompile, one frame, Resume enabled. The player taps Resume to go on: the fight does not restart under their fingers. Restart or Rematch while lost: reopen(), all over on a new canvas.
+- What survives a restore: three re-uploads geometry and images by itself, Post and shadow targets rebuild on first use. Only the PMREM target had to be rebuilt, and that keeps env's pixels in memory (4 MB). Trap found on the way: my restored listener runs before three's, so the rebuild has to wait a task, or it bakes into the old state and the picture comes back darker.
+- Sound (audio.js): sounds due while the context is not running are dropped; the crowd loops wait. wake() runs on any gesture and on statechange for the life of the arena. setPaused and setHidden both feed settle(). Sound off: no context at all.
+- Same fight at any frame rate (frame()): the rival and a test bot decide every second tick inside the tick loop; a human's presses still go in once a frame. S.tick, S.inP, S.inO. handle.replay(seed) is for tests.
+- Low: PRESETS.low.tex 512, texGlove 700. kit.shrinkImage draws an image down into a canvas (willReadFrequently, so it stays on the CPU side) and lets the original go; ImageBitmaps are closed. Used for kit textures, model textures, fighter textures, trunks. Medium and high pass 0 and are untouched. The painted ring canvas and the poster atlas stay 1024 on low, on purpose: biggest surface, and readable words. Files downloaded are unchanged.
 
-## Log
-- 19:55 read everything. Nothing written yet.
-- 20:20 A, B, C, D written and checked with the audit's steps, committed (b3adaea). Scripts are in the scratchpad phone/audit (lib.js, run.sh, s_*.js, p_*.js, res.py, j.py, o/ for results).
-- 20:45 E, F, G patches applied in the working tree; E checked. G and F checks running. NEXT if restarted: read scratchpad phone/audit/o/tally1, audio_touch, audio_js, layout; run F before/after (s_fps.js on 8791 and the old copy on 8793, scratchpad phone/before, `python3 -I -m http.server 8793 --bind 127.0.0.1` from there); slow line s_slow.js with --net 500:300; hung file s_hang.js; then full matches with play.js, gates, final report in this file.
-- 21:05 G measured: GPU tally low 282.2 to 115.7 MB at 844x390, 276.7 to 110.3 MB at 390x844 dpr 3. jsc table with 150 seeds: harness loop at 60 and the new tick loop agree within noise (mixed 26.7 and 28, learner 28.7 and 26.7, skilled 62 and 64), the old loop at 30 fps does not (34.7, 33.3, 68). Real frame before and after running in the batch phone/audit/b6.sh. play.js has a touch bot now (spec.touch).
+## Findings
+Fixed and confirmed with the audit's own steps, in emulation:
+- 1.1, 2.7 nobody on touch ends in the old arena: too old (no import map support, or no WebGL2 at all), failed module, failed asset, stall, hung import, lost context. Fine pointer: old arena plus the line.
+- 1.2 frozen 32 s at 12% on 1.6 Mbps: fight ready 18.9 s after coming back, no panel.
+- 1.3, 2.2 three failures of concrete_floor_worn_001_diff.webp: retried by itself, ready at 5.3 s. Six failures: panel at 7.6 s, Try again really fetched, ready 5.4 s later.
+- 1.5 500 kbps with 300 ms latency, no compression: ready at 168.8 s (before: gave up at 40.7 s on 4%). Note appeared at 43 s, on three.core.js.
+- 1.6, 1.15 a3_touch.js: pause with two fingers down works, Resume with fingers down works, Guard held through the pause guards again, two fingers on one button stay pressed until the last lift. A finger still down after a blur has to press again: that is the part left.
+- 1.8 tally through emu.js: low 282.2 to 115.7 MB at 844x390, 276.7 to 110.3 MB at 390x844 dpr 3. Before: 38 at 1024, gloves 1400. After: 35 canvases at 512 plus gloves at 700, 16 model textures that already were 512, two painted canvases at 1024. Decoded copies: about 45 MB of canvases and 16 MB of bitmaps by arithmetic, not measured. No memory limit was tested: no real phone ran.
+- 1.9, 1.10, 2.5 with the iOS-like wrapper: opened by a tap the context runs from the start, first bell on time. Opened with no gesture: nothing but the four loops scheduled, first tap wakes it in 420 ms, peak .073 in the first second against .107 later, no mash. Stopped with no gesture around (acts out interrupted): stays stopped, nothing queued, next tap brings it back. Hidden in a fight and on the end panel: suspended, comes back. Exit closes it, reopen works.
+- 1.11, 1.13 ring measured after rematch and after a rotate: same place. With insets 0,47,21,47: zone and ring inside.
+- 1.12, 2.6 arena.css failed: panel at 1.1 s. Hung: panel at 30 s. No root left behind.
+- 1.14, 2.14 cover up in the same task as the tap, hotkeys blocked. index.js hung: slow line at 20 s, panel at 45 s, Try again checks the line and comes back to the panel while it is down. three.core.js hung: panel after 90 s, Try again reloads.
+- 1.16 pause icon 44x44. End panel at 844x340, 740x304, 667x331 with large text fits; at 640x280 it scrolls by a real touch drag. No overlap with the stick zone at 320x568.
+- 1.17 title fits 360 px in the fallback font with the font hung (12 to 348). -webkit-text-size-adjust on .arena-x, computed 100%.
+- 2.4 frame rate: below.
+- 2.8 right click on the canvas prevented. 2.9 Cmd up stops the walk. 2.10 Shift read again after a pause. 2.12 Hangul letter and Process both open the settings hotkey; a key labelled o on another position still follows the label; W works in the old arena through Hangul. 2.13 back closes the arena to the lobby, normal exit removes its entry (history index 2 back to 1 both ways).
+Context loss, in intro, fight, paused, down, him down, rising, break, round 2 intro, end graphic, end panel, on low and high: panel right, no GL error after the restore, frames run, sim goes on. Picture before and after, same paused frame, HUD hidden, mean pixel of 400 samples: low 45.43 and 45.43, medium 37.68 and 37.57, high 44.49 and 44.27. Never restored: Resume goes at 8 s, Restart loads a new canvas. End panel never restored: result stays, Rematch loads a new canvas. During the load: one loss retries by itself, ready at 5.3 s; a second loss goes to the panel, Try again works.
+
+Frame rate through the real frame(), manual mode, handle.step, same seeds, normal level:
+- After: 9 of 9 seeds with nothing stubbed and 48 of 48 with the view stubbed are one identical fight at 30, 60, 120, 144 (hash of every event and tick). Before: 0 of 9 and 0 of 48.
+- Wins for the bot over 16 seeds, 30/60/120/144. Before: mixed 25/31/19/12, learner 19/31/44/31, skilled 69/81/81/62. After: mixed 12 at all four, learner 12 at all four, skilled 75 at all four. 16 seeds is few: read the spread, not the level.
+- A jsc copy (scratchpad phone/audit/tick2.js) gives the same hash as the real frame on 9 of 9 seeds. Over 150 seeds in jsc, the balance harness loop at 60 against the new loop: mixed 26.7 and 28, learner 28.7 and 26.7, skilled 62 and 64. The old loop at 30: 34.7, 33.3, 68. The harness decides per frame with a bank reset at contact, so it is not bit-identical to every second tick, but it measures the same game. simtest.html was left alone: others are using it.
+
+Not in this task, status as read: 1.4 and 1.7 changed by earlier edits (film targets are tested, a coarse pointer gets low), not re-run. 2.3 has a 900 ms focus delay from an earlier edit, not re-run. 2.11 left: controls follow key position, labels do not follow AZERTY or Dvorak. 2.15 left: the page's own context warning.
+
+Partly done:
+- Back and swipe back: tested only through history.back(). The real Android back and the iOS edge swipe were not run.
+- Long press: contextmenu, selectstart, dragstart, gesturestart prevented on the root and callout off in CSS, but no long press through CDP fired anything, so this rests on the right click and on reading.
+- A hung font still lets the load go on after 1.5 s, and the first frames can show the fallback font.
+
+## For the next agent, on real Safari
+1. Failure panel by real taps, Back and Try again. WebKit should retry a failed module fetch (read from memory of its module loader, not run): fail one gfx file once and see that Try again gets through.
+2. Card tap: context state running at once, first bell on time. Phone call or Siri if it can be acted out. The silent switch is not handled and cannot be read.
+3. Pause icon and Resume with a thumb on the stick. Edge swipe back in a fight. Long press on the picture: no loupe, no callout.
+4. Backgrounding in a fight: does webglcontextlost come, does restored follow, and does the same fight go on. loseContext and restoreContext through ios.py.
+5. Whether a canvas with willReadFrequently keeps its size and looks right as a texture on iOS.
+
+## How to run the checks
+Scratchpad phone/audit: lib.js plus a scenario s_*.js through run.sh NAME SCENARIO [phone2 args], results in o/NAME.txt, j.py NAME prints one. b1.sh to b9.sh are the batches run. phone/before is the code at 33cbce7, for before and after on port 8793. play.js has a touch bot: matches:[{bot:'skilled',touch:true}] with drive.py --touch.

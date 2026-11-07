@@ -117,7 +117,11 @@ window.__openRealArena=(function(){
       return r.over?null:m.openArena(opts);
     }).catch(function(e){failed(r,e);});
   }
-  window.addEventListener("keydown",function(e){if(screen&&e.key==="Escape"){e.preventDefault();e.stopPropagation();closeAll();}},true);
+  window.addEventListener("keydown",function(e){
+    if(!screen)return;
+    if(e.key==="Escape"){e.preventDefault();e.stopPropagation();closeAll();}
+    if(e.key==="Tab"){e.preventDefault();var b=[].slice.call(screen.querySelectorAll("button")),i=b.indexOf(document.activeElement);b[(i+(e.shiftKey?-1:1)+b.length)%b.length].focus();}
+  },true);
   window.addEventListener("popstate",function(){if(skipPop){skipPop=false;return;}if(histOn){histOn=false;closeAll();}});
   return open;
 })();

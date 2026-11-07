@@ -317,10 +317,17 @@ async function pictureBack(S) {
   /* this listener was added before three's own, which has to rebuild its state first */
   await new Promise((ok) => setTimeout(ok, 0));
   if (S.closed || S.lost || turn !== S.backTurn) return;
-  try { S.stage.rebuildEnv(); await S.engine.precompile(); } catch (e) { console.warn('[arena] while restoring the picture:', e); }
-  if (S.closed || S.lost || turn !== S.backTurn) return;
+  try {
+    S.stage.rebuildEnv(); await S.engine.precompile();
+    if (S.closed || S.lost || turn !== S.backTurn) return;
+    S.engine.render(1e-4);
+  } catch (e) { /* back, but not usable: treat it as gone, so Restart starts over on a new canvas */
+    console.warn('[arena] while restoring the picture:', e);
+    if (S.closed || turn !== S.backTurn) return;
+    S.rebuilding = false; S.lost = true; S.hud.setPicture('gone');
+    return;
+  }
   S.rebuilding = false;
-  S.engine.render(1e-4);
   S.hud.setPicture(null);
   if (!S.paused && !S.opts.manual && !S.frozen) S.engine.start(); /* the end panel keeps its living picture behind it */
 }
