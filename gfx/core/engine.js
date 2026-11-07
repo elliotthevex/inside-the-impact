@@ -12,8 +12,11 @@
 import * as THREE from 'three';
 import { Post } from './post.js';
 
+/* Smaller textures on low are for phones and tablets, which run short of memory. A computer on low is short of GPU speed, so it keeps the full-size files. */
+const TOUCH_FIRST = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+
 export const PRESETS = {
-  low: { name: 'low', film: false, msaa: 0, ao: false, aoSamples: 0, dof: 0, bloom: false, grain: false, tex: 512, texGlove: 700, aniso: 2, motion: true, pixelRatio: 1, maxPixels: 1280 * 720, shadow: 1024, hazeSteps: 3, dust: 60, crowd: 44, bulbs: 0, exposureScale: 0.29, charFill: 3.6, charRim: 0.5, charSoft: 30 },
+  low: { name: 'low', film: false, msaa: 0, ao: false, aoSamples: 0, dof: 0, bloom: false, grain: false, tex: TOUCH_FIRST ? 512 : 1024, texGlove: TOUCH_FIRST ? 700 : 1400, aniso: 2, motion: true, pixelRatio: 1, maxPixels: 1280 * 720, shadow: 1024, hazeSteps: 3, dust: 60, crowd: 44, bulbs: 0, exposureScale: 0.29, charFill: 3.6, charRim: 0.5, charSoft: 30 },
   medium: { name: 'medium', mainFormat: 'r11', film: true, msaa: 2, ao: false, aoSamples: 0, dof: 12, bloom: true, grain: true, tex: 1024, aniso: 4, motion: true, pixelRatio: 1.5, maxPixels: 1600 * 900, shadow: 1536, hazeSteps: 5, dust: 220, crowd: 110, bulbs: 1, exposureScale: 1, charFill: 4.3, charRim: 0.5, charSoft: 22 },
   high: { name: 'high', mainFormat: 'r11', film: true, msaa: 4, ao: true, aoSamples: 8, dof: 16, bloom: true, grain: true, tex: 2048, aniso: 8, motion: true, pixelRatio: 2, maxPixels: 1800000, shadow: 2048, hazeSteps: 6, dust: 420, crowd: 200, bulbs: 2, exposureScale: 1, charFill: 4.3, charRim: 0.5, charSoft: 20 },
 };
