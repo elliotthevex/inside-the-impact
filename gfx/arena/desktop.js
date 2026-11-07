@@ -51,13 +51,14 @@ export function wireDesktop(S, { pause }) {
   };
 
   /* ---------- focus ---------- */
-  let fsAt = -1e9, leftAt = -1e9, backAt = -1e9, blurTimer = 0;
+  let fsAt = -1e9, leftAt = -1e9, backAt = -1e9, blurTimer = 0, away = false;
   const onBlur = () => {
     if (S.opts.manual || S.botName) return; /* a test or the dev page's bot: nobody is at the keys */
+    away = true;
     clearTimeout(blurTimer);
     blurTimer = setTimeout(() => { if (!document.hasFocus() && playing()) pause(); }, Math.max(0, fsAt + FS_SETTLE - performance.now()));
   };
-  const onFocus = () => { backAt = performance.now(); };
+  const onFocus = () => { backAt = performance.now(); away = false; };
   const onClick = (e) => { if (performance.now() - backAt < CLICK_GAP) { e.stopPropagation(); e.preventDefault(); } };
 
   /* ---------- fullscreen ---------- */
@@ -109,13 +110,13 @@ export function wireDesktop(S, { pause }) {
   let soundOn = readPref(SOUND_KEY) !== 'off';
   const pageSound = () => !S.settings || S.settings.sound;
   function toggleSound() {
-    const quietNote = root.querySelector(UP);
-    if (!pageSound()) { if (!quietNote) S.hud.note('Sound is off in settings'); return; }
+    const panel = root.querySelector(UP); /* a panel shows it in its own control */
+    if (!pageSound()) { if (!panel) S.hud.note('Sound is off in settings'); return; }
     soundOn = !soundOn;
     savePref(SOUND_KEY, soundOn ? 'on' : 'off');
     if (S.audio) S.audio.setMuted(!soundOn);
     S.hud.setSound(soundOn, false);
-    if (!quietNote) S.hud.note(soundOn ? 'Sound on' : 'Sound off');
+    S.hud.note(panel ? '' : soundOn ? 'Sound on' : 'Sound off');
   }
 
   window.addEventListener('mousemove', onMouse, { capture: true, passive: true });
@@ -134,7 +135,8 @@ export function wireDesktop(S, { pause }) {
       if (S.audio) S.audio.setMuted(!soundOn);
       S.hud.setSound(soundOn && pageSound(), !pageSound());
     },
-    start() { lastMove = performance.now(); sync(); }, /* the clock starts here, so the cursor outlasts the load screen's fade */
+    /* the cursor's clock starts here, so it outlasts the load screen's fade. A player who went to another app while it loaded comes back to a paused fight. */
+    start() { lastMove = performance.now(); sync(); if (away && !document.hasFocus()) pause(); },
     sync, fullscreen, pickGraphics, toggleSound,
     key(code, e) {
       if (code === 'Escape' && performance.now() - leftAt < ESC_GAP) { e.preventDefault(); e.stopPropagation(); return true; }

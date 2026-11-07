@@ -2,7 +2,8 @@
 
    createHud(rootEl, opts) -> { update(match, dt), onEvent(ev), showLoading(p, label), destroy(),
                                 setPaused(bool), paused, reset(), stick, el, ready }
-   opts: touch (default: coarse pointer), onPause(), onResume(), onRematch(), onExit(), onInput(code, down), onEndPanel(on)
+   opts: touch (default: coarse pointer), onPause(), onResume(), onRematch(), onExit(), onInput(code, down), onEndPanel(on), onFullscreen(), onGraphics(choice), onSound()
+   Also on the returned object, for a keyboard device's pause panel: setGraphics(choice, locked), setSound(on, locked), note(text).
 
    The HUD reads the sim and nothing else, and it never reads the hidden head load: that number is the point of the game and
    the player has to find it by watching the fighters. No code in this file touches `fighter.head`.
@@ -602,7 +603,7 @@ export function createHud(rootEl, opts = {}) {
     writeWhy();
   }
   /* a short word under the clock, for a key pressed with no panel up */
-  function note(text) { if (!noteEl) return; noteEl.textContent = text; noteEl.classList.add('is-on'); noteT = 1.2; say(text); }
+  function note(text) { if (!noteEl) return; noteEl.classList.toggle('is-on', !!text); noteT = text ? 1.2 : 0; if (text) { noteEl.textContent = text; say(text); } }
   /* The picture went away during the end graphic: the result does not wait for frames that are not coming. */
   function finish(m) {
     if (destroyed || !m || m.state !== 'over' || endShown) return;
