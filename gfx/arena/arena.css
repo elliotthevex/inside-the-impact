@@ -149,6 +149,10 @@
 .arena-x .ax-bn.k-round .ax-bn-main{animation:ax-drift 2.4s linear both}
 /* fight: a tag dropping from the clock, gone before the first punch lands. No band, nothing across the middle of the screen. */
 .arena-x .ax-bn.k-fight{align-items:flex-start;padding:calc(var(--ax-top) + clamp(30px,5.3vw,86px)*1.05*var(--ax-ts) + clamp(26px,3.4vw,50px)) 0 0;--bn-size:min(5.6vw,8vh);--bn-pad:.04;--bn-cy:calc(var(--ax-top) + clamp(30px,5.3vw,86px)*1.05*var(--ax-ts) + clamp(26px,3.4vw,50px) + var(--bn-size)*.5);--bn-fill:linear-gradient(180deg,#fff 0%,#fff3c4 32%,#ffc53d 50%,#f07a12 66%,#ffcf63 100%);--bn-rule:transparent;--bn-glow:rgba(255,160,50,.26);--bn-band:transparent}
+/* a short screen has little room between the pause mark and the men's heads, so there the tag is smaller */
+@media (max-height:480px) and (min-aspect-ratio:1/1){
+  .arena-x .ax-bn.k-fight{--bn-size:min(3.6vw,6vh)}
+}
 .arena-x .ax-bn.k-fight .ax-bn-word{animation:ax-tag .16s cubic-bezier(.15,1.1,.35,1) both}
 .arena-x .ax-bn.k-fight.is-out .ax-bn-word{animation:ax-blowout .18s ease-in both}
 .arena-x .ax-bn.k-fight.is-out{animation:ax-fade .18s linear both}
@@ -189,7 +193,7 @@
 
 /* ── touch controls ─────────────────────────────────────────────────── */
 .arena-x .ax-touch{position:absolute;z-index:6;left:0;right:0;bottom:0;top:0;--tb:clamp(52px,min(15.4vw,16.6vh),76px);--tg:clamp(5px,1.5vw,9px);--st:clamp(100px,min(28vw,29vh),150px);pointer-events:none;touch-action:none;transition:opacity .35s linear}
-.arena-x .ax-hud.is-calm .ax-touch{opacity:.26}
+.arena-x .ax-hud.is-calm .ax-touch{opacity:.14}
 .arena-x .ax-stickzone{position:absolute;left:0;bottom:0;width:46%;height:52%;pointer-events:auto;touch-action:none}
 .arena-x .ax-stick{position:absolute;left:0;top:0;width:var(--st);height:var(--st);margin:calc(var(--st)*-.5) 0 0 calc(var(--st)*-.5);border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.03) 0 46%,rgba(255,255,255,.1) 72%,rgba(255,255,255,.04) 100%);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.34),0 2px 18px rgba(0,0,0,.45);pointer-events:none}
 .arena-x .ax-stick::before,.arena-x .ax-stick::after{content:"";position:absolute;left:50%;top:50%;background:rgba(255,255,255,.2)}

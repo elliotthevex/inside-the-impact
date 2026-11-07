@@ -42,8 +42,9 @@ const APERTURE = 0.013;         // film aperture in a fight: the room behind the
 const SHARP = 1.6;              // metres each side of the focal plane that stay fully sharp
 /* deadOut, deadIn: radians off the aim where turning starts and stops. gain: how hard an error past the edge is followed. calm: rate limit outside the fight, tallCalm the same on a tall screen, which has further to turn and less time before the men leave the view.
    softRate: rate limit in the fight while the line is under softAt off the aim, so a quick swing of the line does not whip the room past; further off it may use the full MAX_RATE.
-   bias: radians of the aim behind the player's shoulder. slack: metres the frame centre may lag the men. distSlack: metres of extra distance kept before coming in. */
-const ORBIT = { deadOut: 0.66, deadIn: 0.64, softRate: 2.2, softAt: 0.8, gain: 20, smooth: 14, calm: 0.9, heldGain: 1.2, tallCalm: 1.5, tallGain: 2.4, bias: 0.08, slack: 0.14, distSlack: 0.3 };
+   bias: radians of the aim behind the player's shoulder. slack: metres the frame centre may lag the men. distSlack: metres of extra distance kept before coming in.
+   postNear: metres from the lens inside which a post in the picture goes: a post is .38 m wide, so past this it is under 6% of a 16:9 frame; a wider picture gets there closer in, so there this shrinks. postRoom: metres outside the picture where that already counts, so the fade is over before it shows. postFar: metres further it stays gone while it is in the picture. postLead: seconds ahead of the orbit that the same test looks. */
+const ORBIT = { deadOut: 0.66, deadIn: 0.64, softRate: 2.2, softAt: 0.8, gain: 20, smooth: 14, calm: 0.9, heldGain: 1.2, tallCalm: 1.5, tallGain: 2.4, bias: 0.08, slack: 0.14, distSlack: 0.3, postNear: 5.4, postFar: 1, postLead: 0.24, postRoom: 0.7 };
 
 export function createFightCam(camera, opts = {}) {
   const reduced = !!opts.reducedMotion, canvasY = opts.canvasY ?? 0.75, stage = opts.stage || null;
@@ -212,7 +213,7 @@ export function createFightCam(camera, opts = {}) {
     const needBare = need;
     need = clamp(need + S.wide * 1.0 - S.push * 0.45, MIN_DIST, MAX_DIST);
     /* pulls back at once when it has to and comes in late and slowly, so it does not breathe with every step */
-    if (need > S.d) S.d = damp(S.d, need, 6.5, dt); else if (need < S.d - O.distSlack) S.d = damp(S.d, need + O.distSlack, 1.1, dt);
+    if (first) S.d = need; else if (need > S.d) S.d = damp(S.d, need, 6.5, dt); else if (need < S.d - O.distSlack) S.d = damp(S.d, need + O.distSlack, 1.1, dt);
 
     /* place it, inside the room: a clamped camera widens the lens instead of losing someone from the frame */
     S.up = damp(S.up, tall && calm ? tallUp(wrap(sideOn - O.bias - S.th)) : 0, 2.2, dt);
@@ -227,7 +228,7 @@ export function createFightCam(camera, opts = {}) {
       const dLens = Math.min(Math.max(dHave, Math.min(needBare, MAX_DIST)), lim);
       tanWant = clamp(lensFrom(S.x + nx * dLens, canvasY + lift, S.z + nz * dLens, aspect), tanV, TALL_MAX_TAN);
     } else tanWant = clamp(tanV * Math.max(1, S.d / dHave), BASE_TAN, MAX_TAN);
-    S.tan = damp(S.tan, tanWant, 5, dt);
+    S.tan = first ? tanWant : damp(S.tan, tanWant, 5, dt);
 
     /* kick and shake */
     if (shakeOn) {
@@ -250,16 +251,22 @@ export function createFightCam(camera, opts = {}) {
     if (S.shift > 0.001) { const W = 1000, H = W / aspect, tall = aspect < 1; camera.setViewOffset(W, H, tall ? 0 : S.shift * W, tall ? S.shift * H : 0, W, H); fovNow = 0; } else if (camera.view && camera.view.enabled) { camera.clearViewOffset(); fovNow = 0; }
     const fov = THREE.MathUtils.radToDeg(2 * Math.atan(S.tan)) - zoom;
     if (Math.abs(fov - fovNow) > 1e-3) { fovNow = fov; camera.fov = fov; camera.updateProjectionMatrix(); }
-    /* a corner post between the camera and either man fades out: side-on framing goes past every corner sooner or later */
+    /* a corner post fades out when it stands between the camera and either man, because side-on framing goes past every corner sooner or later, and when it would be a wide strip in the picture.
+       The fade takes .17 s and a fast orbit covers metres in that time, so the strip test also runs on where the camera is about to be: the post is gone before it comes into the picture. */
     if (stage && stage.posts) {
       const px1 = camera.position.x, pz1 = camera.position.z;
       const a1 = (p.x - px1) * rx + (p.z - pz1) * rz, b1 = Math.max(0.5, (p.x - px1) * fx + (p.z - pz1) * fz), a2 = (o.x - px1) * rx + (o.z - pz1) * rz, b2 = Math.max(0.5, (o.x - px1) * fx + (o.z - pz1) * fz);
       const lo = Math.min((a1 - 0.6) / b1, (a2 - 0.6) / b2), hi = Math.max((a1 + 0.6) / b1, (a2 + 0.6) / b2), far = Math.max(b1, b2);
+      const tanSeen = Math.max(tanH, S.tan * aspect), lead = Math.abs(wantOm) > Math.abs(S.om) ? wantOm : S.om, postNear = O.postNear * Math.min(1, BASE_TAN * 16 / 9 / tanSeen);
       for (let i = 0; i < 4; i++) {
-        const q = stage.posts[i], a = (q[0] - px1) * rx + (q[1] - pz1) * rz, b = (q[0] - px1) * fx + (q[1] - pz1) * fz, m = postHidden[i] ? 0.14 : 0, mFar = postHidden[i] ? 0.45 : 0;
+        const q = stage.posts[i], a = (q[0] - px1) * rx + (q[1] - pz1) * rz, b = (q[0] - px1) * fx + (q[1] - pz1) * fz, m = postHidden[i] ? 0.14 : 0, mFar = postHidden[i] ? O.postFar : 0;
         /* wider than the pad itself; and one close to the lens goes whether or not it covers anyone, because it is a big pale strip down the side of the picture. Beside the lens it goes as well, so the camera can never sit inside one. */
-        const hide = Math.hypot(a, b) < 1.3 || (b > 0.05 && ((b < far && (a + 0.38) / b > lo - m && (a - 0.38) / b < hi + m) || (b < 3.9 + mFar && Math.abs(a / b) < tanH + 0.4)));
-        if (hide !== postHidden[i]) { postHidden[i] = hide; stage.setPostAlpha(i, hide ? 0 : 1); }
+        let hide = Math.hypot(a, b) < 1.3 || (b > 0.05 && ((b < far && (a + 0.38) / b > lo - m && (a - 0.38) / b < hi + m) || (b < postNear && Math.abs(a) < tanSeen * b + O.postRoom) || (b < postNear + mFar && Math.abs(a) < tanSeen * b + 0.19)));
+        for (let k = 1; !hide && k <= 3 && lead !== 0; k++) {
+          const th1 = S.th + lead * O.postLead * k / 3, n1x = Math.sin(th1), n1z = Math.cos(th1), qx = q[0] - S.x - n1x * dHave, qz = q[1] - S.z - n1z * dHave, b1Now = -(qx * n1x + qz * n1z), a1Now = qx * n1z - qz * n1x;
+          hide = Math.hypot(a1Now, b1Now) < 1.3 || (b1Now > 0.05 && b1Now < postNear && Math.abs(a1Now) < tanSeen * b1Now + O.postRoom);
+        }
+        if (first || hide !== postHidden[i]) { postHidden[i] = hide; stage.setPostAlpha(i, hide ? 0 : 1, first); }
       }
     }
     /* focus on the plane through the two men, measured the way the depth buffer measures it */

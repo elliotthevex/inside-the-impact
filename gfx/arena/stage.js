@@ -41,6 +41,20 @@ function stipple(mat, U) {
   mat.needsUpdate = true;
 }
 
+/* A rope must not end in the air where a post has gone: around that corner its ropes dissolve over 1.6 m, on the post's own fade. */
+function ropeEnds(mat, U) {
+  const prev = mat.onBeforeCompile, key = mat.customProgramCacheKey ? mat.customProgramCacheKey() : '';
+  mat.onBeforeCompile = (s, r) => {
+    if (prev) prev.call(mat, s, r);
+    s.uniforms.uPostA = U;
+    s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vRopeXZ;').replace('#include <project_vertex>', '#include <project_vertex>\n vRopeXZ=(modelMatrix*vec4(transformed,1.)).xz;');
+    s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vRopeXZ;uniform vec4 uPostA;').replace('#include <color_fragment>', `#include <color_fragment>
+ {float ha=vRopeXZ.x<0.?(vRopeXZ.y<0.?uPostA.x:uPostA.y):(vRopeXZ.y<0.?uPostA.z:uPostA.w);if(ha<.999)diffuseColor.a*=mix(smoothstep(.1,1.7,length(abs(vRopeXZ)-vec2(3.))),1.,ha);}`);
+  };
+  mat.customProgramCacheKey = () => `${key}|ropeends`;
+  mat.needsUpdate = true;
+}
+
 function crowdMaterial(u) {
   const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.82 });
   m.onBeforeCompile = (s) => {
@@ -251,7 +265,7 @@ export async function createStage(engine, loader) {
   field.bakeInstances(benches.planks, 0.5, 0.8); field.bakeInstances(benches.legs, 0.25, 0.6); crowd.bake(field, q.name === 'low' ? 0.56 : 0.7); /* nothing blurs the crowd on low: dimmer people against the wall read better than clear ones */
   const bakeMs = performance.now() - t0;
   /* after the bake, which swaps these meshes' materials */
-  { const pm = ring.group.getObjectByName('posts'); const pd = ring.group.getObjectByName('pads'); stipple(pm.material, postA); if (pd.material !== pm.material) stipple(pd.material, postA); }
+  { const pm = ring.group.getObjectByName('posts'); const pd = ring.group.getObjectByName('pads'); stipple(pm.material, postA); if (pd.material !== pm.material) stipple(pd.material, postA); for (const k of Object.keys(ring.ropes)) ropeEnds(ring.ropes[k].material, postA); }
   /* contact shadows under everything that stands on the floor */
   const H = RING.platformHalf + 0.05;
   floor.userData.u.uContact.value = paintContact([...contact, ...crowd.feet], [
@@ -275,7 +289,7 @@ export async function createStage(engine, loader) {
     /* a, 0..1, for one side: 'px', 'nx', 'pz', 'nz'. At 0 it no longer draws but still casts its shadow. Needs autoRopes false. */
     setRopeAlpha(side, a) { ropeState[side].target = a; },
     /* index 0..3 in the order (-x,-z), (-x,+z), (+x,-z), (+x,+z), a 0..1. It fades there in update. Posts: where they stand. */
-    setPostAlpha(i, a) { postTarget[i] = a; },
+    setPostAlpha(i, a, now = false) { postTarget[i] = a; if (now) postNow[i] = a; },
     posts: [[-RING.postAt, -RING.postAt], [-RING.postAt, RING.postAt], [RING.postAt, -RING.postAt], [RING.postAt, RING.postAt]],
     /* A fighter hit that side: amount in metres of push, along in -1..1 along the side. */
     ropeHit(side, amount = 0.05, along = 0) { const s = ropeState[side]; s.v += amount * 12; ring.ropes[side].material.userData.u.uWobAt.value = along; },
