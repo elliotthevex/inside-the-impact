@@ -4,10 +4,9 @@ Checkpoint file. Read this first when resuming. Design and interfaces are in `gf
 Work is on git branch `realistic-3d` in `site/`. Do not push or merge to `main`: a push to `main` deploys live, and the user decides that.
 
 ## Status
-Phase: a first version is LIVE (see below). Balance and polish fixes are stopped partway; the feature modules and both audits are finished and waiting to be acted on.
-STOPPED at 22:18 KST on 2026-11-06 at 67 against the 70 line. The window has since reset. At 03:55 KST on 2026-11-07 the 5-hour limit read 2% and weekly 49%. WAITING: the Mac has been lid-shut on battery since 23:37 KST, so it only wakes for about 45 seconds at a time and agents cannot run. Everything restarts when the lid opens.
-Usage rule: stop at 70% of the 5-hour window (the user moved it from 75 to 50 to 70 on 2026-11-06, and the latest message wins); the weekly limit keeps 75%. Check with `mcp__ccd_session_mgmt__get_usage`. Agents stop at 67. Five agents at once burned 45 to 60 points an hour, three about 30, so check every 5 minutes past 55. The main session stops anything still running at 67 to 68.
-Power: on battery at about 80% at 22:18 KST. A closed lid sleeps the Mac even on the charger.
+Phase: a first version is LIVE (see below). Three workflows run on 2026-11-07 from 17:55 KST: balance and polish in `site/`, phone fixes in worktree `../phone-fixes` (branch `phone-fixes`). All unpublished.
+Usage rule: stop at 70% of the 5-hour window (the user moved it from 75 to 50 to 70 on 2026-11-06, and the latest message wins); the weekly limit keeps 75%. Check with `mcp__ccd_session_mgmt__get_usage`. Agents stop at 67 by themselves. The window resets at 22:50 KST. About 8 points of the 5-hour limit cost 1 weekly point, so a 67-point window costs about 8 weekly points; weekly was 57 at 21:32 KST.
+Power: on battery at 4% at 21:32 KST. The Mac sleeps with a closed lid or a dead battery. Nothing is lost, and agents retry when it wakes.
 
 ## Live release
 The user said "Put it live now" on 2026-11-06. `main` is at `6c7e471` and deployed on https://inside-the-impact.pages.dev. Another session also pushed `2ee0907` to `main` about the same time; this release sits on top of it. Cloudflare reported "Build failed" for `fa818c0`, with logs only in the user's dashboard; an empty rebuild commit `6c7e471` succeeded.
@@ -28,10 +27,11 @@ The page is three files. `index.html` is markup only, `style.css` holds every st
 - Independently rerun at 22:26 KST on 2026-11-05: `jscheck.py` parses, parity `3bea3b59`, smoke passes.
 - `CREDITS.md`, `ASSET_LIST.md`.
 
-## In progress, all stopped at 22:18 KST
-Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the session's `workflows/scripts` folder. Finished agents replay from cache.
-- Balance: `arena-balance-wf_0ec0b835-a23.js`, run `wf_0ec0b835-a23`. Independent verify failed: any two-button fixed-beat pattern beats the AI (body shots only 96% on Normal, 93.5% on Hard). `fix 1` was stopped partway. Its lead: the AI learns the man's punch order (`learnOrder`) and stops sparing a routine. `gfx/dev/notes/balance.md` has its state, and the working tree holds it.
-- Polish: `arena-polish-wf_14dc4bd3-946.js`, run `wf_14dc4bd3-946`. Review failed on portrait phones: the break view and count can lose the men. `fix 1` was stopped partway. Findings in `gfx/dev/notes/polish-review.md`.
+## In progress
+Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the session's `workflows/scripts` folder. Finished agents replay from cache only if their prompt is byte-identical, so never edit a string a finished agent's prompt uses.
+- Balance: `arena-balance-wf_0ec0b835-a23.js`, run `wf_0ec0b835-a23`. Fix 1 closed the fixed-beat holes (committed `9bf806e`). Verify 2 met every table target and found one policy left: walk in to .8 m, hands up, random power punch every 1.4 s wins 64.5% on normal and 30.5% on hard. `fix 2` is working on it, in `gfx/arena/ai.js`. This is a real boxing plan a person might find, so if fix 2 cannot close it cheaply, accept it and record that: do not lift difficulty for new players to chase it.
+- Polish: `arena-polish-wf_14dc4bd3-946.js`, run `wf_14dc4bd3-946`. A second full review ran by accident (my edit broke the cache) and gave a clean list: no blockers, three visible, all camera (orbit, accepted as out of reach; post strip; post ghost at fast orbit). `fix 1` is working on the post items. Its next step is another full review, which can be skipped if the playtest covers it.
+- Phone fixes: `arena-phone-fixes-wf_e026d923-0b6.js`, run `wf_e026d923-0b6`, branch `phone-fixes`. Groups A to G committed, notes in `gfx/dev/notes/phone-fixes.md` on that branch. `check 1` is running: it re-runs the audits and tests on real iPhone Safari in the Simulator. Then the same workflow hooks in the menu, coach, notes and the Stop the fight button, and checks those.
 
 ## Finished, waiting to be acted on
 - Feature modules: `gfx/arena/menu.js`, `coach.js`, `notes.js`, `extras-ui.js`, `extras.css`. Final review: one visible failure, `rawFallback` in `extras-ui.js` leaves a nearly black inline background on the menu if `extras.css` arrives late, plus minors in `gfx/dev/notes/features-review.md`. Hook plan in `gfx/dev/notes/features.md`.
@@ -43,15 +43,12 @@ Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the sessio
   - Also: slow networks give up while data is arriving, iOS plays all queued sounds at the first tap, the crowd sound keeps playing behind another app with the end panel up, arena.css failing leaves an invisible fight, and the touch pause icon ignores taps while another finger is down. Whether a script-added import map works in real Safari is the top unknown.
 
 ## Remaining, in order
-1. Once the Mac is awake, resume balance and polish. `origin/main` is already merged in as `c41d5a5`, keeping this branch's `gfx/arena/ai.js`. Rerun parity and smoke on the merge, which only the parse check has covered so far. Read results, rerun the gates, commit.
-2. Merge `origin/main` into `realistic-3d`: it holds the release fixes and two commits by AngelCat Tech to `README.md` and `CREDITS.md`, which must be kept. Keep `realistic-3d`'s `ai.js`, not the release's rollback.
-3. Fix the audit findings, phone blockers first.
-4. Hook in the difficulty menu, coach lines and medical notes (`gfx/dev/notes/features.md`), fix `rawFallback`, then re-run `gfx/dev/coachtest.js` and `gfx/dev/menuclaims.js` on the final balance. Coach praise almost never fires because head load puts most breaks in the safety tiers: decide whether that is right after the final balance.
-5. "Stop the fight" choice at a break, using `coach.offerStop`. Needs a small addition to `sim.js`.
-6. Adversarial playtest and fix pass. Note from balance: only a quarter of normal mixed matches end stopped, so check a new player actually sees a stoppage. Note from polish: there is no referee figure, so the stoppage is told only by the graphic and caption.
-7. Performance and low-end preset: measure with nothing else running. Low saves little memory against medium (282-292 against 331 MB of textures), so phones may need smaller textures.
-8. Prune `vendor/`, unused assets and `gfx/dev` from what ships, final checkpoint. Remove the `.lab`, `.dl` and `.scratch` symlinks and the `release-live` worktree.
-9. Each later release needs the user's say-so: a push to `main` reaches real players. Sync `upload/` with the released tree (done for `6c7e471`). `inside-the-impact.html` in the project root is a stale single-file copy from before the 3D game.
+1. When the workflows finish or stop at the usage line, commit what is in `site/`, then after the reset resume whichever stopped.
+2. Merge `phone-fixes` into `realistic-3d` by hand, never with `-X ours` or `-X theirs`. Expect small overlaps in `hud.js`, `arena.css`, `stage.js`, `kit.js`. Rerun gates, `gfx/dev/coachtest.js`, `gfx/dev/menuclaims.js` and complete matches on the merged code, and the balance table through the real `frame()`.
+3. Adversarial playtest and fix pass, including real iPhone Safari by real taps: does a new player meet the Stop the fight offer, does a stoppage land, is it fun. Note from polish: there is no referee figure, so the stoppage is told only by the graphic and caption.
+4. Performance: measure with nothing else running.
+5. Prune `vendor/`, unused assets and `gfx/dev` from what ships, final checkpoint. Remove the `.lab`, `.dl` and `.scratch` symlinks and the `release-live` and `phone-fixes` worktrees.
+6. Ask the user before each release: a push to `main` reaches real players. Sync `upload/` with the released tree. `inside-the-impact.html` in the project root is a stale single-file copy from before the 3D game.
 
 ## Other branches to keep in mind
 - Page split: merged into `realistic-3d` as `2ee0907` by another session at the user's choice. `index.html` is markup, `style.css` and `game.js` hold the rest, and the arena launch line and `hotkeysBlocked` are now in `game.js`. Older notes and workflow prompts may still say `index.html`. `game.js` must stay a classic script, because `notes.js` reads `CX` as a bare global.
@@ -64,7 +61,7 @@ Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the sessio
 
 ## Not verified
 - No human has played it, and nobody on this side can listen to the sound. `gfx/dev/sound.html` is there for a person to judge it.
-- Never run on a phone or in Safari. Touch was emulated in desktop Chrome.
+- Real iPhone Safari: one quick probe in the Simulator (iOS 26.2) on 2026-11-07. The import map added from script works and a whole match ran on low with no page errors. The first open failed about 30 s in when the GPU context died with the Mac at 12 GB of swap, so read as memory pressure, not proven. No real phone has run it, and the fix for this is what `check 1` tests. Android only as Chrome emulation. In-app browsers (KakaoTalk, Naver) never.
 - 60 Hz never seen on a real display. macOS Low Power Mode is on, which is the user's setting, so every fps number is lower than a normal Mac would give.
 
 ## Files changed
@@ -74,4 +71,4 @@ New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `CREDITS.md`, `ASSET_LIST
 21:58 KST on 2026-11-06, on the live site itself, commit `6c7e471`: a bot played a whole match through real key events on medium, ending in a referee stoppage in round 3 at 40 health with the report line on the end panel. No page or console errors, load 8.5 s, 43 fps with five agents running. Parity `3bea3b59` and smoke pass on the live URL.
 
 ## Next task
-When the Mac is awake with the lid open, check usage and power, run parity and smoke on `c41d5a5`, then resume balance and polish.
+When the workflows report, read their results. Merge `phone-fixes` once its checks pass, then the playtest.
