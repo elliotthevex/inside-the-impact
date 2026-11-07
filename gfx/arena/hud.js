@@ -659,14 +659,16 @@ export function createHud(rootEl, opts = {}) {
   const onTapDown = (e) => {
     if (e.pointerType !== 'touch') return;
     const b = e.target.closest && e.target.closest('[data-act]');
-    if (b && hud.contains(b)) tapping.set(e.pointerId, b);
+    if (b && hud.contains(b)) tapping.set(e.pointerId, { b, x: e.clientX, y: e.clientY });
   };
   const onTapUp = (e) => {
-    const b = tapping.get(e.pointerId);
-    if (!b) return;
+    const t = tapping.get(e.pointerId);
+    if (!t) return;
     tapping.delete(e.pointerId);
-    const over = document.elementFromPoint(e.clientX, e.clientY);
-    if (b.disabled || !over || !b.contains(over)) return;
+    const b = t.b, over = document.elementFromPoint(e.clientX, e.clientY);
+    /* a finger that stayed put still means the button it pressed, even if the panel moved under it: the line about the picture comes and goes */
+    const still = Math.abs(e.clientX - t.x) < 10 && Math.abs(e.clientY - t.y) < 10 && b.offsetParent;
+    if (b.disabled || (!still && (!over || !b.contains(over)))) return;
     clickAfter = performance.now() + 450; /* the click that may follow this lift could land on a panel that has just opened under the finger */
     act(b.dataset.act);
   };
