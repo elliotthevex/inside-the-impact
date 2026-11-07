@@ -16,6 +16,7 @@ Built from worktree `../release-live` (branch `release-live`), so the running jo
 Before the next release, merge `main` into `realistic-3d` and keep `realistic-3d`'s `ai.js`, not the rollback. Do not push half-finished jobs: release from a commit that has passed its independent checks.
 
 ## Scope note
+The user said on 2026-11-08: "this is for computer game mainly, do not need to work on ios". So aim testing, polish and performance at keyboard and desktop browsers. No iOS Simulator and no iPhone or Safari-specific work. Touch controls and the phone fixes already written stay, and get a sanity run only. Low keeps full-size textures on a computer; the smaller ones apply only to a coarse pointer.
 The user's latest brief is Street Fight 3D, a complete 1v1 arena game. It takes priority over the earlier whole-game overhaul brief, which is parked, not cancelled, and saved at `gfx/dev/overhaul-brief.md`.
 
 ## Page layout
@@ -31,7 +32,7 @@ The page is three files. `index.html` is markup only, `style.css` holds every st
 Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the session's `workflows/scripts` folder. Finished agents replay from cache only if their prompt is byte-identical, so never edit a string a finished agent's prompt uses.
 - Balance: `arena-balance-wf_0ec0b835-a23.js`, run `wf_0ec0b835-a23`. Fix 1 closed the fixed-beat holes (committed `9bf806e`). Verify 2 met every table target and found one policy left: walk in to .8 m, hands up, random power punch every 1.4 s wins 64.5% on normal and 30.5% on hard. `fix 2` is working on it, in `gfx/arena/ai.js`. This is a real boxing plan a person might find, so if fix 2 cannot close it cheaply, accept it and record that: do not lift difficulty for new players to chase it.
 - Polish: `arena-polish-wf_14dc4bd3-946.js`, run `wf_14dc4bd3-946`. A second full review ran by accident (my edit broke the cache) and gave a clean list: no blockers, three visible, all camera (orbit, accepted as out of reach; post strip; post ghost at fast orbit). `fix 1` is working on the post items. Its next step is another full review, which can be skipped if the playtest covers it.
-- Phone fixes: `arena-phone-fixes-wf_e026d923-0b6.js`, run `wf_e026d923-0b6`, branch `phone-fixes`. Groups A to G committed, notes in `gfx/dev/notes/phone-fixes.md` on that branch. `check 1` is running: it re-runs the audits and tests on real iPhone Safari in the Simulator. Then the same workflow hooks in the menu, coach, notes and the Stop the fight button, and checks those.
+- Failure, input and frame-rate fixes, then the feature hook: `arena-phone-fixes-wf_e026d923-0b6.js`, run `wf_e026d923-0b6`, branch `phone-fixes`. Groups A to G committed, notes in `gfx/dev/notes/phone-fixes.md` on that branch. Re-aimed at computers on 2026-11-08: `check 2` tests for keyboard and desktop browsers, then the same workflow hooks in the menu, coach, notes and the Stop the fight button, and checks those.
 
 ## Finished, waiting to be acted on
 - Feature modules: `gfx/arena/menu.js`, `coach.js`, `notes.js`, `extras-ui.js`, `extras.css`. Final review: one visible failure, `rawFallback` in `extras-ui.js` leaves a nearly black inline background on the menu if `extras.css` arrives late, plus minors in `gfx/dev/notes/features-review.md`. Hook plan in `gfx/dev/notes/features.md`.
@@ -45,8 +46,8 @@ Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the sessio
 ## Remaining, in order
 1. When the workflows finish or stop at the usage line, commit what is in `site/`, then after the reset resume whichever stopped.
 2. Merge `phone-fixes` into `realistic-3d` by hand, never with `-X ours` or `-X theirs`. Expect small overlaps in `hud.js`, `arena.css`, `stage.js`, `kit.js`. Rerun gates, `gfx/dev/coachtest.js`, `gfx/dev/menuclaims.js` and complete matches on the merged code, and the balance table through the real `frame()`.
-3. Adversarial playtest and fix pass, including real iPhone Safari by real taps: does a new player meet the Stop the fight offer, does a stoppage land, is it fun. Note from polish: there is no referee figure, so the stoppage is told only by the graphic and caption.
-4. Performance: measure with nothing else running.
+3. Adversarial playtest and fix pass on a computer: does a new player meet the Stop the fight offer, does a stoppage land, is it fun. Note from polish: there is no referee figure, so the stoppage is told only by the graphic and caption.
+4. Performance on computers: high and medium at 1080p with nothing else running, how integrated GPUs get treated by `detectQuality`, adaptive steps.
 5. Prune `vendor/`, unused assets and `gfx/dev` from what ships, final checkpoint. Remove the `.lab`, `.dl` and `.scratch` symlinks and the `release-live` and `phone-fixes` worktrees.
 6. Ask the user before each release: a push to `main` reaches real players. Sync `upload/` with the released tree. `inside-the-impact.html` in the project root is a stale single-file copy from before the 3D game.
 
@@ -61,7 +62,7 @@ Resume with `Workflow({scriptPath, resumeFromRunId})`. Scripts are in the sessio
 
 ## Not verified
 - No human has played it, and nobody on this side can listen to the sound. `gfx/dev/sound.html` is there for a person to judge it.
-- Real iPhone Safari: one quick probe in the Simulator (iOS 26.2) on 2026-11-07. The import map added from script works and a whole match ran on low with no page errors. The first open failed about 30 s in when the GPU context died with the Mac at 12 GB of swap, so read as memory pressure, not proven. No real phone has run it, and the fix for this is what `check 1` tests. Android only as Chrome emulation. In-app browsers (KakaoTalk, Naver) never.
+- Desktop Safari and Firefox have never run it; only Chrome here. iOS is out of scope. One quick probe in iPhone Safari in the Simulator did run a whole match on low.
 - 60 Hz never seen on a real display. macOS Low Power Mode is on, which is the user's setting, so every fps number is lower than a normal Mac would give.
 
 ## Files changed
