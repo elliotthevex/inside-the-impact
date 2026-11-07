@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { Post } from './post.js';
 
 export const PRESETS = {
-  low: { name: 'low', film: false, msaa: 0, ao: false, aoSamples: 0, dof: 0, bloom: false, grain: false, tex: 1024, aniso: 2, motion: true, pixelRatio: 1, maxPixels: 1280 * 720, shadow: 1024, hazeSteps: 3, dust: 60, crowd: 44, bulbs: 0, exposureScale: 0.29, charFill: 3.6, charRim: 0.5, charSoft: 30 },
+  low: { name: 'low', film: false, msaa: 0, ao: false, aoSamples: 0, dof: 0, bloom: false, grain: false, tex: 512, texGlove: 700, aniso: 2, motion: true, pixelRatio: 1, maxPixels: 1280 * 720, shadow: 1024, hazeSteps: 3, dust: 60, crowd: 44, bulbs: 0, exposureScale: 0.29, charFill: 3.6, charRim: 0.5, charSoft: 30 },
   medium: { name: 'medium', mainFormat: 'r11', film: true, msaa: 2, ao: false, aoSamples: 0, dof: 12, bloom: true, grain: true, tex: 1024, aniso: 4, motion: true, pixelRatio: 1.5, maxPixels: 1600 * 900, shadow: 1536, hazeSteps: 5, dust: 220, crowd: 110, bulbs: 1, exposureScale: 1, charFill: 4.3, charRim: 0.5, charSoft: 22 },
   high: { name: 'high', mainFormat: 'r11', film: true, msaa: 4, ao: true, aoSamples: 8, dof: 16, bloom: true, grain: true, tex: 2048, aniso: 8, motion: true, pixelRatio: 2, maxPixels: 1800000, shadow: 2048, hazeSteps: 6, dust: 420, crowd: 200, bulbs: 2, exposureScale: 1, charFill: 4.3, charRim: 0.5, charSoft: 20 },
 };
@@ -72,7 +72,7 @@ export class Engine {
     this.camera = new THREE.PerspectiveCamera(38, 16 / 9, 0.1, 42);
     this.scene = null; this.exposure = opts.exposure ?? 1;
     this.listeners = new Set(); if (opts.onQuality) this.listeners.add(opts.onQuality);
-    this.update = null; this.running = false; this.t = 0; this._raf = 0; this._last = 0;
+    this.update = null; this.running = false; this.t = 0; this._raf = 0; this._last = 0; this._throws = 0; this.onCrash = null;
     this.stats = { fps: 0, ms: 0, calls: 0, tris: 0, w: 0, h: 0, quality: name };
     this._win = { sum: 0, n: 0, slow: 0, skip: 90 };
     this.resize(); this.post = new Post(r, this.q); this._syncExposure();
@@ -125,8 +125,8 @@ export class Engine {
     const frame = (now) => {
       if (!this.running) return; this._raf = requestAnimationFrame(frame);
       const raw = Math.max(0, now - this._last) / 1000; this._last = now; const dt = Math.min(raw, 1 / 15); this.t += dt; /* a frame's timestamp can be older than the moment start() ran */
-      if (this.update) this.update(dt, this.t);
-      this.render(dt); this._watch(raw);
+      /* a frame that throws every time would leave a dead picture with the loop still spinning. One that throws once is let go. */
+      try { if (this.update) this.update(dt, this.t); this.render(dt); this._watch(raw); this._throws = 0; } catch (e) { if (++this._throws < 3 || !this.onCrash) { if (this._throws >= 3) this.stop(); throw e; } this.stop(); this.onCrash(e); }
     };
     this._raf = requestAnimationFrame(frame);
   }

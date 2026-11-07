@@ -31,12 +31,13 @@
   font-family:var(--ax-font);font-weight:600;line-height:1.1;letter-spacing:0;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
   -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;touch-action:none;
+  -webkit-text-size-adjust:100%;text-size-adjust:100%;
   font-variant-numeric:lining-nums;
 }
 .arena-x[data-ax-text="small"]{--ax-ts:.9}
 .arena-x[data-ax-text="large"]{--ax-ts:1.2}
 .arena-x *,.arena-x *::before,.arena-x *::after{box-sizing:border-box}
-.arena-x canvas{display:block;position:absolute;left:0;top:0;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;background:#000;image-rendering:auto;max-width:none;outline:0}
+.arena-x canvas{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;display:block;position:absolute;left:0;top:0;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;background:#000;image-rendering:auto;max-width:none;outline:0}
 .arena-x button{font:inherit;color:inherit;background:none;border:0;margin:0;padding:0;cursor:pointer;-webkit-appearance:none;appearance:none;touch-action:manipulation}
 .arena-x .ax-hud{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
 .arena-x .ax-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
@@ -83,7 +84,7 @@
 .arena-x .ax-clock{position:relative;font-style:italic;font-weight:800;font-size:calc(clamp(30px,5.3vw,86px)*var(--ax-ts));line-height:.92;letter-spacing:.005em;font-variant-numeric:tabular-nums lining-nums;color:#fffdf7;background:linear-gradient(180deg,#fff 0%,#fff 44%,#cfc8b8 56%,#f4efe4 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;padding:0 .07em;transform-origin:50% 60%}
 .arena-x .ax-clockbox.is-low .ax-clock{background-image:linear-gradient(180deg,#ffd9cd 0%,#ff7a5c 40%,#ea3322 62%,#ff7f61 100%)}
 .arena-x .ax-rlabel{position:relative;font-weight:700;font-size:calc(clamp(9.5px,1.02vw,16px)*var(--ax-ts));letter-spacing:.14em;margin-top:.1em;color:var(--ax-gold-hi);white-space:nowrap;text-transform:uppercase}
-.arena-x .ax-pausebtn{position:absolute;left:50%;top:100%;width:44px;height:36px;margin-left:-22px;pointer-events:auto;display:flex;align-items:flex-start;justify-content:center;padding-top:7px;opacity:.6}
+.arena-x .ax-pausebtn{position:absolute;left:50%;top:100%;width:44px;height:44px;margin-left:-22px;pointer-events:auto;display:flex;align-items:flex-start;justify-content:center;padding-top:7px;opacity:.6}
 .arena-x .ax-pausebtn::before,.arena-x .ax-pausebtn::after{content:"";display:block;width:4px;height:13px;margin:0 2px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.9)}
 .arena-x .ax-pausebtn:hover,.arena-x .ax-pausebtn:focus-visible{opacity:1}
 
@@ -190,11 +191,12 @@
 /* ── touch controls ─────────────────────────────────────────────────── */
 .arena-x .ax-touch{position:absolute;z-index:6;left:0;right:0;bottom:0;top:0;--tb:clamp(52px,min(15.4vw,16.6vh),76px);--tg:clamp(5px,1.5vw,9px);--st:clamp(100px,min(28vw,29vh),150px);pointer-events:none;touch-action:none;transition:opacity .35s linear}
 .arena-x .ax-hud.is-calm .ax-touch{opacity:.26}
-.arena-x .ax-stickzone{position:absolute;left:0;bottom:0;width:46%;height:52%;pointer-events:auto;touch-action:none}
+.arena-x .ax-stickzone{--sl:max(12px,env(safe-area-inset-left));--sb:max(6px,env(safe-area-inset-bottom));position:absolute;left:var(--sl);bottom:var(--sb);width:min(calc(46% - var(--sl)),calc(100% - var(--sl) - 3*var(--tb) - 2*var(--tg) - max(10px,env(safe-area-inset-right)) - 2px));height:calc(52% - var(--sb));pointer-events:auto;touch-action:none}
 .arena-x .ax-stick{position:absolute;left:0;top:0;width:var(--st);height:var(--st);margin:calc(var(--st)*-.5) 0 0 calc(var(--st)*-.5);border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.03) 0 46%,rgba(255,255,255,.1) 72%,rgba(255,255,255,.04) 100%);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.34),0 2px 18px rgba(0,0,0,.45);pointer-events:none}
 .arena-x .ax-stick::before,.arena-x .ax-stick::after{content:"";position:absolute;left:50%;top:50%;background:rgba(255,255,255,.2)}
 .arena-x .ax-stick::before{width:1px;height:62%;transform:translate(-50%,-50%)}
 .arena-x .ax-stick::after{height:1px;width:62%;transform:translate(-50%,-50%)}
+.arena-x .ax-stick.is-rest{left:max(12px,calc(var(--st)*.14));top:auto;bottom:max(12px,calc(var(--st)*.14));margin:0;transform:none}
 .arena-x .ax-knob{position:absolute;z-index:1;left:50%;top:50%;width:44%;height:44%;margin:-22% 0 0 -22%;border-radius:50%;background:radial-gradient(circle at 42% 34%,rgba(255,255,255,.9),rgba(226,221,208,.74) 44%,rgba(138,132,120,.68) 100%);box-shadow:0 3px 12px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.55);will-change:transform}
 .arena-x .ax-tbtns{position:absolute;right:max(10px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,var(--tb));grid-auto-rows:var(--tb);gap:var(--tg);pointer-events:none}
 .arena-x .ax-tb{position:relative;display:flex;align-items:center;justify-content:center;text-align:center;width:100%;height:100%;pointer-events:auto;touch-action:none;font-weight:700;font-size:calc(clamp(12.5px,3.5vw,16px)*var(--ax-ts));line-height:1;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:linear-gradient(180deg,rgba(32,33,38,.62),rgba(8,9,11,.66));box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.3),0 2px 10px rgba(0,0,0,.45);border-radius:12px;text-shadow:0 1px 2px #000}

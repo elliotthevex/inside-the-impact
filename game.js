@@ -14,7 +14,10 @@ document.head.appendChild(Object.assign(document.createElement("script"),{type:"
 window.__openRealArena=(function(){
   var SLOW_S=20,IMPORT_S=45; /* seconds on screen: when to say the line is slow, and when to give up on a module that never arrives */
   var WHY={net:"Could not reach the fight. Check your connection.",old:"This browser is too old for the 3D fight.",gl:"The graphics stopped. Closing other apps may help.",other:"The 3D fight could not start."};
-  var run=null,mod=null,screen=null;
+  var run=null,mod=null,screen=null,histOn=false,skipPop=false;
+  /* Android back and the iOS edge swipe: one history entry while this is open, so back closes it to the lobby instead of leaving the site. */
+  function pushHist(){if(histOn)return;try{history.pushState({arena3d:1},"");histOn=true;}catch(e){histOn=false;}}
+  function dropHist(){if(!histOn)return;histOn=false;skipPop=true;history.back();}
   function coarse(){try{return matchMedia("(pointer: coarse)").matches;}catch(e){return false;}}
   /* "old" when this browser can never run it, "gl" when it should be able to but has no context to give right now. */
   function unsupported(){
@@ -63,6 +66,7 @@ window.__openRealArena=(function(){
     clearScreen();
     if(mod)mod.closeArena();
     if(r)endSound(r);
+    dropHist();
   }
   function failed(r,e,kind){
     if(r.over)return; /* the player has already left */
@@ -70,7 +74,7 @@ window.__openRealArena=(function(){
     endSound(r);
     console.warn("[arena] could not start:",e);
     kind=kind||(e&&e.kind)||(e instanceof SyntaxError?"old":"net");
-    if(!coarse()){clearScreen();r.fallback();simpleNote();return;}
+    if(!coarse()){clearScreen();dropHist();r.fallback();simpleNote();return;}
     showPanel(kind,kind==="old"?null:function(){if(e&&e.hung)freshPage(kind,r.fallback);else open(r.fallback);});
   }
   function simpleNote(){
@@ -91,6 +95,7 @@ window.__openRealArena=(function(){
     if(why)return failed(r,new Error("3D fight unsupported: "+why),why);
     run=r;
     r.ctx=soundForThisTap();
+    pushHist();
     showWait();
     var seen=0,giveUp=null,limit=new Promise(function(_,no){giveUp=no;});
     limit.catch(function(){});
@@ -104,7 +109,7 @@ window.__openRealArena=(function(){
     var opts={
       audioCtx:r.ctx,
       onScreen:function(){if(!r.over){clearInterval(r.timer);clearScreen();}},
-      onClosed:function(){if(run===r){run=null;r.over=true;clearInterval(r.timer);clearScreen();}},
+      onClosed:function(){if(run===r){run=null;r.over=true;clearInterval(r.timer);clearScreen();dropHist();}},
       onFail:function(e){failed(r,e);},
     };
     Promise.race([import("./gfx/arena/index.js"),limit]).then(function(m){
@@ -113,6 +118,7 @@ window.__openRealArena=(function(){
     }).catch(function(e){failed(r,e);});
   }
   window.addEventListener("keydown",function(e){if(screen&&e.key==="Escape"){e.preventDefault();e.stopPropagation();closeAll();}},true);
+  window.addEventListener("popstate",function(){if(skipPop){skipPop=false;return;}if(histOn){histOn=false;closeAll();}});
   return open;
 })();
 
@@ -2841,6 +2847,14 @@ window.__openRealArena=(function(){
       }
 
       /* ── open / close ─────────────────────────────────────────── */
+      /* With a Korean keyboard in Hangul mode e.key is a Hangul letter, or "Process" on Windows, so only then read which key it is by position. Other layouts keep meaning what they say. */
+      function latinKey(e) {
+        const k = e.key || "", c = e.code || "";
+        if (k !== "Process" && !/^[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]$/.test(k)) return k;
+        if (/^Key[A-Z]$/.test(c)) return c.slice(3).toLowerCase();
+        if (/^Digit\d$/.test(c)) return c.slice(5);
+        return c === "Space" ? " " : /^Shift/.test(c) ? "Shift" : c || k;
+      }
       function openArena3D() {
         document.querySelectorAll(".arena3").forEach((n) => n.remove());
         const el = document.createElement("div");
@@ -2905,7 +2919,7 @@ window.__openRealArena=(function(){
       const a3Open = () => !!document.querySelector(".arena3");
       window.addEventListener("keydown", (e) => {
         if (!a3Open()) return;
-        const k = e.key.toLowerCase();
+        const k = latinKey(e).toLowerCase();
         if (k === "escape") { e.preventDefault(); return closeArena3D(); }
         if (["w", "a", "s", "d", "shift"].includes(k)) { A3.keys.add(k); e.preventDefault(); }
         if (k === " ") { a3Sidestep(); e.preventDefault(); }
@@ -2920,7 +2934,7 @@ window.__openRealArena=(function(){
       });
       window.addEventListener("keyup", (e) => {
         if (!a3Open()) return;
-        A3.keys.delete(e.key.toLowerCase());
+        A3.keys.delete(latinKey(e).toLowerCase());
       });
       window.addEventListener("blur", () => A3.keys.clear());
 
@@ -3875,7 +3889,7 @@ window.__openRealArena=(function(){
         if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || "")) return;
         if (t && t.isContentEditable) return;
         if (hotkeysBlocked()) return;
-        const k = e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key;
+        const key = latinKey(e), k = key === " " ? "Space" : key.length === 1 ? key.toUpperCase() : key;
         for (const id in CTRL_ACTIONS) {
           if (ST[id] && ST[id] === k) {
             if (CTRL_ACTIONS[id]()) e.preventDefault();

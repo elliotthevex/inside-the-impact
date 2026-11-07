@@ -25,6 +25,7 @@ const CODE_FILES = 24;    // about how many script files a first visit fetches, 
 const LOST_WAIT = 8;      // seconds on screen to wait for a lost GPU context before offering a fresh start
 const HOLD = 0.45;        // seconds after the load screen starts to fade before the sim starts
 const STEP = 1 / 120;     // the sim's fixed step
+const THINK = 2 * STEP;   // the rival thinks every second tick, 60 times a second of fight, at any frame rate
 
 let session = null;
 
@@ -67,7 +68,7 @@ function newMatch(S) {
   S.match = S.mods.sim.createMatch({ seed, names: S.opts.names || { p: 'YOU', o: 'RIVAL' }, ringHalf: S.stage.ringHalf, corners: { blue: [c.blue.x, c.blue.z], red: [c.red.x, c.red.z] } });
   S.ai = S.mods.ai.createAI({ difficulty: S.opts.difficulty || 'normal', seed: seed + 1 });
   if (S.botName) S.bot = S.mods.ai.createBot(S.botName, { seed: seed + 2, kind: S.botKind });
-  S.hitStop = 0; S.slow = null; S.hold = HOLD; S.bank = 0;
+  S.hitStop = 0; S.slow = null; S.hold = HOLD; S.bank = 0; S.tick = 0; S.inP = null; S.inO = null;
   clearInput(S);
   S.cam.snap();
   if (S.fx.clear) S.fx.clear();
@@ -76,8 +77,7 @@ function newMatch(S) {
 
 function clearInput(S) { S.keys.clear(); S.q.punch = null; S.q.slip = false; S.q.ups = 0; S.q.lastUp = false; }
 
-function playerInput(S, m, dt) {
-  if (S.bot) return S.bot.decide(m, m.p, m.o, dt);
+function playerInput(S, m) {
   const I = S.input, K = S.keys, st = S.hud.stick;
   let ax, ay;
   if (st && st.active) { ax = st.x; ay = st.y; } else {
@@ -142,14 +142,19 @@ function frame(S, dt) {
   /* the rig runs on scaled real time, so slow motion stays smooth between sim ticks, except that a contact stops it exactly on the tick */
   let dts = dt * scale, advanced = 0;
   if (dts > 0) {
-    const inP = playerInput(S, m, dts), inO = S.ai.decide(m, m.o, m.p, dts);
-    /* Presses go in once, then the sim goes tick by tick. A punch connecting ends the ticks for this frame, so the frame drawn, and held by hit-stop, is the contact itself. */
-    m.step(0, inP, inO); inP.punch = null; inO.punch = null;
+    /* The player's presses go in once a frame. The rival, and a test bot on the player's side, think on the sim's clock, so a fight is the same at any frame rate and a 60 Hz game is what the balance harness measures. */
+    if (!S.bot) { S.inP = playerInput(S, m); m.step(0, S.inP, S.inO); S.inP.punch = null; }
+    /* Then the sim goes tick by tick. A punch connecting ends the ticks for this frame, so the frame drawn, and held by hit-stop, is the contact itself. */
     S.bank += dts;
     while (S.bank >= STEP) {
       S.bank -= STEP;
+      if ((S.tick++ & 1) === 0) {
+        if (S.bot) S.inP = S.bot.decide(m, m.p, m.o, THINK);
+        S.inO = S.ai.decide(m, m.o, m.p, THINK);
+        m.step(0, S.inP, S.inO); S.inO.punch = null; if (S.bot) S.inP.punch = null;
+      }
       const from = m.events.length;
-      m.step(STEP, inP, inO);
+      m.step(STEP, S.inP, S.inO);
       advanced += STEP;
       let contact = false;
       for (let i = from; i < m.events.length; i++) { const k = m.events[i].type; if (k === 'hit' || k === 'block') contact = true; }
@@ -185,6 +190,7 @@ function press(S, code, repeat) {
 
 function wireInput(S) {
   S.onKeyDown = (e) => {
+    S.shift = e.shiftKey;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const code = codeOf(e);
     if (code === 'Escape') {
@@ -209,8 +215,10 @@ function wireInput(S) {
     press(S, code, e.repeat);
   };
   S.onKeyUp = (e) => {
+    S.shift = e.shiftKey;
     const code = codeOf(e);
     S.keys.delete(code);
+    if (e.key === 'Meta' || /^Meta/.test(code)) { S.keys.clear(); if (e.shiftKey) S.keys.add('ShiftLeft'); } /* macOS sends no key up for anything released while Cmd is held */
     const panel = panelOn(S);
     if (!(panel && e.target && panel.contains(e.target))) e.stopPropagation();
   };
@@ -225,7 +233,10 @@ function wireInput(S) {
   S.onRestored = () => { if (!S.closed && S.ready) pictureBack(S); };
   S.canvas.addEventListener('webglcontextlost', S.onLost);
   S.canvas.addEventListener('webglcontextrestored', S.onRestored);
-  S.onBlur = () => clearInput(S);
+  S.onBlur = () => { clearInput(S); S.shift = false; if (S.hud) S.hud.dropFingers(); };
+  /* no browser menu, callout or selection from a long press or a right click on the fight */
+  S.onNoMenu = (e) => e.preventDefault();
+  for (const n of ['contextmenu', 'selectstart', 'dragstart', 'gesturestart']) S.root.addEventListener(n, S.onNoMenu);
   /* sound stops behind another app or tab in every state, the end panel included */
   S.onVisibility = () => {
     if (S.audio) S.audio.setHidden(document.hidden);
@@ -269,6 +280,9 @@ function resume(S, fromHud) {
   if (!S.paused || S.lost || S.rebuilding) return;
   S.paused = false;
   if (!fromHud) S.hud.setPaused(false);
+  /* a pause cleared the keys, but Shift does not repeat and a finger may still be on Guard */
+  if (S.shift) S.keys.add('ShiftLeft');
+  S.hud.heldAgain();
   S.audio.setPaused(false);
   if (!S.opts.manual && !S.frozen) S.engine.start();
 }
@@ -487,6 +501,12 @@ async function load(S) {
   if (S.closed) return;
   S.ready = true;
   S.engine.update = (dt) => frame(S, dt);
+  /* A fight that keeps throwing goes to the same place as one that could not start, unless it is already over: the result stays up. */
+  S.engine.onCrash = (e) => {
+    console.error('[arena] the fight stopped:', e);
+    if (S.hud.el.querySelector('.ax-end.is-on')) return;
+    const o = S.opts; teardown(S, { quiet: true }); if (o.onFail) o.onFail(Object.assign(e, { kind: e.kind || 'other' }));
+  };
   S.hud.showLoading(1);
   if (S.audio.unlock) S.audio.unlock();
   if (!opts.manual) S.engine.start();
@@ -518,7 +538,7 @@ function teardown(S, { keepSound = false, quiet = false } = {}) {
   if (S.engine) {
     const r = S.engine.renderer;
     safe(() => S.engine.dispose());
-    safe(() => r.forceContextLoss());
+    safe(() => { if (!r.getContext().isContextLost()) r.forceContextLoss(); });
   }
   S.canvas.width = S.canvas.height = 1;
   S.root.remove();
@@ -533,6 +553,7 @@ export function arenaSession() { return session ? session.handle : null; }
 function makeHandle(S) {
   return {
     get match() { return S.match; }, get engine() { return S.engine; }, get stage() { return S.stage; }, get rigP() { return S.rigP; }, get rigO() { return S.rigO; },
+    get tick() { return S.tick; }, replay(seed) { S.opts.seed = seed; S.matchNo = 0; rematch(S); },
     get cam() { return S.cam; }, get fx() { return S.fx; }, get audio() { return S.audio; }, get hud() { return S.hud; }, get mods() { return S.mods; }, get root() { return S.root; }, get ai() { return S.ai; },
     get loadMarks() { return S.loadMarks; }, get ready() { return S.ready; }, get paused() { return S.paused; }, get lost() { return S.lost; }, get rebuilding() { return S.rebuilding; }, get frames() { return S.frames; }, get jsMs() { return S.jsMs; }, get jsPeak() { return S.jsPeak; }, get seed() { return S.seed; }, get hitStop() { return S.hitStop; }, get slow() { return S.slow; }, get settings() { return S.settings; },
     resetPeak() { S.jsPeak = 0; },

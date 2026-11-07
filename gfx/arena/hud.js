@@ -124,7 +124,7 @@ const TEMPLATE = (touch) => `
 <div class="ax-cap" aria-hidden="true"></div>
 ${touch ? '' : `<div class="ax-hint is-off" aria-hidden="true"><div class="ax-hint-in">${keysHtml()}</div></div>`}
 ${touch ? `<div class="ax-touch">
-  <div class="ax-stickzone" aria-label="Move"><div class="ax-stick"><div class="ax-knob"></div></div></div>
+  <div class="ax-stickzone" aria-label="Move"><div class="ax-stick is-rest"><div class="ax-knob"></div></div></div>
   <div class="ax-tbtns">
     ${TOUCH_PUNCHES.map(([l, c, k, x]) => `<button class="ax-tb${x}" type="button" data-code="${c}" data-key="${k}">${l}</button>`).join('')}
     <button class="ax-tb ax-tb-guard" type="button" data-code="ShiftLeft" data-key="Shift">Guard</button>
@@ -647,14 +647,34 @@ export function createHud(rootEl, opts = {}) {
     scope.dispatchEvent(new CustomEvent('arena:' + name, { bubbles: true }));
   }
   function act(a) {
+    if (a === 'resume' && resumeBtn.disabled) return;
     if (a === 'pause') { setPaused(true); emit('pause'); }
     else if (a === 'resume') { setPaused(false); emit('resume'); }
     else if (a === 'rematch') { reset(); emit('rematch'); }
     else if (a === 'exit') { setPaused(false); emit('exit'); }
   }
-  const onClick = (e) => {
+  /* A browser makes no click from a tap while another finger is down, and a thumb is usually on the stick, so on touch the buttons act on the lift themselves. */
+  let clickAfter = 0;
+  const tapping = new Map();
+  const onTapDown = (e) => {
+    if (e.pointerType !== 'touch') return;
     const b = e.target.closest && e.target.closest('[data-act]');
-    if (b && hud.contains(b)) act(b.dataset.act);
+    if (b && hud.contains(b)) tapping.set(e.pointerId, b);
+  };
+  const onTapUp = (e) => {
+    const b = tapping.get(e.pointerId);
+    if (!b) return;
+    tapping.delete(e.pointerId);
+    const over = document.elementFromPoint(e.clientX, e.clientY);
+    if (b.disabled || !over || !b.contains(over)) return;
+    clickAfter = performance.now() + 450; /* the click that may follow this lift could land on a panel that has just opened under the finger */
+    act(b.dataset.act);
+  };
+  const onTapCancel = (e) => { tapping.delete(e.pointerId); };
+  const onClick = (e) => {
+    if (performance.now() < clickAfter) return;
+    const b = e.target.closest && e.target.closest('[data-act]');
+    if (b && !b.disabled && hud.contains(b)) act(b.dataset.act);
   };
   const onPanelKey = (e) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
@@ -669,12 +689,15 @@ export function createHud(rootEl, opts = {}) {
   // Clicking the pause icon must not leave focus on it, or Space (slip) would press it.
   const noFocus = (e) => { if (e.target.closest && e.target.closest('.ax-pausebtn')) e.preventDefault(); };
   hud.addEventListener('click', onClick);
+  hud.addEventListener('pointerdown', onTapDown);
+  hud.addEventListener('pointerup', onTapUp);
+  hud.addEventListener('pointercancel', onTapCancel);
   hud.addEventListener('keydown', onPanelKey);
   hud.addEventListener('mousedown', noFocus);
 
   /* ── touch ────────────────────────────────────────────────────────── */
   const stick = { x: 0, y: 0, active: false };
-  let cleanupTouch = null;
+  let cleanupTouch = null, heldAgain = () => {}, dropFingers = () => {};
   if (touch) cleanupTouch = wireTouch();
   function send(code, key, down) {
     if (opts.onInput) opts.onInput(code, down);
@@ -687,17 +710,14 @@ export function createHud(rootEl, opts = {}) {
     let id = null, ox = 0, oy = 0, rect = null;
     const R = () => base.offsetWidth * .34;
     const setDir = (code, on) => { if (held[code] !== on) { held[code] = on; send(code, keyOf[code], on); } };
-    const rest = () => {
-      const z = zone.getBoundingClientRect(), w = base.offsetWidth;
-      const pad = Math.max(12, w * .14);
-      moveBase(pad + w * .5, z.height - pad - w * .5);
-      knob.style.transform = 'none';
-    };
-    const moveBase = (x, y) => { base.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)'; };
+    /* The resting place is all in the stylesheet, so it needs no measuring and is right after a rematch or a rotate, when the layer may have been hidden. */
+    const rest = () => { if (id !== null) return; base.classList.add('is-rest'); base.style.transform = ''; knob.style.transform = 'none'; };
+    const moveBase = (x, y) => { base.classList.remove('is-rest'); base.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)'; };
     const down = (e) => {
+      if (id !== null && zone.hasPointerCapture && !zone.hasPointerCapture(id)) up({ pointerId: id }); /* a browser can lose a lift: a finger whose capture has gone is no longer here */
       if (id !== null) return;
       id = e.pointerId;
-      zone.setPointerCapture && zone.setPointerCapture(id);
+      try { zone.setPointerCapture(id); } catch (err) { /* that finger has already gone: the up handler sorts it out */ }
       rect = zone.getBoundingClientRect();
       const w = base.offsetWidth * .5;
       ox = Math.min(rect.width - w, Math.max(w, e.clientX - rect.left));
@@ -734,12 +754,15 @@ export function createHud(rootEl, opts = {}) {
       const b = e.currentTarget;
       b.setPointerCapture && b.setPointerCapture(e.pointerId);
       b.classList.add('is-down');
+      b.axFingers = (b.axFingers || 0) + 1; /* two fingers on one button: it stays pressed until the last one lifts */
       send(b.dataset.code, b.dataset.key, true);
       e.preventDefault();
     };
     const btnUp = (e) => {
       const b = e.currentTarget;
       if (!b.classList.contains('is-down')) return;
+      b.axFingers = Math.max(0, (b.axFingers || 1) - 1);
+      if (b.axFingers > 0) return;
       b.classList.remove('is-down');
       send(b.dataset.code, b.dataset.key, false);
     };
@@ -752,7 +775,13 @@ export function createHud(rootEl, opts = {}) {
     const noMenu = (e) => e.preventDefault();
     q('.ax-touch').addEventListener('contextmenu', noMenu);
     addEventListener('resize', rest);
-    ready.then(rest, () => {});
+    /* A pause clears the keys, but a finger may still be on Guard: on resume it counts again. A punch does not, or a held finger would throw one. */
+    heldAgain = () => { for (const b of btns) if (b.dataset.code === 'ShiftLeft' && b.classList.contains('is-down')) send(b.dataset.code, b.dataset.key, true); };
+    /* The window lost focus, and lifts may never reach us: start clean. A finger really still down just has to press again. */
+    dropFingers = () => {
+      if (id !== null) up({ pointerId: id });
+      for (const b of btns) if (b.classList.contains('is-down')) { b.axFingers = 0; b.classList.remove('is-down'); send(b.dataset.code, b.dataset.key, false); }
+    };
     return () => {
       removeEventListener('resize', rest);
       Object.keys(held).forEach((c) => setDir(c, false));
@@ -784,12 +813,17 @@ export function createHud(rootEl, opts = {}) {
   /* a short line under the bar, for a load that has gone quiet */
   function setLoadNote(text) { if (!destroyed && loadNote.textContent !== (text || '')) loadNote.textContent = text || ''; }
 
+  addEventListener('resize', fitLoadTitle);
   function destroy() {
     if (destroyed) return;
     destroyed = true;
     clearTimeout(loadTimer);
+    removeEventListener('resize', fitLoadTitle);
     if (cleanupTouch) cleanupTouch();
     hud.removeEventListener('click', onClick);
+    hud.removeEventListener('pointerdown', onTapDown);
+    hud.removeEventListener('pointerup', onTapUp);
+    hud.removeEventListener('pointercancel', onTapCancel);
     hud.removeEventListener('keydown', onPanelKey);
     hud.removeEventListener('mousedown', noFocus);
     hud.remove();
@@ -798,7 +832,7 @@ export function createHud(rootEl, opts = {}) {
   }
 
   return {
-    update, onEvent, showLoading, setLoadNote, destroy, setPaused, setPicture, finish, reset, stick, el: hud, ready,
+    update, onEvent, showLoading, setLoadNote, destroy, setPaused, setPicture, finish, reset, stick, el: hud, ready, heldAgain: () => heldAgain(), dropFingers: () => dropFingers(),
     get paused() { return paused; },
   };
 }

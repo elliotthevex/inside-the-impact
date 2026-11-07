@@ -109,7 +109,7 @@ Audio: WebAudio synthesis only, no files. Punch thuds by type and blocked, whoos
 A real basement fight venue, 18 m by 18 m, ceiling about 4.5 m. Ring centred: 6.4 m platform, 0.75 m high, canvas with scuffs, four posts with coloured pads (blue corner, red corner, two neutral), three taped ropes each side with sag, apron, steps, stools and buckets in the corners. Breeze-block or brick walls, wet concrete floor, pipes, ducts, cables, beams. Poly Haven models and textures, CC0 (`hanging_industrial_lamp`, `caged_hanging_light`, `modular_industrial_pipes_01`, `modular_airduct_circular_01`, `metal_stool_01`, `wooden_bucket_01`, `concrete_block_wall_02`, and similar; check sizes, stay lean). One strong warm key with shadow over the ring on a swaying lamp, dim bulbs around, haze cones, dust. A low HDRI environment for reflections only. Benches and a seated and standing crowd of Rocketbox people, baked to static poses and instanced, dark and out of focus, with a small shader sway.
 
 ### Quality
-low: no film pipeline, direct tone mapping, 1024 textures, no AO or DOF, small shadow map, little haze, few crowd, pixel ratio 1, works on a phone GPU.
+low: no film pipeline, direct tone mapping, 512 textures (gloves about 700, drawn down at load, see kit.js shrinkImage), no AO or DOF, small shadow map, little haze, few crowd, pixel ratio 1, works on a phone GPU.
 medium: film, bloom, DOF 12 taps, 1024 textures. high: film, AO, DOF 16 taps, MSAA 4, 2048 textures. Auto-detect, `ST.lowdetail` forces low, drop a level if frames stay slow. Target 60 fps on an M1 at 1080p on high.
 
 ## Credits

@@ -110,7 +110,7 @@ function paintContact(items, extraRects) {
 }
 
 export async function createStage(engine, loader) {
-  setLoader(loader);
+  setLoader(loader, engine.q.name === 'low' ? engine.q.tex : 0);
   const q = engine.q; const scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000); scene.name = 'venue';
   const aniso = q.aniso || 4; const doorX = -2.6;
   scene.fog = new THREE.FogExp2(0x0b0806, 0.016);
@@ -147,7 +147,7 @@ export async function createStage(engine, loader) {
   await texturesReady();
   env.mapping = THREE.EquirectangularReflectionMapping;
   /* a render target's pixels do not survive a lost context, so env keeps its pixels in memory and this can run again */
-  let envRT = null; const bakeEnv = () => { const pm = new THREE.PMREMGenerator(engine.renderer); const rt = pm.fromEquirectangular(env); if (envRT) envRT.dispose(); envRT = rt; scene.environment = rt.texture; env.dispose(); pm.dispose(); };
+  let envRT = null; const bakeEnv = () => { const pm = new THREE.PMREMGenerator(engine.renderer); envRT = pm.fromEquirectangular(env); scene.environment = envRT.texture; env.dispose(); pm.dispose(); };
   bakeEnv(); scene.environmentIntensity = 0.26;
 
   /* key lamp, and the real point lights the fighters see */
