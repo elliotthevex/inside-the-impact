@@ -52,3 +52,9 @@ Partly done:
 
 ## How to run the checks
 Scratchpad phone/audit: lib.js plus a scenario s_*.js through run.sh NAME SCENARIO [phone2 args], results in o/NAME.txt, j.py NAME prints one. b1.sh to b9.sh are the batches run. phone/before is the code at 33cbce7, for before and after on port 8793. play.js has a touch bot: matches:[{bot:'skilled',touch:true}] with drive.py --touch.
+
+## Last checks, 21:25 to 21:30, on the final code unless it says otherwise
+- Gates after the last code change: jscheck ALL SCRIPTS PARSE, parity 3bea3b59, smoke pass true, 20 run.
+- Whole matches on the real page through play.js, low: by keyboard, mixed bot, decision, 224 s. By real touches through CDP, stick and buttons, skilled bot (spec.touch), decision, 217 s, 108 punches thrown. No page errors or GL errors. These two ran just before the last two small commits (failed-restore path, history race), which touch neither input nor the fight loop. fps there is 30 under headless load and says nothing about a phone.
+- play.js flow steps: pauseFlow and Reduced Motion passed, the touch step passed all 13 checks. Camera Shake passed. Found by this run: reopening within moments of closing made Chrome leave the page, because a history push raced a back still on its way. Fixed in c6f22a1, and the history check still gives index 2 to 1 on back and on exit.
+- Stopped because the Mac was at 6% battery on its last run: see the report for what that left unread.
