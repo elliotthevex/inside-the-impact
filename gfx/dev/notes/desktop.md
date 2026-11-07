@@ -41,3 +41,15 @@ Restart: read this file and `gfx/arena/desktop.js`. Test scripts are in the scra
 - A GPU that cannot draw the film path shows black on a manual High or Medium. The panel still works and Auto or Low brings the picture back. Auto never picks those there.
 - A live switch changes the film path, lights, crowd count, shadow size and effects. Texture size and the context's antialias flag need the next open, as with the adaptive step.
 - Nobody has played this by hand. Fullscreen is real Chrome but headless: the macOS and Windows window animations have not been seen. Firefox, Edge and Safari were not run. Windows Sticky Keys was not run; Q is simply a key that does not trigger it.
+
+## Check
+Independent check, headless Chrome over the DevTools protocol with real key and mouse events. Scripts and frames: scratchpad `desktop/check/` (a.py to f.py). Nothing in game code was changed.
+- Gates: jscheck ALL SCRIPTS PARSE, parity 3bea3b59, smoke pass true, 20 run.
+- Focus lost with the tab visible pauses with the panel, clock held, in: normal fight, knockdown of the player, slow motion after the opponent goes down, the break between rounds, the instant the round clock is at 0.02. Focus back does not resume. (An early run seemed to show no pause. That was the test toggling focus off and on without a pause between, so no blur event fired. Not a game fault.)
+- F during load enters fullscreen with no error; M during load throws nothing. Ctrl+F is ignored by the page code (already in fullscreen in that run, so only read, not seen).
+- Guard: Q then Shift, released in either order, keeps guard 1 until the last one is up. Q released during a pause gives guard 0 after resume. Q with key "ㅂ" (Hangul) guards.
+- After Exit from fullscreen on the pause panel: fullscreen off, no arena left, cursor auto.
+- localStorage that throws on get and set: M, pause and Resume work, no page error. I did not click a Graphics option in that run (selector miss).
+- 1024x768: fullscreen icon sits right beside the pause icon (34 px each, 478-546), pause panel prefs row inside the screen. Touch emulation 844x390: no fullscreen icon, no prefs row.
+- Result: no blocker or visible failure found.
+- Not checked by me: 2560x1440 and 3840x2160 layout, Large Text, 1366x768 and 1920x1080 frames, graphics switching in each direction and the Low Detail override, a new complete match by real keys, cursor after a rematch, F in the count and end panel, Esc in fullscreen. I rely on the earlier notes for those.
