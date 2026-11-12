@@ -4,16 +4,13 @@ Checkpoint file. Read this first when resuming. Design and interfaces are in `gf
 Work is on git branch `realistic-3d` in `site/`. Do not push or merge to `main`: a push to `main` deploys live, and the user decides that.
 
 ## Status
-STOPPED at 11:32 KST on 2026-11-08 at weekly 74% against the 75% line (5-hour 9%). Weekly resets at 15:00 KST on 2026-11-12. Do not start agents before then unless the user moves the line. Nothing is running; both trees are clean.
-`realistic-3d` (in `site/`) holds: balance (verified, passed), polish (no blockers; a further full review skipped to save usage), the failure, loading, input and frame-rate fixes merged from `phone-fixes` as `6ee3fda`, and the computer-game basics (cursor, focus pause, fullscreen, graphics and sound in the pause panel, Q guard, big monitors; independent check passed). Gates and a whole match by real keys passed on it. Not live. A stable copy for the user to play on this Mac: http://127.0.0.1:8791/try-now/index.html (worktree `../try-now`, detached at the branch head).
-Usage rule: stop at 70% of the 5-hour window and 75% weekly (the user's lines). About 8 points of the 5-hour limit cost 1 weekly point. Agents running in short dark-wake bursts while the lid is shut still spend usage: weekly went from 67 to 74 overnight with the lid shut.
+Released `6fb07fa` to `main` at 10:41 KST on 2026-11-12 at the user's word ("Yes, now"); live checked (see Live release). Work continues on `realistic-3d` with workflow `arena-finish-wf_c032beb5-16b.js`, run `wf_c032beb5-16b` (in the Desktop session's workflows/scripts folder): key and focus fixes R1 to R6, then the difficulty menu, corner coach, notes and Stop the fight, then an independent check and fixes. Notes in `gfx/dev/notes/finish.md`.
+Project folder moved to `/Users/elliot_jeong/Desktop/Inside-the-Impact` on 2026-11-11. Worktree links were repaired, and the local test server on port 8791 now serves this folder. Older notes name `~/Downloads`. Many scratchpad test tools from before were cleaned out of /tmp; what is left is in the old scratchpad, and agents rebuild the rest.
+Usage rule: 5-hour 70%. Weekly: the user said "Use until 95%" on 2026-11-12 with weekly at 83% before the 15:00 KST reset. Agents stop at 67 and 93. A shut lid does not stop spending: agents keep working in dark-wake bursts.
 
 ## Live release
-The user said "Put it live now" on 2026-11-06. `main` is at `6c7e471` and deployed on https://inside-the-impact.pages.dev. Another session also pushed `2ee0907` to `main` about the same time; this release sits on top of it. Cloudflare reported "Build failed" for `fa818c0`, with logs only in the user's dashboard; an empty rebuild commit `6c7e471` succeeded.
-Built from worktree `../release-live` (branch `release-live`), so the running jobs' edits did not ship. It carries three fixes and one rollback that `realistic-3d` does not have yet:
-- `404.html` for unknown addresses; `filmTargetsWork` and phones on low in `gfx/core/engine.js`; end panel focus delay in `gfx/arena/hud.js`.
-- `gfx/arena/ai.js` restored to the tuned `5d6668b`, because the half-done fix at `2ee0907` measured harder for new players (normal mixed 6.7% against 19%, n=60 and n=100).
-Before the next release, merge `main` into `realistic-3d` and keep `realistic-3d`'s `ai.js`, not the rollback. Do not push half-finished jobs: release from a commit that has passed its independent checks.
+`main` is `6fb07fa`, live on https://inside-the-impact.pages.dev since 10:43 KST on 2026-11-12 (Cloudflare check run success; GitHub Pages also serves main). It carries balance, polish, the failure, loading, input and frame-rate fixes, and the computer basics. Checked on the live URL: `index.html`, `game.js`, `index.js`, `ai.js`, `hud.js`, `engine.js` and `style.css` equal the commit; parity `3bea3b59`; smoke pass (20 run); the 3D fight opens on high to a running fight with GL error 0 and the fullscreen icon present; only the two old 404s (`__manus` manifest, `impact-mark.svg`). `upload/` mirrors `6fb07fa`. Known small issues in this release, being fixed now: right Shift held through a pause sticks the guard; Space held as the end panel appears can press Rematch; a hung request on a keyboard device keeps the card on the old arena until reload.
+Before the next release: run the gates on the exact commit, push it with `git push origin <sha>:refs/heads/main` after the user says so, and compare live file hashes with the commit.
 
 ## Scope note
 The user said on 2026-11-08: "this is for computer game mainly, do not need to work on ios". So aim testing, polish and performance at keyboard and desktop browsers. No iOS Simulator and no iPhone or Safari-specific work. Touch controls and the phone fixes already written stay, and get a sanity run only. Low keeps full-size textures on a computer; the smaller ones apply only to a coarse pointer.
@@ -70,4 +67,4 @@ New: `gfx/`, `assets/`, `vendor/three/`, `tools/gfx/`, `CREDITS.md`, `ASSET_LIST
 00:35 KST on 2026-11-08, merged code `6ee3fda`: jscheck parses, parity `3bea3b59`, smoke pass (20 run), a whole match on high by real keys to a TKO with no page or GL errors. The desktop work after it passed its own gates, a whole match on high by real keys, and an independent check.
 
 ## Next task
-Wait for the weekly reset (15:00 KST on 2026-11-12) or the user. Then resume `wf_e026d923-0b6`.
+Watch usage while `wf_c032beb5-16b` runs. When it reports, read the result, rerun the gates and a whole match, and ask the user about releasing the coaching features.
