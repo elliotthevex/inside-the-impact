@@ -87,3 +87,7 @@ Last checks on the final code, 23:22 to 23:31:
 - play.js flow steps: touch and pageOk 16 ok, pauseFlow, Reduced Motion, Camera Shake, settings (Low Detail, Effects, Shadows, Text Size), load screen, gym keys, mode leak, pageOk 29 ok, none failed. Whole match by real touches, skilled bot: decision after 3 rounds, 116 punches thrown, no page errors, no GL errors. fps from here says nothing about a phone, so none is quoted.
 - Not run again: the keyboard whole match, escEnd, and the old arena's own flow with a keyboard beyond c_crashf.
 - Not run at all: everything phone-fixes-check.md lists under "Not run", apart from what is named here (c_hang's scenarios, the Tab step). The Simulator list above ("For the next agent, on real Safari") is still open, and the click after Exit and the still-finger rule join it: does iOS send that click within 450 ms, and does the finger rule behave on a real thumb.
+
+## After check round 3 (for a computer): R1 to R6
+Started 11:11 on 2026-11-08, usage 40, on code at 3db5888. Desktop profile only (fine pointer, keyboard and mouse), no Simulator, no phone work. Scripts and results: scratchpad phone/fix3 (o/NAME.txt). fps and timing from this Mac say little.
+Status: reading the code and checking each failure on the current code. Nothing changed yet.
