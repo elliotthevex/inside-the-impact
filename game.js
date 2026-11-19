@@ -1390,8 +1390,8 @@ window.__openRealArena=(function(){
         if (id === "settings") return openSettings();
         maintenance(id);
       }
-      function maintenance(id) {
-        const label = (LOBBY_TABS.find((x) => x.id === id) || {}).label
+      function maintenance(id, name) {
+        const label = name || (LOBBY_TABS.find((x) => x.id === id) || {}).label
           || id.charAt(0).toUpperCase() + id.slice(1);
         document.querySelectorAll(".maint-wrap").forEach((n) => n.remove());
         const wrap = document.createElement("div");
@@ -2964,8 +2964,8 @@ window.__openRealArena=(function(){
         { id: "duel", label: "1v1 Arena", live: true,
           sub: "Three dimensions, two fighters. Circle him, cut the ring off, and watch the angles.",
           art: 2 },
-        { id: "thecall", label: "The Call", live: false,
-          sub: "Ten seconds of tape. Continue, stop, or call the doctor. Placeholder name.",
+        { id: "story", label: "Story Mode", live: false,
+          sub: "Ten seconds of tape. Continue, stop, or call the doctor.",
           art: 3 },
       ];
 
@@ -3046,7 +3046,7 @@ window.__openRealArena=(function(){
           mk(W * .73, true, "#2b4f7e");
           b(W * .46, H * .38, W * .08, H * .07, "#ffeab4");             /* gloves meeting */
         } else {
-          /* THE CALL — the corner between rounds: stool, towel, watch */
+          /* STORY MODE — the corner between rounds: stool, towel, watch */
           b(0, H * .62, W, H, "#141019");
           b(W * .3, H * .44, W * .40, H * .05, "#2a3242");               /* stool seat */
           b(W * .34, H * .49, W * .05, H * .22, "#232a37");
@@ -3123,7 +3123,7 @@ window.__openRealArena=(function(){
                    : m.id === "duel" ? window.__openRealArena(openArena3D)
                    : openMissionSetup();
             }
-            maintenance(btn.dataset.mode);
+            maintenance(btn.dataset.mode, m && m.label);
           }));
         document.addEventListener("keydown", function esc(e) {
           if (e.key === "Escape") { closeModeSelect(); document.removeEventListener("keydown", esc); }
