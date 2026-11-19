@@ -156,10 +156,16 @@
   const raw = Object.create(null);          // code -> held
   let hitCodes = Object.create(null);       // codes that went down since the last update (taps between steps count)
   let anyHit = false;
-  const st = Object.create(null);           // action -> {down, pressed, released, pressAt, consumed, virtual, vhit}
+  const st = Object.create(null);           // action -> {down, pressed, released, pressAt, consumed, virtual, vhit, v*}
   const frameHits = Object.create(null);    // edges accumulated for per-frame readers (UI); cleared by clearFrame()
   let captureFn = null;
-  for (const a of ACTIONS) st[a] = { down: false, pressed: false, released: false, pressAt: -1e9, consumed: true, virtual: false, vhit: false };
+  for (const a of ACTIONS) st[a] = { down: false, pressed: false, released: false, pressAt: -1e9, consumed: true, virtual: false, vhit: false,
+    vDown: false, vPressed: false, vReleased: false, vPressAt: -1e9 };
+  /* Lock: while the director holds control (cutscene, dialogue), movement and combat actions read
+     only virtual input (the director drives Jin with it). Presses of up/down stay live for menus,
+     held up/down are locked. Meta actions (interact, pause, journal, map, minimap) are never locked. */
+  const LOCK_HELD = { left: 1, right: 1, up: 1, down: 1, jump: 1, punch: 1, dash: 1, slip: 1, flurry: 1, run: 1 };
+  const LOCK_PRESS = { left: 1, right: 1, jump: 1, punch: 1, dash: 1, slip: 1, flurry: 1, run: 1 };
 
   function validBindings(b) {
     const base = PRESETS[S.settings.preset] || PRESETS.A, out = {};
@@ -188,15 +194,30 @@
     actions: ACTIONS.slice(),
     presets: PRESETS,
     bindings: validBindings(S.settings.bindings),
-    down: (a) => !!(st[a] && st[a].down),
-    pressed: (a) => !!(st[a] && st[a].pressed && !st[a].consumed),
-    released: (a) => !!(st[a] && st[a].released),
+    locked: false,
+    down(a) { const s = st[a]; if (!s) return false; return input.locked && LOCK_HELD[a] ? s.vDown : s.down; },
+    pressed(a) {
+      const s = st[a]; if (!s || s.consumed) return false;
+      return input.locked && LOCK_PRESS[a] ? s.vPressed : s.pressed;
+    },
+    released(a) { const s = st[a]; if (!s) return false; return input.locked && LOCK_HELD[a] ? s.vReleased : s.released; },
     // True if `a` was pressed within the last `seconds` of sim time and not yet consumed; consumes it.
     buffer(a, seconds) {
       const s = st[a]; if (!s || s.consumed) return false;
       const win = seconds === undefined ? ((S.tune && S.tune.inputBuffer) || 0.10) : seconds;
-      if (S.time - s.pressAt <= win + 1e-9) { s.consumed = true; return true; }
+      const at = input.locked && LOCK_PRESS[a] ? s.vPressAt : s.pressAt;
+      if (S.time - at <= win + 1e-9) { s.consumed = true; return true; }
       return false;
+    },
+    // Unlocked readers for UI code that runs per step (menus, dialogue choices).
+    rawPressed: (a) => !!(st[a] && st[a].pressed && !st[a].consumed),
+    rawHeld: (a) => !!(st[a] && st[a].down),
+    lock(on) {
+      on = !!on;
+      if (on === input.locked) return;
+      input.locked = on;
+      // Presses made on the other side of the switch never leak through (no buffered punch after a cutscene).
+      for (const a in LOCK_PRESS) st[a].consumed = true;
     },
     consume(a) { const s = st[a]; if (s) { s.consumed = true; } },
     any: () => !!input._any,     // any key or virtual button went down this step ("press any key")
@@ -234,8 +255,9 @@
     rawDown: (code) => !!raw[code],
     reset() {
       for (const k in raw) delete raw[k];
-      hitCodes = Object.create(null); anyHit = false;
-      for (const a of ACTIONS) Object.assign(st[a], { down: false, pressed: false, released: false, consumed: true, virtual: false, vhit: false });
+      hitCodes = Object.create(null); anyHit = false; input.locked = false;
+      for (const a of ACTIONS) Object.assign(st[a], { down: false, pressed: false, released: false, consumed: true, virtual: false, vhit: false,
+        vDown: false, vPressed: false, vReleased: false });
     },
     // Once per sim step (main loop): compute edges from raw key state and virtual buttons.
     update() {
@@ -248,6 +270,12 @@
         s.pressed = hit || (now && !was);
         s.released = was && !now;
         s.down = now;
+        // Virtual-only view, read while locked.
+        const vWas = s.vDown, vNow = s.virtual || s.vhit;
+        s.vPressed = s.vhit || (vNow && !vWas);
+        s.vReleased = vWas && !vNow;
+        s.vDown = vNow;
+        if (s.vPressed) { s.vPressAt = S.time; if (input.locked) s.consumed = false; }
         if (s.pressed) { s.pressAt = S.time; s.consumed = false; frameHits[a] = true; if (s.vhit) anyHit = true; }
         s.vhit = false;
       }

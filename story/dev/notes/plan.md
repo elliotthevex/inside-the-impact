@@ -21,3 +21,12 @@ Both workflows were stopped in their first phase; no agent had finished, so a re
 - Engine: run `wf_a47653da-b10`, script `~/.claude/projects/-Users-elliot-jeong-Desktop-Inside-the-Impact/ca804261-1003-4979-b90e-1f8fbae65bec/workflows/scripts/story-engine-build-wf_a47653da-b10.js`
 Burn rate seen: nine agents at once took the 5-hour window from 42% to 78% in about 25 minutes (another session was also spending it).
 Resume is scheduled for 05:44 KST (one-shot cron in the session).
+
+## Resumed — 05:44 KST, 2026-11-20 (5-hour at 1%)
+
+Both workflows restarted from their run ids (design task witl3vt4r, engine task wk19fe4gm). Prompts now tell agents to continue from their own partial files after an interruption, so a stop at the usage line loses less. Usage check every 3 minutes; pause at 76%.
+
+## Paused again — 06:13 KST, 2026-11-20 (5-hour at 67%, stopped early: the burn was 12 points per 3 minutes)
+
+Same run ids and scripts as above (design wf_b87e3322-06d, engine wf_a47653da-b10). Still no agent had returned, but a lot is on disk for them to continue from: drafts cinematic 139 KB, world 130 KB, systems 205 KB; engine core.js, director.js, world.js, pieces.js, combat.js, activities.js written (art.js, ui.js, story.css and the dev harness not yet). Builders 7 and 8 (ui, dev-harness) had not started (concurrency cap 6).
+Weekly went 19% -> 27% in this window. Resume scheduled 10:44 KST (one-shot cron); next pause at 70%.
