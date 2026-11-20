@@ -7179,6 +7179,37 @@ window.__openRealArena=(function(){
           (G.stopLog = G.stopLog || []).push(
             !!(m.conc || m.abd || m.sdh || m.head >= BAL.medical.headStop),
           );
+        if (G.champ) {
+          G.titleStop = t === "towel" || t === "medstop" ? !!m.conc : null;
+          G.postBout = true;
+          return end(W ? "champ" : t);
+        }
+        G.res.push(t == "win" ? "W" : t == "lose" ? "L" : "S");
+        if (t === "ko") {
+          m.sdh = true;
+          return end("sdh");
+        }
+        if (G.l >= 3) return end("lose");
+        G.k++;
+        m.fat *= 0.6;
+        G.days = 5;
+        /* The counterfactual. Sometimes you pull him and he was fine —
+           you took the fight off him for nothing. Learning that this is
+           STILL the right policy is the hardest idea in the subject, and
+           no paragraph can teach it. A distribution of outcomes can. */
+        if (t === "towel" || t === "medstop") {
+          const trulyHurt = G.stopLog[G.stopLog.length - 1];
+          const left = 8 - G.k - 1,
+            need = Math.max(0, 6 - G.w);
+          G.counter =
+            (trulyHurt
+              ? `<b class="k">He was concussed when you stopped it.</b><div class="mu" style="margin-top:6px">Two more rounds would have been two more rounds of it. You will never get credit for this, because nothing happened — which is what it looks like when this goes right.</div>`
+              : `<b class="w">He was not concussed.</b><div class="mu" style="margin-top:6px">Tired, behind on the cards, and he would have finished the fight. You took it off him for nothing, and he knows it.</div>`) +
+            `<div class="mu" style="margin-top:8px;border-top:2px solid #34516b;padding-top:7px">That bout is gone either way. <b class="w">${left} left · ${need} more win${need === 1 ? "" : "s"} needed.</b></div>` +
+            (trulyHurt
+              ? ""
+              : `<div class="mu" style="margin-top:7px;color:#ffe6ac">Pulling a fighter who turns out to be fine is not a mistake. It is the price of the rule, and the rule is still right — because the one time you are wrong the other way, it is his brain.</div>`);
+        }
         const why = {
           win: "Won" + (how == "KO" ? " by KO" : "") + " vs " + o.n,
           lose: "Lost on points to " + o.n,
