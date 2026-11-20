@@ -3,10 +3,10 @@
 Status: IN PROGRESS (restart: read this, then continue with the files listed under "Progress").
 
 ## Progress
-- core.js: exists from an earlier interrupted run (complete draft). Needs: input lock (S.input.lock) — see decisions.
-- director.js: being written (sections: registry, waits, tasks, runner, director state, dialogue, A api, story state, chapter flow, resume, policies)
-- main.js: not started
-- manifest.js: not started
+- core.js: complete (input lock done). Syntax OK.
+- director.js: complete draft (sections 1-10), syntax OK. Next: integration review against world/combat/activities as they land.
+- main.js: being written (run 3).
+- manifest.js: being written (run 3).
 
 ## Key decisions (planned)
 - S.director.busy = a scene HOLDS control (or dialog/card/screen/doc open). A scene that called A.control(true), or is waiting in A.reach / A.waitFor / A.fight / A.bout / A.activity, does not count as busy, so the world keeps interaction/triggers live. `S.director.running` = any scene at all.
