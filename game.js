@@ -860,10 +860,20 @@ window.__openRealArena=(function(){
           const raw = localStorage.getItem(PROFILE_KEY);
           P = raw ? Object.assign(base, JSON.parse(raw)) : base;
         } catch (e) { P = base; }
+        /* a save can arrive from the Corner Pass server: its counts are
+           drawn into the hub as markup, so they must be plain numbers */
+        const NUM = { lv: 1, xp: 0, gold: 0, gems: 0, bouts: 0, wins: 0, stops: 0, seen: 0, train: 0, sp: 3 };
+        for (const k in NUM) {
+          if (P[k] == null && k === "sp") continue;   /* ensureSkills() gives the starting points */
+          const v = Number(P[k]);
+          P[k] = Number.isFinite(v) ? v : NUM[k];
+        }
         return P;
       }
       function saveProfile() {
+        if (cornerStale()) return;   /* another tab changed who is signed in; this one reloads */
         try { localStorage.setItem(PROFILE_KEY, JSON.stringify(P)); } catch (e) {}
+        cornerSaved();
       }
       function grantReward(kind) {
         const base = REWARDS[kind];
@@ -1320,6 +1330,7 @@ window.__openRealArena=(function(){
         const boot = $("#boot");
         if (!boot) { intro(); return; }
         const status = $("#boot-status"), bar = $("#boot-bar-fill");
+        cornerProbe();
         const steps = [
           "Loading", "Loading corner data", "Loading fighter", "Loading the room",
         ];
@@ -1341,11 +1352,860 @@ window.__openRealArena=(function(){
             status.textContent = "Loaded!";
             status.className = "boot-status done";
             setTimeout(() => {
+              /* the Corner Pass waits under the boot screen as it fades */
+              cornerPassOpen("boot");
               boot.classList.add("gone");
               setTimeout(() => boot.remove(), 600);
             }, 760);
           }
         }, 240);
+      }
+
+      /* ── CORNER PASS ─────────────────────────────────────────────
+         The front door between the boot screen and the hub: sign in,
+         make a new corner, or train as a guest. Accounts are served by
+         functions/api/[[route]].js, a Cloudflare Pages Function. Where
+         that answers { accounts: false }, or this is a static copy with
+         no /api at all, the card offers guest play only, so nothing on
+         it promises what cannot happen.
+
+         Saves: the game keeps playing from localStorage (PROFILE_KEY) as
+         before. While signed in, CORNER_KEY says whose progress that is,
+         and each save goes up to the corner a moment later. A guest's own
+         progress waits under GUEST_KEY while someone is signed in and
+         comes back on sign-out. A new corner takes the guest's progress
+         with it. Settings stay per computer. */
+      const CORNER_KEY = "iti.corner.v1", GUEST_KEY = "iti.guest.v2", SIGNOUT_KEY = "iti.signout.v1", DEVICE_KEY = "iti.device.v1";
+      const CP = { api: null, corner: null, probe: null, seq: 0, timer: 0, pushing: null, busy: false, me: null, newer: null,
+        tab: "in", from: "boot", vals: { name: "", pw: "", pw2: "", keep: false },
+        fi: 0, rot: 0, hold: 0, wait: 0, waitT: 0, availT: 0, crowdT: 0, flashes: [], outT: 0, unsaved: false };
+      const cpJSON = { "Content-Type": "application/json" };
+      const cpStill = () => document.body.classList.contains("reduce-motion")
+        || matchMedia("(prefers-reduced-motion: reduce)").matches;
+      function cpApi(path, opt) {
+        return fetch("api/" + path, Object.assign({ credentials: "same-origin", cache: "no-store" }, opt || {}));
+      }
+      async function cpCall(path, opt) {
+        try {
+          const r = await cpApi(path, opt);
+          let j = {};
+          try { j = JSON.parse(await r.text()); } catch (e) { j = {}; }
+          if (!r.ok && !j.error) j.error = "The corner server didn't answer properly. Try again in a minute.";
+          j.status = r.status;
+          j.ok = r.ok && !j.error;
+          return j;
+        } catch (e) {
+          return { ok: false, status: 0, error: "Can't reach the corner server. Check the connection and try again." };
+        }
+      }
+      function cpRead(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+      function cpWrite(k, v) {
+        try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+      }
+      const cpMark = () => cpRead(CORNER_KEY);
+      const cpSame = (a, b) => !!a && !!b && String(a).toLowerCase() === String(b).toLowerCase();
+      /* A random id for this browser, so the server can tell this
+         computer's own later saves from another computer's. */
+      function cpDevice() {
+        let d = cpRead(DEVICE_KEY);
+        if (typeof d !== "string" || !/^[A-Za-z0-9_-]{8,40}$/.test(d)) {
+          d = [...crypto.getRandomValues(new Uint8Array(12))].map((x) => x.toString(16).padStart(2, "0")).join("");
+          cpWrite(DEVICE_KEY, d);
+        }
+        return d;
+      }
+      /* Whose save this tab is playing. If another tab signs someone in or
+         out, this tab's copy is stale: it stops saving and reloads. */
+      CP.me = (cpMark() || {}).name || null;
+      function cornerStale() {
+        const now = (cpMark() || {}).name || null;
+        if (cpSame(now, CP.me) || (!now && !CP.me)) return false;
+        if (!CP.reloading) { CP.reloading = true; setTimeout(() => location.reload(), 50); }
+        return true;
+      }
+      addEventListener("storage", (e) => { if (e.key === CORNER_KEY || e.key === null) cornerStale(); });
+
+      /* Is there an accounts server, and is this browser signed in to it?
+         true: yes. false: this copy has none. "down": it should, but did
+         not answer. */
+      function cornerProbe(force) {
+        if (CP.probe && !force) return CP.probe;
+        const ctl = typeof AbortController === "function" ? new AbortController() : null;
+        const to = setTimeout(() => ctl && ctl.abort(), 6000);
+        /* a sign-out that never reached the server is sent before anything else */
+        const before = cpRead(SIGNOUT_KEY)
+          ? cpCall("signout", { method: "POST", headers: cpJSON, body: "{}" }).then((j) => { if (j.ok) cpWrite(SIGNOUT_KEY, null); })
+          : Promise.resolve();
+        CP.probe = before.then(() => cpRead(SIGNOUT_KEY) ? { down: true } : cpApi("me", ctl ? { signal: ctl.signal } : {}))
+          .then(async (r) => {
+            if (r.down || r.status >= 500) return { down: true };
+            if (!r.ok) return { accounts: false };          /* a static host answers 404 */
+            try { return JSON.parse(await r.text()); } catch (e) { return { accounts: false }; }
+          })
+          .then((j) => {
+            CP.api = j.down ? "down" : !!(j && j.accounts);
+            CP.corner = (j && j.corner) || null;
+            return CP.api;
+          })
+          .catch(() => {
+            CP.api = location.protocol === "file:" ? false : "down";
+            CP.corner = null;
+            return CP.api;
+          })
+          .finally(() => clearTimeout(to));
+        return CP.probe;
+      }
+
+      /* ── progress: which save is on this computer, and sending it up ── */
+      function cpUse(profile) {
+        cpWrite(PROFILE_KEY, profile || null);
+        CP.me = (cpMark() || {}).name || null;
+        P = null;
+        loadProfile();
+        try { newGame(); } catch (e) { try { intro(); } catch (e2) {} }
+        if ($(".cpass")) cpShade(true);
+      }
+      /* saveProfile() calls this: a signed-in corner's progress goes up shortly after */
+      function cornerSaved() {
+        const m = cpMark();
+        if (!m) return;
+        CP.seq++;
+        if (!m.dirty) { m.dirty = true; cpWrite(CORNER_KEY, m); }
+        clearTimeout(CP.timer);
+        CP.timer = setTimeout(() => cpPush(), 1500);
+      }
+      /* Resolves true when this computer has nothing unsent. */
+      function cpPush(keepalive) {
+        const m = cpMark();
+        if (!m || !m.dirty) return Promise.resolve(true);
+        if (CP.api === false || CP.newer || !cpSame(m.name, CP.me)) return Promise.resolve(false);
+        /* a page that is closing sends at once: waiting behind a request
+           the closing page is about to cancel would lose the last save */
+        if (CP.pushing && !keepalive) return CP.pushing.then(() => cpPush(keepalive));
+        clearTimeout(CP.timer);
+        const seq = CP.seq;
+        const body = '{"name":' + JSON.stringify(m.name) + ',"base":' + Number(m.rev || 0) + ',"dev":' + JSON.stringify(cpDevice())
+          + ',"profile":' + (localStorage.getItem(PROFILE_KEY) || "{}") + "}";
+        const run = cpCall("profile", { method: "PUT", headers: cpJSON, body, keepalive: !!keepalive })
+          .then((j) => {
+            const n = cpMark();
+            if (j.ok && j.rev && n && cpSame(n.name, m.name)) {
+              n.rev = Math.max(j.rev, n.rev || 0);
+              if (CP.seq === seq) n.dirty = false;
+              else CP.timer = setTimeout(() => cpPush(), 1500);
+              cpWrite(CORNER_KEY, n);
+              if (CP.api === "down") CP.api = true;
+              return !n.dirty;
+            }
+            if (j.status === 409 && j.newer && n && cpSame(n.name, m.name)) {
+              /* another computer saved since: its progress wins, as on opening the game */
+              CP.newer = { rev: j.rev, profile: j.profile };
+              cpAdoptNewer();
+            }
+            if (j.status === 401) CP.corner = null;
+            return false;
+          })
+          .finally(() => { if (CP.pushing === run) CP.pushing = null; });
+        if (!CP.pushing) CP.pushing = run;
+        return run;
+      }
+      /* Newer progress from another computer replaces this one's, but only
+         at the hub, never in the middle of a bout or a menu. */
+      function cpAdoptNewer() {
+        if (!CP.newer) return;
+        const idle = document.body.dataset.phase === "title" && $(".lobby")
+          && !document.querySelector(".cpass,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3,.arena-x,.arena-wait,.trainer,#gymload,.boardwrap,.tradewrap");
+        if (!idle) return;
+        const n = CP.newer, m = cpMark();
+        CP.newer = null;
+        if (!m) return;
+        cpWrite(CORNER_KEY, { name: m.name, rev: n.rev, dirty: false });
+        cpUse(n.profile);
+        cpToast(`${m.name} was played on another computer since. That newer progress is loaded here.`);
+      }
+      function cpToast(text) {
+        document.querySelectorAll(".cp-toast").forEach((n) => n.remove());
+        const t = document.createElement("div");
+        t.className = "cp-toast";
+        t.setAttribute("role", "status");
+        t.textContent = text;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 6000);
+      }
+      addEventListener("pagehide", () => cpPush(true));
+      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") cpPush(true); });
+
+      async function cpPull(stashGuest) {
+        const j = await cpCall("profile");
+        if (!j.ok) {
+          /* no save, no mark: nothing gets pushed over the corner from here */
+          CP.api = "down";
+          CP.corner = null;
+          return false;
+        }
+        if (stashGuest) cpWrite(GUEST_KEY, cpRead(PROFILE_KEY));
+        cpWrite(CORNER_KEY, { name: CP.corner.name, rev: j.rev, dirty: false });
+        cpUse(j.profile);
+        return true;
+      }
+      /* Signed in when the game opened: line this computer's save up with the corner's. */
+      async function cpSettle() {
+        const c = CP.corner, m = cpMark();
+        if (!c) return;
+        if (m && cpSame(m.name, c.name)) {
+          /* Another computer saved since this one last did: its progress is
+             newer, so it wins, even over a few unsent minutes here. */
+          if (c.rev > m.rev) await cpPull();
+          else if (m.dirty) await cpPush();
+          return;
+        }
+        await cpPull(!m);
+      }
+      async function cpSignIn(name, password, keep) {
+        const j = await cpCall("signin", { method: "POST", headers: cpJSON, body: JSON.stringify({ name, password, keep }) });
+        if (!j.ok) return j;
+        const m = cpMark();
+        CP.api = true;
+        CP.corner = j.corner;
+        if (m && cpSame(m.name, j.corner.name) && m.dirty && m.rev === j.rev) {
+          /* this computer played on after the session ran out, and nothing newer arrived: send it */
+          cpWrite(CORNER_KEY, { name: j.corner.name, rev: j.rev, dirty: true });
+          await cpPush();
+        } else {
+          if (!m) cpWrite(GUEST_KEY, cpRead(PROFILE_KEY));
+          cpWrite(CORNER_KEY, { name: j.corner.name, rev: j.rev, dirty: false });
+          cpUse(j.profile);
+        }
+        return { ok: true };
+      }
+      async function cpSignUp(name, password, keep) {
+        /* the guest's progress moves into the new corner */
+        const guest = cpMark() ? cpRead(GUEST_KEY) : cpRead(PROFILE_KEY);
+        const j = await cpCall("signup", { method: "POST", headers: cpJSON,
+          body: JSON.stringify({ name, password, keep, profile: guest || {}, dev: cpDevice() }) });
+        if (!j.ok) return j;
+        CP.api = true;
+        CP.corner = j.corner;
+        cpWrite(GUEST_KEY, null);
+        cpWrite(CORNER_KEY, { name: j.corner.name, rev: j.rev, dirty: false });
+        cpUse(guest);
+        return { ok: true };
+      }
+      function cpBackToGuest() {
+        const g = cpRead(GUEST_KEY);
+        cpWrite(GUEST_KEY, null);
+        cpWrite(CORNER_KEY, null);
+        CP.corner = null;
+        cpUse(g);
+      }
+      async function cpSignOut(anyway) {
+        if (!(await cpPush()) && !anyway) {
+          return { error: "Can't reach the corner server, so your last few minutes aren't saved to this corner yet. Try again in a moment, or sign out anyway and lose them.", unsaved: true };
+        }
+        const j = await cpCall("signout", { method: "POST", headers: cpJSON, body: "{}" });
+        /* if the server didn't hear it, the session would outlive this
+           sign-out: say it again the next time the game opens */
+        if (!j.ok) cpWrite(SIGNOUT_KEY, 1);
+        cpBackToGuest();
+        return { ok: true };
+      }
+      async function cpDelete(password) {
+        const j = await cpCall("delete", { method: "POST", headers: cpJSON, body: JSON.stringify({ password }) });
+        if (!j.ok) return j;
+        cpBackToGuest();
+        return { ok: true };
+      }
+
+      /* ── the screen ── */
+      const CP_LOCK = `<svg width="24" height="24" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><rect x="3" y="1" width="6" height="1" fill="#c9b27a"/><rect x="2" y="2" width="1" height="3" fill="#c9b27a"/><rect x="9" y="2" width="1" height="3" fill="#c9b27a"/><rect x="1" y="5" width="10" height="6" fill="#c9b27a"/><rect x="5" y="7" width="2" height="2" fill="#09121e"/></svg>`;
+      const CP_GLOVE = `<svg width="24" height="24" viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><rect x="3" y="1" width="6" height="1" fill="#070a10"/><rect x="2" y="2" width="8" height="6" fill="#c8372b"/><rect x="3" y="2" width="5" height="2" fill="#e2503d"/><rect x="1" y="3" width="2" height="4" fill="#a8251a"/><rect x="2" y="8" width="7" height="1" fill="#070a10"/><rect x="2" y="9" width="7" height="2" fill="#e9e4d6"/><rect x="2" y="11" width="7" height="1" fill="#070a10"/></svg>`;
+      const CP_FINE = `<p class="cp-fine">Fictional teaching simulation — not a medical device.<br>Created by Joohyun Lee and Elliot Jeong.</p>`;
+      const CP_TS = { small: "Small", normal: "Standard", large: "Large" };
+      let cpAvatars = null;
+      function cpLoadAvatars() {
+        if (window.ITIAV) return Promise.resolve(window.ITIAV);
+        if (cpAvatars) return cpAvatars;
+        cpAvatars = new Promise((ok) => {
+          const s = document.createElement("script");
+          s.src = "gfx/avatars.js";
+          s.onload = () => ok(window.ITIAV || null);
+          s.onerror = () => ok(null);
+          document.head.appendChild(s);
+        });
+        return cpAvatars;
+      }
+      const cpFighters = () => (window.ITIAV ? window.ITIAV.roster.filter((a) => a.cat === "fighters") : []);
+
+      function cornerPassOpen(from) {
+        CP.from = from || "boot";
+        let el = $(".cpass");
+        if (!el) {
+          el = document.createElement("div");
+          el.className = "cpass" + (CP.from === "hub" ? " from-hub" : "");
+          el.setAttribute("role", "dialog");
+          el.setAttribute("aria-modal", "true");
+          el.setAttribute("aria-labelledby", "cp-title");
+          el.innerHTML = `
+            <div class="cp-scene" aria-hidden="true">
+              <canvas class="cp-crowd"></canvas>
+              <div class="cp-light"><i class="cp-cone"></i><i class="cp-lamp"></i></div>
+              <div class="cp-floor"></div>
+              <div class="cp-shadow"></div>
+              <div class="cp-fighter"></div>
+              <div class="cp-post"></div><div class="cp-pad"></div>
+              <div class="cp-ropes"><i class="r"></i><i class="w"></i><i class="b"></i></div>
+              <div class="cp-apron"></div>
+            </div>
+            <div class="cp-logo" aria-hidden="true">
+              <div class="cp-kick">Corner · Season One</div>
+              <div class="cp-mark">Inside the<span>Impact</span></div>
+            </div>
+            <div class="cp-col"><section class="cp-card" id="cp-card"></section></div>
+            <div class="cp-intro">
+              <div class="cp-plate" aria-hidden="true"><small></small><b></b></div>
+              <div class="cp-browse" role="group" aria-label="Fighters under the light">
+                <button type="button" class="cp-arrow" data-step="-1" aria-label="Previous fighter">‹</button>
+                <button type="button" class="cp-arrow" data-step="1" aria-label="Next fighter">›</button>
+              </div>
+              <div class="cp-under"><div class="cp-dots"></div>
+              <p class="cp-tagline">A safety stop pays more than a win.</p></div>
+            </div>
+            <div class="cp-tools">
+              <button type="button" class="cp-tool" id="cp-text" title="Text size"></button>
+              <button type="button" class="cp-tool" id="cp-settings" aria-label="Settings" title="Settings">⚙</button>
+            </div>`;
+          document.body.appendChild(el);
+          cpWire(el);
+          cpTextBtn();
+          cpCrowd();
+          cpLoadAvatars().then(() => { cpFighter(0, true); cpRotate(); });
+        }
+        cpShade(true);
+        cpRender("check");
+        cornerProbe().then(async () => {
+          if (CP.from === "boot" && CP.corner) { try { await cpSettle(); } catch (e) {} }
+          if ($(".cpass") === el) cpRender(cpPickView(), true);
+        });
+      }
+      function cornerPassClose() {
+        const el = $(".cpass");
+        if (!el) return;
+        clearInterval(CP.rot); clearInterval(CP.crowdT); clearInterval(CP.waitT); clearTimeout(CP.outT);
+        el.classList.add("out");
+        cpShade(false);
+        setTimeout(() => el.remove(), cpStill() ? 0 : 240);
+        cpChip();
+        const play = $(".lb-play");
+        if (play && CP.from === "boot") play.focus({ preventScroll: true });
+        else { const chip = $(".lb-cp"); if (chip) chip.focus({ preventScroll: true }); }
+      }
+      /* Everything under the pass is out of reach while it is up. */
+      function cpShade(on) {
+        document.querySelectorAll("body > *").forEach((n) => {
+          if (n.matches(".cpass,#boot,.settings,dialog,script,.maint-wrap")) return;
+          if (on) { if (!n.inert) { n.inert = true; n.dataset.cpInert = "1"; } }
+          else if (n.dataset.cpInert) { n.inert = false; delete n.dataset.cpInert; }
+        });
+      }
+      function cpPickView() {
+        const m = cpMark();
+        if (CP.api === true) return CP.corner ? "signed" : "form";
+        if (m) return "offline";
+        return CP.api === "down" ? "down" : "guestonly";
+      }
+
+      function cpRender(view, focus) {
+        const card = $("#cp-card");
+        if (!card) return;
+        CP.view = view;
+        const m = cpMark(), hub = CP.from === "hub";
+        const close = hub ? `<button type="button" class="cp-x" id="cp-x" aria-label="Close the Corner Pass">×</button>` : "";
+        let h = "";
+        if (view === "check") {
+          h = `<span class="cp-tag">◆ Corner Pass</span><h2 id="cp-title">Take your corner</h2>
+            <p class="cp-sub">Checking the door…</p><div class="cp-btn cp-load" role="status">Loading corner data…</div>${CP_FINE}`;
+        } else if (view === "guestonly" || view === "down") {
+          h = `${close}<span class="cp-tag">◆ Corner Pass</span><h2 id="cp-title">Take your corner</h2>
+            <p class="cp-sub">${view === "down"
+              ? "Can't reach the corner server right now, so signing in is off for the moment. Train as a guest: your progress saves on this computer."
+              : "Signing in isn't switched on for this copy of the game. Your progress saves in this browser."}</p>
+            <button type="button" class="cp-btn" id="cp-guest">Train as a guest</button>
+            ${view === "down" ? `<button type="button" class="cp-btn2" id="cp-retry">Try again</button>` : ""}${CP_FINE}`;
+        } else if (view === "offline") {
+          h = `${close}<span class="cp-tag">◆ Corner Pass</span><h2 id="cp-title">Take your corner</h2>
+            <div class="cp-msg gold">Can't reach the corner server right now. You can keep playing as <b>${escapeUI(m.name)}</b>: progress saves on this computer and goes up the next time you sign in.</div>
+            <button type="button" class="cp-btn" id="cp-go">Continue as ${escapeUI(m.name)}</button>
+            <button type="button" class="cp-btn2" id="cp-retry">Try again</button>
+            <button type="button" class="cp-guest" id="cp-guest"><u>Train as a guest instead</u>${m.dirty ? " — progress not yet sent to this corner is lost" : ""}</button>${CP_FINE}`;
+        } else if (view === "signed") {
+          h = `${close}<span class="cp-tag green">Signed in</span>
+            <p class="cp-kick">Welcome back</p><h2 id="cp-title" class="cp-name">${escapeUI(CP.corner.name)}</h2>
+            <p class="cp-sub">Level ${P ? P.lv : 1}. Your progress saves to this corner as you play.</p>
+            <div class="cp-msg bad" id="cp-err" role="alert" hidden></div>
+            <button type="button" class="cp-btn" id="cp-go">Continue</button>
+            <button type="button" class="cp-btn2" id="cp-out">${CP.unsaved ? "Sign out anyway" : "Sign out"}</button>
+            <button type="button" class="cp-lnk cp-del" id="cp-del" aria-expanded="false" aria-controls="cp-delform">Delete this corner</button>
+            <form class="cp-delform" id="cp-delform" hidden novalidate>
+              <p>This removes the corner's name, password and saved progress from the server for good. This computer goes back to guest progress.</p>
+              <div class="cp-fl"><label for="cp-delpw">Password</label>
+                <div class="cp-in"><span class="cp-ic">${CP_LOCK}</span><input id="cp-delpw" type="password" autocomplete="current-password" maxlength="200" aria-describedby="cp-delhint"></div>
+                <div class="cp-hint" id="cp-delhint">Type the password to confirm.</div></div>
+              <button type="submit" class="cp-btn2 cp-danger" id="cp-delgo">Delete for good</button>
+            </form>${CP_FINE}`;
+        } else if (view === "welcome") {
+          h = `<span class="cp-tag green">Signed in</span>
+            <p class="cp-kick">${CP.fresh ? "Corner made" : "Welcome back"}</p>
+            <div class="cp-wav" aria-hidden="true">${window.ITIAV ? window.ITIAV.svg("coach", 112, { bg: "ring" }) : ""}</div>
+            <h2 id="cp-title" class="cp-name">${escapeUI(CP.corner ? CP.corner.name : "")}</h2>
+            <p class="cp-kick cp-lv">LV. ${P ? P.lv : 1}</p>
+            <div class="cp-msg good" role="status">Ding. Round one. Back to the hub…</div>`;
+        } else {
+          const isNew = CP.tab === "new";
+          const was = m && !CP.corner;
+          h = `${close}<span class="cp-tag">◆ Corner Pass</span>
+            <h2 id="cp-title">${isNew ? "Make your corner" : "Take your corner"}</h2>
+            <p class="cp-sub">${isNew ? "Takes a minute. Your guest progress comes with you." : "Sign in to keep your fighter's progress on any computer."}</p>
+            ${was ? `<div class="cp-msg gold">You were signed in as <b>${escapeUI(m.name)}</b> on this computer. Sign in again to keep saving there.${m.dirty
+              ? ` Some progress here hasn't reached that corner yet; it is lost if a different corner signs in, a new corner is made, or you train as a guest.` : ""}</div>` : ""}
+            <div class="cp-tabs" role="tablist" aria-label="Corner Pass">
+              <button type="button" role="tab" id="cp-tab-in" aria-controls="cp-form" aria-selected="${!isNew}" tabindex="${isNew ? -1 : 0}">Sign in</button>
+              <button type="button" role="tab" id="cp-tab-new" aria-controls="cp-form" aria-selected="${isNew}" tabindex="${isNew ? 0 : -1}">New corner</button>
+            </div>
+            <form id="cp-form" role="tabpanel" aria-labelledby="${isNew ? "cp-tab-new" : "cp-tab-in"}" novalidate>
+              <div class="cp-msg bad" id="cp-err" role="alert" hidden></div>
+              <div class="cp-fl"><label for="cp-name">Corner name${isNew ? " <em>Not your real name</em>" : ""}</label>
+                <div class="cp-in"><span class="cp-ic">${CP_GLOVE}</span><input id="cp-name" name="username" autocomplete="username" maxlength="${isNew ? 16 : 40}" spellcheck="false" autocapitalize="off" placeholder="Your corner name" aria-describedby="cp-name-hint"><span class="cp-ok" aria-hidden="true">✓</span></div>
+                <div class="cp-hint" id="cp-name-hint">${isNew ? "3–16 letters, numbers or _." : ""}</div></div>
+              <div class="cp-fl"><label for="cp-pw">Password</label>
+                <div class="cp-in"><span class="cp-ic">${CP_LOCK}</span><input id="cp-pw" name="password" type="password" autocomplete="${isNew ? "new-password" : "current-password"}" maxlength="200" placeholder="Password" aria-describedby="cp-pw-hint"><button type="button" class="cp-show" id="cp-show" aria-pressed="false">Show</button></div>
+                ${isNew ? `<div class="cp-row cp-strength"><div class="cp-pips" aria-hidden="true"><i></i><i></i><i></i></div><div class="cp-hint" id="cp-pw-hint">At least 8 characters.</div></div>`
+                        : `<div class="cp-hint" id="cp-pw-hint"></div>`}</div>
+              ${isNew ? `<div class="cp-fl"><label for="cp-pw2">Confirm password</label>
+                <div class="cp-in"><span class="cp-ic">${CP_LOCK}</span><input id="cp-pw2" name="password2" type="password" autocomplete="new-password" maxlength="200" aria-describedby="cp-pw2-hint"></div>
+                <div class="cp-hint" id="cp-pw2-hint"></div></div>` : ""}
+              <div class="cp-row cp-keeprow">
+                <label class="cp-chk"><input type="checkbox" id="cp-keep"><i aria-hidden="true"></i><span>Keep me signed in<small>Leave off on a shared or school computer.</small></span></label>
+                ${isNew ? "" : `<button type="button" class="cp-lnk" id="cp-forgot" aria-expanded="false" aria-controls="cp-forgot-msg">Forgot password?</button>`}
+              </div>
+              ${isNew ? "" : `<div class="cp-msg gold" id="cp-forgot-msg" hidden>There's no email reset yet, so a forgotten password can't be sent to you. Ask the game's makers to reset it, or make a new corner.</div>`}
+              <button type="submit" class="cp-btn" id="cp-go"><small aria-hidden="true">◆</small><span>${isNew ? "Create corner" : "Sign in"}</span><small aria-hidden="true">◆</small></button>
+            </form>
+            ${isNew ? "" : `<div class="cp-or" aria-hidden="true">or</div><button type="button" class="cp-btn2" id="cp-to-new">Make a new corner</button>`}
+            <button type="button" class="cp-guest" id="cp-guest"><u>${was ? "Train as a guest instead" : "Train as a guest"}</u> — progress stays on this computer</button>
+            ${CP_FINE}`;
+        }
+        card.innerHTML = h;
+        card.classList.remove("in"); void card.offsetWidth; card.classList.add("in");
+        cpWireCard(view);
+        if (focus || view === "welcome") {
+          const f = view === "form" ? $("#cp-name") : view === "signed" || view === "offline" ? $("#cp-go") : $("#cp-guest");
+          if (f) f.focus({ preventScroll: true });
+        }
+      }
+
+      function cpWireCard(view) {
+        const on = (id, ev, fn) => { const n = $(id); if (n) n.addEventListener(ev, fn); };
+        on("#cp-x", "click", cornerPassClose);
+        on("#cp-guest", "click", () => {
+          if (CP.view === "offline" || (cpMark() && !CP.corner)) cpBackToGuest();
+          cornerPassClose();
+        });
+        on("#cp-retry", "click", () => {
+          cpRender("check");
+          cornerProbe(true).then(async () => {
+            if (CP.corner) { try { await cpSettle(); } catch (e) {} }
+            cpRender(cpPickView(), true);
+          });
+        });
+        if (view === "offline") on("#cp-go", "click", cornerPassClose);
+        if (view === "signed") {
+          on("#cp-go", "click", cornerPassClose);
+          on("#cp-out", "click", async () => {
+            const b = $("#cp-out");
+            b.disabled = true; b.textContent = "Saving…";
+            const r = await cpSignOut(CP.unsaved);
+            if (r.ok) { CP.unsaved = false; cpRender("form", true); return; }
+            CP.unsaved = !!r.unsaved;
+            b.disabled = false; b.textContent = CP.unsaved ? "Sign out anyway" : "Sign out";
+            cpErr(r.error);
+          });
+          on("#cp-del", "click", () => {
+            const f = $("#cp-delform"), b = $("#cp-del");
+            f.hidden = !f.hidden;
+            b.setAttribute("aria-expanded", String(!f.hidden));
+            if (!f.hidden) $("#cp-delpw").focus();
+          });
+          on("#cp-delform", "submit", async (e) => {
+            e.preventDefault();
+            const pw = $("#cp-delpw").value, hint = $("#cp-delhint"), b = $("#cp-delgo");
+            if (!pw) { hint.textContent = "Type the password to confirm."; hint.className = "cp-hint bad"; return; }
+            b.disabled = true; b.textContent = "Deleting…";
+            const r = await cpDelete(pw);
+            if (r.ok) { cpRender("form", true); cpErr("The corner is deleted. This computer is back on guest progress.", null, "good"); return; }
+            b.disabled = false; b.textContent = "Delete for good";
+            hint.className = "cp-hint bad";
+            hint.textContent = r.wait ? `Too many tries. Wait ${cpClock(r.wait)}.` : r.error;
+            $("#cp-delpw").select();
+          });
+        }
+        if (view !== "form") return;
+        const name = $("#cp-name"), pw = $("#cp-pw"), pw2 = $("#cp-pw2"), keep = $("#cp-keep");
+        name.value = CP.vals.name; pw.value = CP.vals.pw; keep.checked = CP.vals.keep;
+        if (pw2) pw2.value = CP.vals.pw2;
+        if (!CP.vals.name && cpMark() && !CP.corner && CP.tab === "in") name.value = cpMark().name;
+        const keepVals = () => {
+          CP.vals = { name: name.value, pw: pw.value, pw2: pw2 ? pw2.value : CP.vals.pw2, keep: keep.checked };
+          CP.hold = Date.now() + 8000;           /* the fighter waits while someone types */
+        };
+        [name, pw, pw2, keep].forEach((n) => n && n.addEventListener("input", keepVals));
+        keep.addEventListener("change", keepVals);
+        /* tabs: click, or the arrow keys */
+        const tabs = [$("#cp-tab-in"), $("#cp-tab-new")];
+        const pick = (t, focusTab) => {
+          if (CP.tab === t) return;
+          keepVals();
+          CP.tab = t;
+          cpRender("form");
+          if (focusTab) $(t === "in" ? "#cp-tab-in" : "#cp-tab-new").focus();
+          else $("#cp-name").focus();
+        };
+        tabs[0].addEventListener("click", () => pick("in"));
+        tabs[1].addEventListener("click", () => pick("new"));
+        tabs.forEach((t) => t.addEventListener("keydown", (e) => {
+          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+            e.preventDefault();
+            pick(e.key === "Home" ? "in" : e.key === "End" ? "new" : CP.tab === "in" ? "new" : "in", true);
+          }
+        }));
+        on("#cp-to-new", "click", () => pick("new"));
+        on("#cp-forgot", "click", () => {
+          const msg = $("#cp-forgot-msg"), b = $("#cp-forgot");
+          msg.hidden = !msg.hidden;
+          b.setAttribute("aria-expanded", String(!msg.hidden));
+        });
+        on("#cp-show", "click", () => {
+          const b = $("#cp-show"), show = pw.type === "password";
+          pw.type = show ? "text" : "password";
+          if (pw2) pw2.type = pw.type;
+          b.textContent = show ? "Hide" : "Show";
+          b.setAttribute("aria-pressed", String(show));
+          pw.focus();
+        });
+        /* Caps Lock, said where the eye already is */
+        const caps = (e) => {
+          if (!e.getModifierState) return;
+          const hint = $(e.target === pw2 ? "#cp-pw2-hint" : "#cp-pw-hint");
+          if (!hint) return;
+          const onCaps = e.getModifierState("CapsLock");
+          if (onCaps && !hint.dataset.caps) { hint.dataset.caps = hint.textContent; hint.dataset.cls = hint.className; hint.textContent = "Caps Lock is on."; hint.className = "cp-hint warn"; }
+          else if (!onCaps && hint.dataset.caps !== undefined) { hint.textContent = hint.dataset.caps; hint.className = hint.dataset.cls; delete hint.dataset.caps; delete hint.dataset.cls; }
+        };
+        [pw, pw2].forEach((n) => n && ["keydown", "keyup"].forEach((ev) => n.addEventListener(ev, caps)));
+        if (CP.tab === "new") {
+          name.addEventListener("input", () => cpCheckName(name));
+          pw.addEventListener("input", () => cpStrength(pw.value, name.value));
+          name.addEventListener("input", () => pw.value && cpStrength(pw.value, name.value));
+          pw2.addEventListener("blur", () => cpMatch(false));
+          pw2.addEventListener("input", () => { if ($("#cp-pw2").closest(".cp-in").classList.contains("err")) cpMatch(false); });
+          if (name.value) cpCheckName(name, true);
+          if (pw.value) cpStrength(pw.value, name.value);
+        }
+        $("#cp-form").addEventListener("submit", cpSubmit);
+        if (CP.wait > Date.now()) cpCountdown();
+      }
+
+      function cpField(sel, state, text) {
+        const inp = $(sel);
+        if (!inp) return;
+        const box = inp.closest(".cp-in"), hint = $(sel + "-hint");
+        box.classList.remove("err", "ok");
+        if (state) box.classList.add(state);
+        inp.setAttribute("aria-invalid", String(state === "err"));
+        if (hint && text !== undefined) {
+          hint.textContent = text;
+          hint.className = "cp-hint" + (state === "err" ? " bad" : state === "ok" ? " good" : "");
+          delete hint.dataset.caps;
+        }
+      }
+      function cpErr(text, focusSel, kind) {
+        const b = $("#cp-err");
+        if (!b) return;
+        b.className = "cp-msg " + (kind || "bad");
+        b.textContent = text || "";
+        b.hidden = !text;
+        if (focusSel) { const f = $(focusSel); if (f) f.focus(); }
+      }
+      function cpNameProblem(v) {
+        if (!v) return "Pick a corner name.";
+        if (v.length < 3) return "Use at least 3 characters.";
+        if (v.length > 16) return "Use 16 characters or fewer.";
+        if (!/^[A-Za-z0-9_]+$/.test(v)) return "Use letters, numbers or _ only.";
+        return "";
+      }
+      function cpCheckName(inp, now) {
+        clearTimeout(CP.availT);
+        const v = inp.value.trim(), why = cpNameProblem(v);
+        if (!v) return cpField("#cp-name", "", "3–16 letters, numbers or _.");
+        if (why) return cpField("#cp-name", "err", why);
+        cpField("#cp-name", "", "Checking…");
+        CP.availT = setTimeout(async () => {
+          const j = await cpCall("name?n=" + encodeURIComponent(v));
+          if (!$("#cp-name") || $("#cp-name").value.trim() !== v) return;
+          if (j.ok && j.free) cpField("#cp-name", "ok", "Available. Skip your real name.");
+          else if (j.ok) cpField("#cp-name", "err", j.why || "That corner name is taken.");
+          else cpField("#cp-name", "", "3–16 letters, numbers or _.");
+        }, now ? 0 : 400);
+      }
+      function cpStrength(v, name) {
+        const pips = document.querySelectorAll(".cp-pips i"), hint = $("#cp-pw-hint");
+        if (!hint) return;
+        let n = 0, txt = "At least 8 characters.", cls = "";
+        const extra = /[^A-Za-z]/.test(v);
+        if (!v) n = 0;
+        else if (name && v.toLowerCase() === name.trim().toLowerCase()) { n = 1; txt = "Don't use your corner name as the password."; cls = "bad"; }
+        else if (v.length < 8) { n = 1; txt = `Too short. ${8 - v.length} more character${8 - v.length === 1 ? "" : "s"}.`; cls = "bad"; }
+        else if ((v.length >= 12 && extra) || v.length >= 16) { n = 3; txt = "Strong."; cls = "good"; }
+        else { n = 2; txt = extra ? "Good. Make it 12 characters or longer to make it strong." : "Good. Add a number or symbol to make it strong."; }
+        pips.forEach((p, i) => { p.className = i < n ? (n === 1 ? "bad" : n === 2 ? "mid" : "on") : ""; });
+        hint.textContent = txt;
+        hint.className = "cp-hint" + (cls ? " " + cls : "");
+        delete hint.dataset.caps;
+        $("#cp-pw").closest(".cp-in").classList.toggle("err", cls === "bad");
+      }
+      function cpMatch(final) {
+        const a = $("#cp-pw"), b = $("#cp-pw2");
+        if (!b) return true;
+        if (!b.value && !final) { cpField("#cp-pw2", "", ""); return false; }
+        if (a.value === b.value) { cpField("#cp-pw2", b.value ? "ok" : "", b.value ? "Matches." : ""); return !!b.value; }
+        cpField("#cp-pw2", "err", "Doesn't match yet.");
+        return false;
+      }
+      const cpClock = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+      function cpCountdown(sec) {
+        if (sec) CP.wait = Date.now() + sec * 1000;
+        clearInterval(CP.waitT);
+        const tick = () => {
+          const b = $("#cp-go");
+          if (!b || CP.view !== "form") { clearInterval(CP.waitT); return; }
+          const left = Math.ceil((CP.wait - Date.now()) / 1000);
+          if (left <= 0) {
+            clearInterval(CP.waitT);
+            b.disabled = false;
+            b.classList.remove("cp-wait");
+            b.querySelector("span").textContent = CP.tab === "new" ? "Create corner" : "Sign in";
+            cpErr("");
+            return;
+          }
+          b.disabled = true;
+          b.classList.add("cp-wait");
+          b.querySelector("span").textContent = "Try again in " + cpClock(left);
+        };
+        tick();
+        CP.waitT = setInterval(tick, 500);
+      }
+      function cpBusy(on) {
+        CP.busy = on;
+        const f = $("#cp-form"), b = $("#cp-go");
+        if (!f) return;
+        f.querySelectorAll("input,button").forEach((n) => { n.disabled = on; });
+        document.querySelectorAll("#cp-card .cp-tabs button,#cp-to-new,#cp-guest").forEach((n) => { n.disabled = on; });
+        b.classList.toggle("cp-load", on);
+        b.setAttribute("aria-busy", String(on));
+        b.querySelector("span").textContent = on ? "Loading corner data…" : CP.tab === "new" ? "Create corner" : "Sign in";
+      }
+      async function cpSubmit(e) {
+        e.preventDefault();
+        if (CP.busy || CP.wait > Date.now()) return;
+        const name = $("#cp-name").value.trim(), pw = $("#cp-pw").value, keep = $("#cp-keep").checked;
+        cpErr("");
+        if (CP.tab === "in") {
+          if (!name) return cpErr("Enter your corner name.", "#cp-name");
+          if (!pw) return cpErr("Enter your password.", "#cp-pw");
+        } else {
+          const why = cpNameProblem(name);
+          if (why) { cpField("#cp-name", "err", why); return cpErr(why, "#cp-name"); }
+          if (pw.length < 8) { cpStrength(pw, name); return cpErr("Use a password of at least 8 characters.", "#cp-pw"); }
+          if (pw.toLowerCase() === name.toLowerCase()) { cpStrength(pw, name); return cpErr("Don't use your corner name as the password.", "#cp-pw"); }
+          if (!cpMatch(true)) return cpErr("The two passwords don't match yet.", "#cp-pw2");
+        }
+        cpBusy(true);
+        const r = CP.tab === "in" ? await cpSignIn(name, pw, keep) : await cpSignUp(name, pw, keep);
+        if (!$("#cp-form")) return;
+        cpBusy(false);
+        if (r.ok) {
+          CP.fresh = CP.tab === "new";
+          CP.vals = { name: "", pw: "", pw2: "", keep: false };
+          return cpWelcome();
+        }
+        if (r.wait) { cpErr(r.error); cpCountdown(r.wait); return; }
+        if (r.field === "name") { cpField("#cp-name", "err", r.error); return cpErr(r.error, "#cp-name"); }
+        if (r.field === "password") { cpField("#cp-pw", "err", r.error); return cpErr(r.error, "#cp-pw"); }
+        cpErr(r.error);
+        if (CP.tab === "in" && r.status === 401) {
+          cpField("#cp-pw", "err", r.left != null
+            ? `${r.left} ${r.left === 1 ? "try" : "tries"} left before a one-minute pause.` : "");
+          $("#cp-pw").select();
+          $("#cp-pw").focus();
+        }
+      }
+      function cpWelcome() {
+        cpRender("welcome", true);
+        cpBell();
+        clearTimeout(CP.outT);
+        CP.outT = setTimeout(cornerPassClose, 1200);
+      }
+      /* The bell on success. It follows the Effects volume and the sound setting. */
+      function cpBell() {
+        if (!uiPrefs.sound || !(Number(ST && ST.fxvol) > 0)) return;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        try {
+          uiAudio = uiAudio || new AC();
+          uiAudio.resume();
+          const t = uiAudio.currentTime, out = uiAudio.createGain();
+          out.gain.value = 0.14 * Number(ST.fxvol) / 100;
+          out.connect(uiAudio.destination);
+          [[830, 1, 1.5], [1960, 0.42, 0.9], [3170, 0.18, 0.5]].forEach(([f, a, d]) => {
+            const o = uiAudio.createOscillator(), g = uiAudio.createGain();
+            o.frequency.value = f;
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(a, t + 0.005);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+            o.connect(g); g.connect(out); o.start(t); o.stop(t + d + 0.05);
+          });
+        } catch (e) {}
+      }
+
+      /* ── the scene: crowd, light, the fighter under it ── */
+      function cpWire(el) {
+        el.querySelectorAll(".cp-arrow").forEach((b) => b.addEventListener("click", () => {
+          cpFighter(CP.fi + Number(b.dataset.step));
+          CP.hold = Date.now() + 12000;
+        }));
+        $("#cp-text").addEventListener("click", () => {
+          if (!ST) loadSettings();
+          const order = ["small", "normal", "large"];
+          ST.textsize = order[(order.indexOf(ST.textsize || "normal") + 1) % 3];
+          saveSettings();
+          cpTextBtn();
+        });
+        $("#cp-settings").addEventListener("click", () => openSettings("display"));
+        const scene = el.querySelector(".cp-intro");
+        scene.addEventListener("pointerenter", () => { CP.hover = true; });
+        scene.addEventListener("pointerleave", () => { CP.hover = false; });
+        el.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && CP.from === "hub" && !$(".settings") && CP.view !== "welcome") {
+            e.preventDefault();
+            return cornerPassClose();
+          }
+          if (e.key !== "Tab") return;
+          /* keep Tab inside the pass */
+          const f = [...el.querySelectorAll("button,input,[tabindex]")].filter((n) =>
+            !n.disabled && n.tabIndex >= 0 && n.offsetParent !== null);
+          if (!f.length) return;
+          const i = f.indexOf(document.activeElement);
+          if (e.shiftKey && (i <= 0)) { e.preventDefault(); f[f.length - 1].focus(); }
+          else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+        });
+      }
+      let cpResize = 0;
+      addEventListener("resize", () => { clearTimeout(cpResize); cpResize = setTimeout(() => { if ($(".cpass")) cpCrowd(); }, 150); });
+      function cpTextBtn() {
+        const b = $("#cp-text");
+        if (!b) return;
+        const v = (ST && ST.textsize) || "normal";
+        b.textContent = "Aa";
+        b.setAttribute("aria-label", `Text size: ${CP_TS[v]}. Press to change.`);
+        b.dataset.size = v;
+      }
+      function cpCrowd() {
+        const cv = $(".cp-crowd");
+        if (!cv) return;
+        const w = cv.clientWidth, h = cv.clientHeight;
+        if (!w || !h) return;
+        cv.width = w; cv.height = h;
+        const g = cv.getContext("2d"), u = Math.max(0.5, h / 480), c = Math.max(9, Math.round(18 * u));
+        let s = 7 * 2654435761 >>> 0;
+        const rnd = () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return (s % 100000) / 100000; };
+        const cols = ["#16222f", "#1c2a3c", "#223248", "#2b2238", "#33232e", "#253449", "#1a2537"];
+        CP.flashes = [];
+        for (let row = 0, y = 0; y < h; row++, y += c) {
+          for (let x = row % 2 ? c / 2 : 0; x < w; x += c) {
+            if (rnd() < 0.16) continue;
+            const k = cols[Math.floor(rnd() * cols.length)], z = c - Math.round((5 + Math.floor(rnd() * 4)) * u);
+            g.fillStyle = k;
+            g.fillRect(Math.round(x + 2 * u), Math.round(y + 2 * u), z, z + Math.round(2 * u));
+            if (rnd() < 0.025) {
+              const f = [Math.round(x + 6 * u), Math.round(y + 6 * u), Math.max(2, Math.round(3 * u)), k];
+              CP.flashes.push(f);
+              g.fillStyle = "#ffe3a0";
+              g.fillRect(f[0], f[1], f[2], f[2]);
+            }
+          }
+        }
+        clearInterval(CP.crowdT);
+        if (cpStill()) return;
+        /* a few camera flashes blink in the dark */
+        CP.crowdT = setInterval(() => {
+          if (!cv.isConnected) return clearInterval(CP.crowdT);
+          if (cpStill() || document.hidden) return;
+          for (const f of CP.flashes) {
+            if (rnd() < 0.3) { g.fillStyle = rnd() < 0.5 ? "#ffe3a0" : f[3]; g.fillRect(f[0], f[1], f[2], f[2]); }
+          }
+        }, 700);
+      }
+      function cpFighter(i, first) {
+        const list = cpFighters(), el = $(".cpass");
+        if (!el || !list.length) return;
+        CP.fi = (i + list.length) % list.length;
+        const a = list[CP.fi], blue = CP.fi % 2 === 0;
+        const swap = () => {
+          el.querySelector(".cp-fighter").innerHTML = window.ITIAV.svg(a.id, 384, { bg: "none" });
+          el.classList.toggle("red", !blue);
+          const plate = el.querySelector(".cp-plate");
+          plate.querySelector("small").textContent = blue ? "In the blue corner" : "In the red corner";
+          plate.querySelector("b").textContent = a.name;
+          plate.classList.remove("go"); void plate.offsetWidth; plate.classList.add("go");
+          el.querySelector(".cp-dots").querySelectorAll("button").forEach((d, k) => {
+            d.classList.toggle("on", k === CP.fi);
+            if (k === CP.fi) d.setAttribute("aria-current", "true"); else d.removeAttribute("aria-current");
+          });
+        };
+        const dots = el.querySelector(".cp-dots");
+        if (!dots.children.length) {
+          dots.innerHTML = list.map((f, k) => `<button type="button" aria-label="Show ${escapeUI(f.name)}"></button>`).join("");
+          dots.querySelectorAll("button").forEach((d, k) => d.addEventListener("click", () => {
+            cpFighter(k);
+            CP.hold = Date.now() + 12000;
+          }));
+        }
+        const scene = el.querySelector(".cp-scene");
+        if (first || cpStill()) { swap(); return; }
+        /* the light dips, the next fighter steps in, the ropes take the bump */
+        scene.classList.remove("swap"); void scene.offsetWidth; scene.classList.add("swap");
+        setTimeout(swap, 260);
+        setTimeout(() => scene.classList.remove("swap"), 900);
+      }
+      function cpRotate() {
+        clearInterval(CP.rot);
+        CP.rot = setInterval(() => {
+          if (!$(".cpass")) return clearInterval(CP.rot);
+          if (cpStill() || CP.hover || document.hidden || Date.now() < CP.hold) return;
+          cpFighter(CP.fi + 1);
+        }, 6000);
+      }
+
+      /* The hub's way back to the pass: who is in the corner, one click away. */
+      function cpChip() {
+        const slot = $(".lb-cpslot");
+        if (!slot) return;
+        const m = cpMark(), name = (CP.corner && CP.corner.name) || (m && m.name);
+        if (CP.api !== true && !m) { slot.innerHTML = ""; return; }
+        const out = !!m && !CP.corner;
+        slot.innerHTML = `<button class="lb-cp" type="button" aria-label="${name
+          ? (out ? "Corner Pass: signed out of " : "Corner Pass: signed in as ") + escapeUI(name)
+          : "Corner Pass: training as a guest. Sign in or make a corner"}"><u>${name ? (out ? "Signed out" : "Corner") : "Guest"}</u><b>${name ? escapeUI(name) : "Sign in"}</b></button>`;
+        slot.querySelector("button").addEventListener("click", () => cornerPassOpen("hub"));
       }
 
       /* ── LOBBY ───────────────────────────────────────────────────
@@ -1435,6 +2295,7 @@ window.__openRealArena=(function(){
             <div class="lb-tabs" role="tablist">
               ${LOBBY_TABS.map((t) => `<button class="lb-tab ${t.id === "gear" ? "active" : t.live ? "" : "locked"}" data-lobby="${t.id}" role="tab" aria-selected="${t.id === "gear"}">${t.id === "gear" ? t.label + " [" + GRADES[Math.round(upAverage())] + "]" : t.label}</button>`).join("")}
             </div>
+            <span class="lb-cpslot"></span>
             <div class="lb-cur">
               <div><span id="lb-gold">${P.gold.toLocaleString()}</span>${COIN_SVG}</div>
               <div><span id="lb-gems">${P.gems.toLocaleString()}</span>${GEM_SVG}</div>
@@ -1516,6 +2377,8 @@ window.__openRealArena=(function(){
         el.querySelectorAll("[data-trade]").forEach((btn) =>
           btn.addEventListener("click", openTrade));
         document.body.appendChild(el);
+        cpChip();
+        setTimeout(cpAdoptNewer, 0);   /* newer progress from another computer, held until the hub */
 
         const av = $("#lb-avatar");
         if (av) drawAvatar(av.getContext("2d"));
@@ -3892,7 +4755,7 @@ window.__openRealArena=(function(){
       }
       function hotkeysBlocked() {
         if (document.querySelector(".st-key.binding")) return true;
-        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3,.arena-x,.arena-wait,.arena-fail")) return true;
+        if (document.querySelector("#boot,.cpass,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3,.arena-x,.arena-wait,.arena-fail")) return true;
         return !!document.querySelector("dialog[open]");
       }
       window.addEventListener("keydown", (e) => {
@@ -4815,7 +5678,7 @@ window.__openRealArena=(function(){
       /* ── gym input ───────────────────────────────────────────── */
       function gymActive() {
         return lobbyView === "gym" && !!document.querySelector(".lobby")
-          && !document.querySelector(".trainer,.settings,.market,.gearup,.msetup,.modesel,#gymload,.boardwrap,.tradewrap,.sfight,.arena3");
+          && !document.querySelector(".cpass,.trainer,.settings,.market,.gearup,.msetup,.modesel,#gymload,.boardwrap,.tradewrap,.sfight,.arena3");
       }
       window.addEventListener("keydown", (e) => {
         if (!gymActive()) return;
