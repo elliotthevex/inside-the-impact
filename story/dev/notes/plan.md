@@ -51,3 +51,8 @@ Design task wjgu399fh, engine task wz9gs7ydg (same run ids). Per the user, no ti
 
 Last run: all eight engine builders and all three drafts finished (cached). Failed and now re-running: bible synthesize (network error), critics, revise; engine integrate, reviews, fixes, verify (5-hour limit). To fit the weekly 95% line, reviews were trimmed to movement + visual (engine) and fidelity + buildability (bible). Design task wtnqgz7p1, engine task wxvhvxhoc.
 Weekly budget left before 95%: ~32 points; the last full run used ~13. Chapters and campaign verification will need a leaner plan or the weekly reset (Nov 26 15:00 KST).
+
+## Engine and bible done — 01:50 KST, 2026-11-22 (5-hour 70%, weekly 72%)
+
+Engine run wf_a47653da-b10 complete (15 agents; 24 findings handled; verify PASS; commit 2060907). Bible run wf_b87e3322-06d complete (72 findings, 71 applied; commit 37a02cf). `story/BIBLE.md` is 555 KB; authors should read `story/design/bible-parts/01-global.md` + their `chNN.md`.
+Next: chapters phase, lean (weekly line 95% leaves ~23 points): one agent for `chapters/cast.js` + `places.js`, then one author per chapter with headless `chapter N` self-test, then a campaign phase (headless both endings, fidelity + choices-wiring reviewers, fixers, final browser pass). Waiting for the user's go and the 5-hour reset at 04:59 KST.
