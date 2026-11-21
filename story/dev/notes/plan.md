@@ -60,3 +60,7 @@ Next: chapters phase, lean (weekly line 95% leaves ~23 points): one agent for `c
 ## Chapters phase approved — start at the 05:00 KST reset, 2026-11-22
 
 The user said "Yes, at the reset". Script: `~/.claude/projects/-Users-elliot-jeong-Desktop-Inside-the-Impact/ca804261-1003-4979-b90e-1f8fbae65bec/workflows/scripts/story-chapters.js` — foundation (cast.js, places.js, README) -> 11 chapter authors (each self-tests headless under both policies) -> campaign integrator (both endings) -> 5 reviewers (fidelity 0-3 / 4-7 / 8-10, choices wiring, in-browser play) -> 3 fixers by chapter group -> final verifier. A session cron starts it at 05:02 KST; usage is checked every ~15 minutes and the run pauses at 74% and waits for the user (no auto-resume after a reset).
+
+## Release wish — 2026-11-22
+
+The user asked to "push it to live", then chose to wait for the chapters: push to the live site once chapters 0–10 are written and the full campaign passes, and ask them again then. origin/main has moved (2378207, two Missions bout fixes by another session): merge origin/main into story-mode before the release gates.
