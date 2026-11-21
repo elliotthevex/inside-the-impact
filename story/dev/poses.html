@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story Poses</title>
+<style>
+  :root { --bg: #0e0f13; --panel: #171820; --line: #2a2b35; --text: #e9e2d0; --dim: #9d968a; --gold: #e8c272; --red: #d8402f; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.4 "Courier New", monospace; }
+  header { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 10px 16px 8px; }
+  h1 { font: 600 17px "Iowan Old Style", Georgia, serif; margin: 0 10px 0 0; color: var(--gold); letter-spacing: .02em; }
+  .group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .group > span { color: var(--dim); margin-right: 4px; font-variant: small-caps; }
+  button { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 3px 8px; cursor: pointer; }
+  button:hover { border-color: #4a4b58; }
+  button.on { border-color: var(--gold); color: var(--gold); }
+  label { color: var(--dim); display: inline-flex; gap: 6px; align-items: center; }
+  input[type=range] { width: 140px; accent-color: var(--gold); }
+  #wrap { padding: 0 16px 16px; overflow-x: auto; }
+  canvas { display: block; width: 1280px; height: 720px; image-rendering: pixelated; image-rendering: crisp-edges; background: #111; border: 1px solid var(--line); }
+  #note { color: var(--dim); padding: 6px 16px 0; max-width: 1300px; }
+  #err { color: var(--red); padding: 0 16px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Inside the Impact — figure poses</h1>
+  <div class="group" id="pages"><span>page</span></div>
+  <div class="group" id="opts"><span>view</span>
+    <button id="bFace">facing: right</button>
+    <button id="bSlow">speed: 1x</button>
+    <button id="bSil" class="on">silhouettes</button>
+    <label>scrub <input id="scrub" type="range" min="0" max="1000" value="0"></label>
+    <button id="bLive" class="on">live</button>
+  </div>
+</header>
+<div class="group" style="padding:0 16px 8px" id="looks"><span>look</span></div>
+<div id="wrap"><canvas id="cv" width="640" height="360"></canvas></div>
+<div id="note"></div>
+<div id="err"></div>
+<script>window.STORY = { headless: false };</script>
+<script src="../core.js"></script>
+<script src="../art.js"></script>
+<script>
+(function () {
+  'use strict';
+  const S = window.STORY, A = S.art, F = S.font, P = S.pal;
+  const errBox = document.getElementById('err');
+  window.addEventListener('error', (e) => { errBox.textContent += (e.message || e) + '\n'; });
+  if (!A || !F) { errBox.textContent = 'art.js did not load'; return; }
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  const MOVES = ['idle', 'guard', 'walk', 'run', 'backstep', 'brake', 'turn', 'jump', 'fall', 'land',
+    'dash', 'backdash', 'slip', 'block', 'jab', 'cross', 'hook', 'uppercut', 'dashStraight', 'counter',
+    'flurry', 'hurt', 'stagger', 'knockdown', 'down', 'getup', 'windup', 'grab', 'baton', 'shove'];
+  const EVERYDAY = ['sit', 'sitFloor', 'sitCurb', 'lieBed', 'kneel', 'crouch', 'leanWall', 'armsCrossed', 'handsHips',
+    'pocket', 'phone', 'carry', 'push', 'point', 'wave', 'shrug', 'headDown', 'hug',
+    'handShoulder', 'work', 'sweep', 'write', 'smoke', 'drink', 'cower', 'limp', 'wheelchair',
+    'bars', 'shadowbox', 'skip', 'talk', 'think', 'reach', 'cheer', 'tired', 'climb'];
+  const listed = new Set(MOVES.concat(EVERYDAY));
+  const extra = A.poses.filter((p) => !listed.has(p));
+  const PAGES = { moves: 'Movement + combat', everyday: 'Everyday + story', strips: 'Frame strips', strips2: 'Frame strips 2', looks: 'Looks + heads', fx: 'Effects + scene' };
+  const state = { page: 'moves', look: 'jin', face: 1, slow: 1, sil: true, live: true, scrub: 0 };
+  try { const q = new URLSearchParams(location.search); for (const k of ['page', 'look']) if (q.get(k)) state[k] = q.get(k); if (q.get('face') === 'left') state.face = -1; } catch (_) { /* ignore */ }
+
+  // ── controls ──
+  const pagesEl = document.getElementById('pages'), looksEl = document.getElementById('looks');
+  for (const id in PAGES) { const b = document.createElement('button'); b.textContent = PAGES[id]; b.dataset.page = id; b.onclick = () => { state.page = id; sync(); }; pagesEl.appendChild(b); }
+  for (const id of Object.keys(S.looks)) { const b = document.createElement('button'); b.textContent = id; b.dataset.look = id; b.onclick = () => { state.look = id; sync(); }; looksEl.appendChild(b); }
+  const bFace = document.getElementById('bFace'), bSlow = document.getElementById('bSlow'), bSil = document.getElementById('bSil'), bLive = document.getElementById('bLive'), scrub = document.getElementById('scrub');
+  bFace.onclick = () => { state.face = -state.face; sync(); };
+  bSlow.onclick = () => { state.slow = state.slow === 1 ? 0.25 : state.slow === 0.25 ? 0.1 : 1; sync(); };
+  bSil.onclick = () => { state.sil = !state.sil; sync(); };
+  bLive.onclick = () => { state.live = !state.live; sync(); };
+  scrub.oninput = () => { state.scrub = scrub.value / 1000; state.live = false; sync(); };
+  window.addEventListener('keydown', (e) => {
+    const ids = Object.keys(PAGES), looks = Object.keys(S.looks);
+    if (e.key === 'ArrowRight') { state.page = ids[(ids.indexOf(state.page) + 1) % ids.length]; sync(); }
+    else if (e.key === 'ArrowLeft') { state.page = ids[(ids.indexOf(state.page) + ids.length - 1) % ids.length]; sync(); }
+    else if (e.key === 'ArrowDown') { state.look = looks[(looks.indexOf(state.look) + 1) % looks.length]; sync(); }
+    else if (e.key === 'ArrowUp') { state.look = looks[(looks.indexOf(state.look) + looks.length - 1) % looks.length]; sync(); }
+    else if (e.key === 'f') { state.face = -state.face; sync(); }
+    else if (e.key === ' ') { state.live = !state.live; sync(); e.preventDefault(); }
+  });
+  function sync() {
+    for (const b of pagesEl.querySelectorAll('button')) b.classList.toggle('on', b.dataset.page === state.page);
+    for (const b of looksEl.querySelectorAll('button')) b.classList.toggle('on', b.dataset.look === state.look);
+    bFace.textContent = 'facing: ' + (state.face > 0 ? 'right' : 'left');
+    bSlow.textContent = 'speed: ' + (state.slow === 1 ? '1x' : state.slow + 'x');
+    bSil.classList.toggle('on', state.sil); bLive.classList.toggle('on', state.live);
+    looksEl.style.display = state.page === 'moves' || state.page === 'everyday' || state.page.startsWith('strips') ? '' : 'none';
+    const notes = {
+      moves: 'Each cell: the pose, and below it the same pose as a flat silhouette (the readability test at 46 px). One-shot poses replay at 1/3 speed with a short hold (Frame strips shows them frame by frame). Scrub freezes every pose at that point (punches are fully extended around 0.35–0.6).',
+      strips: 'Eight evenly spaced frames of each cycle and one-shot, left to right, so timing and silhouettes can be judged without motion. Loops cover one full cycle; one-shots go from start to recovery (the punch is fully out in frames 3–4).',
+      strips2: 'More frame strips: the rest of the one-shots and a few loops.',
+      everyday: 'Story and exploration poses. Seat height, bed height and carried object come from opts (seat, bed, carry). Arrow up/down cycles looks, f flips facing.',
+      looks: 'Every built-in look in relaxed idle and walking the other way, then each hair style at 4x and Jin’s head facing right (scar visible) and left.',
+      fx: 'Dash afterimages, punch smears per kind, impact sparks, foot dust, pose crossfades, tint, outline, squash, the 3x5 font, and a test of Jin against brick under a streetlight.',
+    };
+    document.getElementById('note').textContent = notes[state.page] + (extra.length ? '  Extra poses beyond the contract: ' + extra.join(', ') + '.' : '');
+    try { const q = new URLSearchParams(location.search); q.set('page', state.page); q.set('look', state.look); history.replaceState(null, '', '?' + q.toString()); } catch (_) { /* file:// */ }
+  }
+  sync();
+
+  // ── helpers ──
+  const hold = 0.55;
+  function poseTime(name, T, seed) {
+    const d = A.poseDuration(name);
+    if (!state.live) return d > 0 ? { t: state.scrub * d, k: state.scrub } : { t: state.scrub * 3, k: null };
+    // one-shots replay at 1/3 speed here so each phase can be seen (in game they run at full speed)
+    if (d > 0) { const slowK = 3, per = d * slowK + hold; const tt = (T + seed * 0.13) % per; return { t: Math.min(d, tt / slowK), k: null, start: tt < 0.12 ? 1 - tt / 0.12 : 0 }; }
+    return { t: T + seed * 0.37, k: null };
+  }
+  function optsFor(name, extraOpts) {
+    const o = Object.assign({}, extraOpts || {});
+    if (name === 'carry') { o.carry = o.carry || 'box'; o.moving = false; }
+    if (name === 'wheelchair') o.moving = true;
+    if (name === 'lieBed') o.blanket = '#6a7a8a';
+    return o;
+  }
+  function figure(name, x, y, face, look, T, seed, extraOpts) {
+    const pt = poseTime(name, T, seed);
+    const o = optsFor(name, extraOpts);
+    if (pt.k != null) o.k = pt.k;
+    if (pt.start > 0 && name !== 'guard') o.blendFrom = { pose: MOVES.indexOf(name) >= 0 ? 'guard' : 'idle', t: 0, k: pt.start };
+    A.drawFigure(ctx, x, y, face, name, pt.t, look, o);
+  }
+  function wall(x, y, w, h, kind) {
+    // a quick backdrop strip: worn brick or blue-gray plaster, with a floor line
+    ctx.fillStyle = kind === 'brick' ? P.brick2 : P.blue2; ctx.fillRect(x, y, w, h);
+    if (kind === 'brick') {
+      for (let yy = y + 3; yy < y + h; yy += 4) {
+        const off = ((yy - y) / 4) % 2 ? 0 : 4;
+        ctx.fillStyle = P.brick1; ctx.fillRect(x, yy, w, 1);
+        for (let xx = x + off; xx < x + w; xx += 8) { ctx.fillStyle = P.brick1; ctx.fillRect(xx, yy - 3, 1, 3); }
+      }
+      ctx.fillStyle = 'rgba(30,20,24,0.35)'; ctx.fillRect(x, y, w, h);
+    }
+  }
+  function floor(x, y, w, h) { ctx.fillStyle = P.street1; ctx.fillRect(x, y, w, h); ctx.fillStyle = P.street2; ctx.fillRect(x, y, w, 1); }
+  function label(text, x, y, col) { F.draw(ctx, text, x, y, { color: col || P.textDim, align: 'center' }); }
+  // Draw a figure into a scratch canvas, then show it as a flat dark silhouette.
+  const scratch = document.createElement('canvas'); scratch.width = 120; scratch.height = 110; const sc = scratch.getContext('2d');
+  function silhouette(name, x, y, face, look, T, seed) {
+    sc.setTransform(1, 0, 0, 1, 0, 0); sc.globalCompositeOperation = 'source-over'; sc.clearRect(0, 0, 120, 110); sc.imageSmoothingEnabled = false;
+    const pt = poseTime(name, T, seed), o = optsFor(name, { shadow: false });
+    if (pt.k != null) o.k = pt.k;
+    A.drawFigure(sc, 60, 90, face, name, pt.t, look, o);
+    sc.globalCompositeOperation = 'source-in'; sc.fillStyle = '#0d0c11'; sc.fillRect(0, 0, 120, 110);
+    sc.globalCompositeOperation = 'source-over';
+    ctx.drawImage(scratch, x - 60, y - 90);
+  }
+
+  // ── pages ──
+  function drawMoves(T) {
+    const cols = 10, cw = 64, ch = 120;
+    MOVES.forEach((name, i) => {
+      const cx = (i % cols) * cw, cy = Math.floor(i / cols) * ch;
+      wall(cx, cy, cw, 58, i % 2 ? 'brick' : 'plaster'); floor(cx, cy + 58, cw, 8);
+      ctx.fillStyle = '#9a958a'; ctx.fillRect(cx, cy + 66, cw, 46);
+      const fx = cx + cw / 2 - (name === 'down' || name === 'knockdown' || name === 'getup' ? 0 : state.face * 6);
+      figure(name, fx, cy + 58, state.face, state.look, T, i);
+      if (state.sil) silhouette(name, fx, cy + 110, state.face, state.look, T, i);
+      ctx.fillStyle = '#16151b'; ctx.fillRect(cx, cy + 111, cw, 9);
+      label(name, cx + cw / 2, cy + 113, P.text);
+      ctx.fillStyle = '#000'; ctx.fillRect(cx + cw - 1, cy, 1, ch);
+    });
+  }
+  function drawEveryday(T) {
+    const cols = 9, cw = 71, ch = 90;
+    EVERYDAY.forEach((name, i) => {
+      const cx = (i % cols) * cw, cy = Math.floor(i / cols) * ch;
+      wall(cx, cy, cw, 74, (i + Math.floor(i / cols)) % 2 ? 'brick' : 'plaster'); floor(cx, cy + 74, cw, 8);
+      const fx = cx + cw / 2 - (name === 'lieBed' ? 0 : state.face * 4);
+      if (name === 'lieBed') { ctx.fillStyle = '#5c646c'; ctx.fillRect(cx + 8, cy + 74 - 20, cw - 16, 3); ctx.fillStyle = '#c9c6bd'; ctx.fillRect(cx + 9, cy + 74 - 23, cw - 18, 3); }
+      if (name === 'sit' || name === 'write') { ctx.fillStyle = P.wood2; ctx.fillRect(fx - state.face * 6 - 5, cy + 74 - 12, 12, 2); ctx.fillRect(fx - state.face * 6 - (state.face > 0 ? 6 : -4), cy + 74 - 26, 2, 14); }
+      if (name === 'write') { ctx.fillStyle = P.wood3; ctx.fillRect(fx + (state.face > 0 ? 4 : -24), cy + 74 - 21, 20, 2); }
+      if (name === 'work') { ctx.fillStyle = P.wood3; ctx.fillRect(fx + (state.face > 0 ? 6 : -26), cy + 74 - 21, 20, 21); }
+      if (name === 'bars') { ctx.fillStyle = '#8a949a'; ctx.fillRect(cx + 4, cy + 74 - 33, cw - 8, 2); }
+      if (name === 'leanWall') { ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(fx - state.face * 8 - (state.face > 0 ? 3 : 0), cy, 3, 74); }
+      if (name === 'sitCurb') { ctx.fillStyle = '#6a7080'; ctx.fillRect(cx + 4, cy + 74 - 5, cw - 8, 5); }
+      figure(name, fx, cy + 74, state.face, state.look, T, i, name === 'carry' ? { carry: ['box', 'crate', 'groceries', 'toolbox', 'files'][Math.floor(T / 2) % 5] } : null);
+      ctx.fillStyle = '#16151b'; ctx.fillRect(cx, cy + 82, cw, 8);
+      label(name, cx + cw / 2, cy + 83, P.text);
+      ctx.fillStyle = '#000'; ctx.fillRect(cx + cw - 1, cy, 1, ch);
+    });
+  }
+  const headCv = document.createElement('canvas'); headCv.width = 40; headCv.height = 40; const hc = headCv.getContext('2d');
+  function zoomHead(look, x, y, z, face, styleLabel) {
+    hc.setTransform(1, 0, 0, 1, 0, 0); hc.clearRect(0, 0, 40, 40); hc.imageSmoothingEnabled = false;
+    const j = A.joints('idle', 0, look);
+    A.drawFigure(hc, 20, 20 - Math.round(j.head.y) + 0, face, 'idle', 0, look, { shadow: false });
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(headCv, 20 - 7 + Math.round(j.head.x) * face, 20 - 8, 14, 16, x, y, 14 * z, 16 * z);
+    if (styleLabel) label(styleLabel, x + 7 * z, y + 16 * z + 2);
+  }
+  const STRIPS = [['walk', 1 / 1.9], ['run', 1 / 2.85], ['backstep', 1 / 2.3], ['jab', 0], ['cross', 0], ['hook', 0],
+    ['dash', 0], ['slip', 0], ['uppercut', 0], ['dashStraight', 0], ['counter', 0], ['hurt', 0]];
+  const STRIPS2 = [['limp', 1 / 1.15], ['skip', 1 / 2.1], ['shadowbox', 2.4], ['backdash', 0], ['land', 0], ['brake', 0],
+    ['knockdown', 0], ['getup', 0], ['flurry', 0], ['windup', 0], ['baton', 0], ['grab', 0]];
+  function drawStrips(T, list) {
+    const rows = 6, rh = 60;
+    list.forEach(([name, period], i) => {
+      const col = i < rows ? 0 : 1, row = i % rows, x0 = col * 320, y0 = row * rh;
+      ctx.fillStyle = row % 2 ? '#2a3040' : '#262b39'; ctx.fillRect(x0, y0, 320, rh);
+      ctx.fillStyle = P.street1; ctx.fillRect(x0, y0 + rh - 3, 320, 3);
+      F.draw(ctx, name, x0 + 2, y0 + 2, { color: P.gold });
+      const d = A.poseDuration(name);
+      for (let f = 0; f < 8; f++) {
+        const k = f / 7, o = optsFor(name, { shadow: false });
+        let t;
+        if (d > 0) { t = k * d; o.k = k; } else t = (f / 8) * period;
+        const lying = name === 'knockdown' || name === 'getup';
+        ctx.save();
+        if (!lying) { ctx.beginPath(); ctx.rect(x0 + 30 + f * 36, y0, 36, rh); ctx.clip(); }
+        else if (f % 2) { ctx.restore(); continue; }   // lying frames are wide: show every other one
+        A.drawFigure(ctx, x0 + 44 + f * 36 + (lying ? 14 * state.face : 0) - (state.face < 0 ? -10 : 0), y0 + rh - 3, state.face, name, t, state.look, o);
+        ctx.restore();
+      }
+    });
+  }
+  function drawLooks(T) {
+    const ids = Object.keys(S.looks), cols = 9, cw = 71, ch = 92;
+    ids.forEach((id, i) => {
+      const cx = (i % cols) * cw, cy = Math.floor(i / cols) * ch;
+      wall(cx, cy, cw, 76, i % 2 ? 'brick' : 'plaster'); floor(cx, cy + 76, cw, 6);
+      A.drawFigure(ctx, cx + 22, cy + 76, 1, 'idle', T + i * 0.3, id, {});
+      A.drawFigure(ctx, cx + 50, cy + 76, -1, 'walk', T + i * 0.21, id, {});
+      ctx.fillStyle = '#16151b'; ctx.fillRect(cx, cy + 82, cw, 10);
+      label(id, cx + cw / 2, cy + 84, P.text);
+      ctx.fillStyle = '#000'; ctx.fillRect(cx + cw - 1, cy, 1, ch);
+    });
+    // hair styles at 4x
+    const y0 = 2 * ch + 4;
+    ctx.fillStyle = '#1b1c24'; ctx.fillRect(0, y0 - 4, 640, 360 - y0 + 4);
+    const styles = ['twoblock', 'shaggy', 'short', 'buzz', 'bald', 'long', 'ponytail', 'bun', 'curly', 'afro', 'slick', 'gray_short', 'bob', 'braids', 'cap', 'beanie', 'fedora', 'hood'];
+    const tones = ['#d6a47e', '#efd0b0', '#c48e68', '#a2704f', '#85583c', '#5f3e2a'];
+    const hairs = ['#3b2a20', '#1e1814', '#6a4a2a', '#a6a29a', '#b07a3a', '#2a2a30'];
+    styles.forEach((st, i) => {
+      const look = { h: 46, build: 'avg', skin: tones[i % tones.length], hair: { style: st, color: st === 'gray_short' ? '#a6a29a' : st === 'cap' ? '#7a3a2e' : st === 'beanie' ? '#4a5a6a' : st === 'fedora' ? '#4a3e34' : st === 'hood' ? '#5a5f66' : hairs[i % hairs.length] },
+        top: { kind: 'tee', color: '#5a6472' }, bottom: { kind: 'pants', color: '#333' }, shoes: '#222', extras: st === 'twoblock' ? ['scar'] : [] };
+      const col = i % 9, row = Math.floor(i / 9);
+      zoomHead(look, 4 + col * 50, y0 + row * 76, 3, 1, st);
+    });
+    // Jin's head both ways at 5x
+    zoomHead('jin', 462, y0 + 2, 5, 1, 'jin right');
+    zoomHead('jin', 548, y0 + 2, 5, -1, 'jin left');
+  }
+  function drawFx(T) {
+    ctx.fillStyle = '#15161d'; ctx.fillRect(0, 0, 640, 360);
+    // 1. dash with afterimages across a strip
+    wall(0, 0, 320, 70, 'brick'); floor(0, 70, 320, 10);
+    const per = 1.6, u = (T % per) / per;
+    const dashT = Math.min(0.16, u * per - 0.3);
+    const x0 = 40, dist = 1.8 * 46;
+    if (dashT > 0) {
+      const k = dashT / 0.16, xNow = x0 + dist * (1 - Math.pow(1 - k, 2));
+      for (let a = 3; a >= 1; a--) { const kk = Math.max(0, k - a * 0.22); const xa = x0 + dist * (1 - Math.pow(1 - kk, 2)); A.drawAfterimage(ctx, xa, 70, 1, 'dash', kk * 0.16, 'jin', 0.45 * (1 - a / 4)); }
+      A.dust(ctx, x0 - 4, 70, Math.min(1, k * 1.4));
+      A.drawFigure(ctx, xNow, 70, 1, 'dash', dashT, 'jin', { scaleX: k < 0.6 ? 1.12 : 1 });
+      if (k > 0.5) { /* lead into a straight */ }
+    } else if (u * per <= 0.3) A.drawFigure(ctx, x0, 70, 1, 'guard', T, 'jin', {});
+    else { const tt = u * per - 0.46; A.drawFigure(ctx, x0 + dist, 70, 1, tt < 0.33 ? 'dashStraight' : 'guard', Math.max(0, tt), 'jin', {}); if (tt > 0.1 && tt < 0.2) A.drawSmear(ctx, x0 + dist, 70, 1, 'straight', (tt - 0.1) / 0.1); if (tt > 0.12 && tt < 0.32) A.spark(ctx, x0 + dist + 27, 36, (tt - 0.12) / 0.2, P.sparkHeavy); }
+    label('dash -> afterimages, dust, dash straight', 160, 2, P.text);
+    // 2. smears per kind
+    wall(320, 0, 320, 70, 'plaster'); floor(320, 70, 320, 10);
+    ['jab', 'cross', 'hook', 'upper', 'straight'].forEach((kind, i) => {
+      const x = 340 + i * 60, k = ((T * 1.4 + i * 0.2) % 1);
+      const pose = { jab: 'jab', cross: 'cross', hook: 'hook', upper: 'uppercut', straight: 'dashStraight' }[kind];
+      A.drawFigure(ctx, x, 70, 1, pose, A.poseDuration(pose) * 0.45, 'jin', { shadow: true });
+      A.drawSmear(ctx, x, 70, 1, kind, k);
+      label(kind, x + 10, 62, P.text);
+    });
+    // 3. sparks and dust
+    ctx.fillStyle = '#1d1f28'; ctx.fillRect(0, 82, 640, 60);
+    for (let i = 0; i < 6; i++) { const k = ((T * 1.2 + i / 6) % 1); A.spark(ctx, 30 + i * 36, 110, k, i % 2 ? P.sparkHeavy : P.spark); }
+    for (let i = 0; i < 4; i++) { const k = ((T * 1.5 + i / 4) % 1); A.dust(ctx, 270 + i * 26, 124, k); }
+    label('sparks k 0..1', 120, 132); label('dust', 310, 132);
+    // 4. crossfade chain: guard -> jab -> cross -> hook with blendFrom (the world crossfades poses like this)
+    const chain = ['guard', 'jab', 'cross', 'hook', 'guard'], seg = [0.3, 0.22, 0.29, 0.37, 0.4];
+    let tt = T % seg.reduce((a, b) => a + b, 0), i = 0;
+    while (tt > seg[i]) { tt -= seg[i]; i++; }
+    const prev = chain[(i + chain.length - 1) % chain.length];
+    const bk = Math.max(0, 1 - tt / 0.06);
+    A.drawFigure(ctx, 420, 130, 1, chain[i], tt, 'jin', { blendFrom: { pose: prev, t: seg[(i + seg.length - 1) % seg.length], k: bk } });
+    label('combo with crossfade', 440, 86, P.text);
+    // 5. tint, outline, alpha, squash, scaleX, lean, carry variants
+    ctx.fillStyle = '#23252f'; ctx.fillRect(0, 142, 640, 74);
+    const demos = [
+      ['hit flash', { tint: '#ffffff' }, 'hurt', 0.03], ['telegraph', { tint: '#ffe7b0' }, 'windup', 0.2], ['outline', { outlineCol: '#e8c272' }, 'idle', 0],
+      ['alpha .5', { alpha: 0.5 }, 'guard', 0], ['squash +1', { squash: 1 }, 'land', 0.03], ['stretch', { squash: -0.6 }, 'jump', 0.1],
+      ['lean +.3', { lean: 0.3 }, 'walk', 0], ['lean -.35', { lean: -0.35 }, 'land', 0.05], ['knuckles', {}, 'guard', 0],
+    ];
+    demos.forEach(([name, o, pose, t], k) => {
+      const x = 30 + k * 68;
+      const look = name === 'knuckles' ? Object.assign({}, S.looks.jin, { extras: ['scar', 'knuckles'] }) : 'jin';
+      A.drawFigure(ctx, x, 204, 1, pose, t || T, look, o);
+      label(name, x, 207);
+    });
+    // 6. font sample
+    ctx.fillStyle = '#121218'; ctx.fillRect(0, 216, 260, 144);
+    F.draw(ctx, 'ROUND 3  0:42', 10, 224, { color: P.gold, scale: 2, shadow: true });
+    F.draw(ctx, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n0123456789 .,'!?-:/&#$()\"+%=*<>", 10, 244, { color: P.text });
+    F.draw(ctx, 'Calder Civic Arena - Aug. 20, 1994', 10, 262, { color: P.textDim });
+    F.draw(ctx, '$1,250 / #3B', 250, 280, { color: P.red, align: 'right', scale: 2 });
+    F.draw(ctx, 'center', 130, 300, { color: P.text, align: 'center', shadow: '#000' });
+    // 7. the first scene: Jin leaning on worn brick under a warm streetlight
+    const sx = 260, sy = 216, sw = 380, sh = 144;
+    ctx.fillStyle = P.sky1; ctx.fillRect(sx, sy, sw, sh);
+    ctx.fillStyle = P.blue1; ctx.fillRect(sx + 220, sy + 30, 60, 90); ctx.fillRect(sx + 300, sy + 50, 80, 70);
+    for (let wx = sx + 228; wx < sx + 276; wx += 10) for (let wy = sy + 40; wy < sy + 110; wy += 14) { ctx.fillStyle = (wx + wy) % 3 ? '#2b3448' : P.amber1; ctx.fillRect(wx, wy, 4, 6); }
+    wall(sx, sy, 200, 124, 'brick');
+    ctx.fillStyle = '#3a2a24'; ctx.fillRect(sx + 40, sy + 30, 16, 22); ctx.fillStyle = '#8a7a62'; ctx.fillRect(sx + 41, sy + 31, 14, 20); ctx.fillStyle = '#5a3a30'; ctx.fillRect(sx + 41, sy + 38, 14, 4);
+    ctx.fillStyle = '#6a6a5e'; ctx.fillRect(sx + 60, sy + 34, 12, 16); ctx.fillStyle = '#b8ab8a'; ctx.fillRect(sx + 61, sy + 35, 10, 7);
+    ctx.fillStyle = P.street1; ctx.fillRect(sx, sy + 124, sw, 20); ctx.fillStyle = P.street2; ctx.fillRect(sx, sy + 124, sw, 1);
+    ctx.fillStyle = P.metal1; ctx.fillRect(sx + 120, sy + 104, 34, 20); ctx.fillStyle = P.metal2; ctx.fillRect(sx + 120, sy + 104, 34, 2);
+    ctx.fillStyle = '#2a2b30'; ctx.fillRect(sx + 172, sy + 20, 2, 104); ctx.fillRect(sx + 160, sy + 20, 14, 2);
+    const g = ctx.createRadialGradient(sx + 162, sy + 26, 2, sx + 150, sy + 90, 80);
+    g.addColorStop(0, 'rgba(255,214,150,0.55)'); g.addColorStop(0.5, 'rgba(240,170,90,0.16)'); g.addColorStop(1, 'rgba(240,170,90,0)');
+    ctx.fillStyle = g; ctx.fillRect(sx, sy, sw, sh);
+    ctx.fillStyle = P.lamp; ctx.fillRect(sx + 158, sy + 22, 6, 2);
+    A.drawFigure(ctx, sx + 100, sy + 124, 1, 'leanWall', T, 'jin', {});
+    A.drawFigure(ctx, sx + 300, sy + 124, -1, 'smoke', T, 'thug', {});
+    A.drawFigure(ctx, sx + 250, sy + 124, 1, 'walk', T, 'woman', {});
+  }
+
+  let last = performance.now(), T = 0;
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (state.live) T += dt * state.slow;
+    try {
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.fillStyle = '#111'; ctx.fillRect(0, 0, 640, 360);
+      if (state.page === 'moves') drawMoves(T);
+      else if (state.page === 'everyday') drawEveryday(T);
+      else if (state.page === 'strips') drawStrips(T, STRIPS);
+      else if (state.page === 'strips2') drawStrips(T, STRIPS2);
+      else if (state.page === 'looks') drawLooks(T);
+      else drawFx(T);
+    } catch (e) { errBox.textContent = String(e && e.stack || e); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  if (S.errors && S.errors.length) errBox.textContent = S.errors.map((e) => e.message).join('\n');
+})();
+</script>
+</body>
+</html>

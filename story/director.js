@@ -504,9 +504,9 @@
     for (let i = 0; i < D.bg.length; i++) D.bg[i].update(dt);
     for (let i = D.bg.length - 1; i >= 0; i--) if (D.bg[i].done) D.bg.splice(i, 1);
     if (S.input && S.input.lock) S.input.lock(D.busy);
-    // Heartbeat fx also beats in the audio.
+    // Heartbeat fx also beats in the audio (world.js does it when it renders the fx; this is the fallback).
     const f = fx();
-    if (f.heartbeat > 0.15) { hbT -= dt; if (hbT <= 0) { hbT = 1.15 - 0.45 * clamp(f.heartbeat, 0, 1); S.audio.play('heartbeat', { vol: clamp(f.heartbeat, 0.2, 1) }); } }
+    if (f.heartbeat > 0.15 && !(S.world && typeof S.world.update === 'function')) { hbT -= dt; if (hbT <= 0) { hbT = 1.15 - 0.45 * clamp(f.heartbeat, 0, 1); S.audio.play('heartbeat', { vol: clamp(f.heartbeat, 0.2, 1) }); } }
     else hbT = 0;
     // Autosave on entering a location (world.js does it on enter) — fallback only when world does not.
     if (pendingLocSave && !D.busy && !D.stack.some((r) => r.system)) {
@@ -517,6 +517,10 @@
 
   // Clear every scene, request and effect (chapter start, load, title).
   D.reset = function () {
+    // A fight, bout or activity from the scene being dropped must not outlive it.
+    const cs = S.combat && S.combat.state;
+    if (cs && ((cs.fight && !cs.fight.done) || (cs.bout && !cs.bout.done)) && typeof S.combat.endFight === 'function') safe(() => S.combat.endFight(), 'combat.endFight');
+    if (S.activities && S.activities.running && typeof S.activities.cancel === 'function') safe(() => S.activities.cancel('reset'), 'activities.cancel');
     for (const r of D.stack) r.cancel();
     for (const r of D.bg) r.cancel();
     for (const q of D.queue) finishHandle(q.handle, undefined, null, true);
@@ -619,9 +623,9 @@
         if (!S.ui && line.shown >= len) {
           if (S.input.pressed('up')) moveSel(line, -1);
           if (S.input.pressed('down')) moveSel(line, 1);
-          if (S.input.pressed('interact')) D.choose(line.sel);
+          if (S.input.pressed('interact')) D.choose(line.sel, 'key');
         }
-      } else if (S.input.pressed('interact')) D.advance();
+      } else if (S.input.pressed('interact')) D.advance('key');
     }
   }
   function pickByPolicy(line) {
@@ -652,24 +656,30 @@
     return true;
   }
 
-  // Debounced so the UI and the director reading the same key press never double-advance.
-  D.advance = function () {
+  /* Debounce across channels only: the director's own key read ('key') and a UI call ('ui', the default)
+     for the same press land within a frame of each other, so the second is dropped. Two presses on one
+     channel always both count (fast readers, tests). */
+  let advSrc = null, selSrc = null;
+  D.advance = function (src) {
+    src = src === 'key' ? 'key' : 'ui';
     const l = D.dialog;
-    if (!l || l.done) return false;
-    if (S.realTime - lastAdvance < 0.1 && lastAdvance >= 0) return false;
-    lastAdvance = S.realTime;
+    // With no line up, advance confirms a chapter / completion screen or skips a title card (mouse clicks).
+    if (!l || l.done) return D.screen || D.card ? D.dismiss() : false;
+    if (lastAdvance >= 0 && src !== advSrc && S.realTime - lastAdvance < 0.1) return false;
+    lastAdvance = S.realTime; advSrc = src;
     if (l.shown < l.text.length) { l.shown = l.text.length; return true; }
     if (l.choices) return false;
     closeLine(l);
     return true;
   };
-  D.choose = function (i) {
+  D.choose = function (i, src) {
+    src = src === 'key' ? 'key' : 'ui';
     const l = D.dialog;
     if (!l || !l.choices || l.done) return false;
-    if (S.realTime - lastSel < 0.1 && lastSel >= 0) return false;
+    if (lastSel >= 0 && src !== selSrc && S.realTime - lastSel < 0.1) return false;
     const c = l.choices[i | 0];
     if (!c || !c.enabled) { S.audio.play('uiBack'); return false; }
-    lastSel = S.realTime;
+    lastSel = S.realTime; selSrc = src;
     l.shown = l.text.length;
     return pick(l, i | 0);
   };
@@ -1192,8 +1202,12 @@
             else if (typeof st.finish === 'function') st.finish(true);
           }, 'activity autoplay');
         }
-        if (!st.done && t > 4) {
-          safe(() => { if (typeof S.activities.stop === 'function') S.activities.stop(st); }, 'activities.stop');
+        // activities.js plays itself under a policy inside this budget; stop() ends a straggler as a pass.
+        if (!st.done && t > (D.policy.activityTimeout || 4)) {
+          safe(() => {
+            if (typeof S.activities.stop === 'function') S.activities.stop(st);
+            else if (typeof st.cancel === 'function') st.cancel('autoplay timeout');
+          }, 'activities.stop');
           st.done = true;
           if (st.result === undefined) st.result = opts.autoResult !== undefined ? opts.autoResult : { ok: true, auto: true };
         }
@@ -1538,6 +1552,7 @@
     n = +n;
     const def = story.chapters[n];
     if (!def) { S.fail(new Error('Chapter ' + n + ' is not available in this build.'), { source: 'story.start' }); return false; }
+    story.startSeq = (story.startSeq | 0) + 1;   // main.js: a load that nobody resumed resumes itself
     D.reset();
     const G = S.G = S.migrateState(S.G);
     if (!opts.fromSave) {
@@ -1735,10 +1750,12 @@
     return story.start(n);
   };
   // Chapters for the title's Chapters list: registered ones only.
-  story.chapterList = function (g) {
+  // The sandbox (99) is listed only in dev builds (S.dev) or when asked: chapterList(g, { sandbox: true }).
+  story.chapterList = function (g, o) {
     g = g || S.peekSave('auto') || S.G;
     const done = (g && g.completed) || {};
-    return story.ids().map((n) => {
+    const withSandbox = !!(S.dev || (o && o.sandbox));
+    return story.ids().filter((n) => n !== SANDBOX || withSandbox).map((n) => {
       const d = story.chapters[n];
       return { n, title: d.title, date: d.date || '', place: d.place || '', sandbox: n === SANDBOX,
         completed: !!done[n], available: n === SANDBOX || !!done[n] || !!S.dev,
@@ -1765,6 +1782,7 @@
   /* Resume after S.load(): restart a chapter, or enter the saved place and replay the scene
      that was running in fast-forward up to the save point. */
   story.resume = function () {
+    story.startSeq = (story.startSeq | 0) + 1;
     const pr = S.pendingResume;
     const res = (pr && !pr.used && pr.resume) || {};
     if (pr) pr.used = true;

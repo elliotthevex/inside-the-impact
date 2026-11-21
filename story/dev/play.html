@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story Mode — dev play</title>
+<!-- Standalone Story Mode for development (no lobby). Loads story/story.css and every script in
+     story/manifest.js in order, then opens Story Mode.
+       play.html                 the Story Mode title screen
+       play.html?ch=N            start chapter N directly (fresh state seeded with earlier chapters' canon)
+       play.html?ch=99           the sandbox (movement test area; also lists it under Chapters)
+       play.html?ch=99&test=1    run the sandbox self-test in the page and show the results
+       play.html?ch=N&auto=P     let the test autopilot play chapter N with policy P (first | restraint | ruthless)
+       &dev=1                    dev build: every chapter (and the sandbox) open in the Chapters list
+       &debug=1                  world debug overlay (collision, triggers)
+       &seed=N                   reseed the gameplay RNG before starting
+     Scripts get a cache-busting query here only; the lobby loader in game.js uses plain paths. -->
+<style>
+  :root { --gold: #e8c272; --red: #d8402f; --ink: #05080d; --text: #efe6d2; --mute: #9aa3b2; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--text); font-family: "Iowan Old Style", Georgia, serif; }
+  .dev-load { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 5; }
+  .dev-card { max-width: min(620px, 92vw); padding: 22px 26px; background: rgba(10, 12, 18, .92); border: 1px solid rgba(232, 194, 114, .35); }
+  .dev-kicker { font: 700 11px/1.2 "Courier New", monospace; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); }
+  .dev-card h1 { margin: 6px 0 10px; font-size: 26px; font-weight: 600; }
+  .dev-line { font: 13px/1.5 "Courier New", monospace; color: var(--mute); white-space: pre-wrap; word-break: break-word; }
+  .dev-line.bad { color: #f0b0a4; }
+  .dev-card button { margin: 14px 8px 0 0; font: 600 13px/1 "Courier New", monospace; letter-spacing: .08em; text-transform: uppercase; padding: 9px 14px;
+    color: var(--gold); background: rgba(232, 194, 114, .08); border: 1px solid rgba(232, 194, 114, .55); cursor: pointer; }
+  .dev-card button:hover, .dev-card button:focus-visible { background: rgba(232, 194, 114, .22); color: #fff3cf; outline: none; }
+  .dev-note { position: fixed; left: 8px; bottom: 8px; z-index: 2000; max-width: 46vw; font: 11px/1.4 "Courier New", monospace; color: #f0b0a4;
+    background: rgba(10, 12, 18, .8); padding: 6px 8px; border-left: 2px solid var(--red); pointer-events: none; white-space: pre-wrap; }
+  .dev-test { position: fixed; right: 10px; top: 10px; bottom: 10px; z-index: 2001; width: min(560px, 46vw); overflow: auto; padding: 14px 16px;
+    background: rgba(10, 12, 18, .94); border: 1px solid rgba(232, 194, 114, .35); font: 12px/1.45 "Courier New", monospace; color: var(--text); }
+  .dev-test h2 { margin: 2px 0 8px; font: 600 18px/1.2 "Iowan Old Style", Georgia, serif; }
+  .dev-test .ok { color: #8fca7e; } .dev-test .bad { color: #f0b0a4; }
+  .dev-test button { float: right; font: 600 11px/1 "Courier New", monospace; color: var(--gold); background: none; border: 1px solid rgba(232, 194, 114, .5); padding: 5px 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="dev-load" id="dev-load" role="status">
+  <div class="dev-card">
+    <div class="dev-kicker">Inside the Impact — dev</div>
+    <h1>Story Mode</h1>
+    <div class="dev-line" id="dev-status">Loading…</div>
+    <div class="dev-btns" id="dev-btns"></div>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var ROOT = '../../';                       // story/dev/ -> repository root (manifest paths are root-relative)
+  var BUST = 'v=' + Date.now().toString(36);
+  var q = new URLSearchParams(location.search);
+  var chParam = q.get('ch');
+  var ch = chParam !== null && chParam !== '' && isFinite(+chParam) ? +chParam : null;
+  var statusEl = document.getElementById('dev-status');
+  var btns = document.getElementById('dev-btns');
+  var loaded = {};                           // path -> true once evaluated (a retry never runs a file twice)
+  var skipped = [];
+
+  function status(text, bad) { statusEl.textContent = text; statusEl.className = 'dev-line' + (bad ? ' bad' : ''); }
+  function button(label, fn) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.textContent = label; b.addEventListener('click', fn);
+    btns.appendChild(b);
+    return b;
+  }
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src + (src.indexOf('?') < 0 ? '?' : '&') + BUST;
+      s.async = false;
+      s.onload = function () { resolve(); };
+      s.onerror = function () { s.remove(); reject(new Error('could not load ' + src)); };
+      document.body.appendChild(s);
+    });
+  }
+  function loadCss(href) {
+    if (document.getElementById('story-css')) return;
+    var l = document.createElement('link');
+    l.id = 'story-css'; l.rel = 'stylesheet'; l.href = href + '?' + BUST;
+    document.head.appendChild(l);
+  }
+
+  // Script errors thrown while a file runs (not load failures) are reported but do not stop the page.
+  var runErrors = [];
+  window.addEventListener('error', function (ev) {
+    var f = String(ev.filename || '');
+    if (/\/story\//.test(f) && !(window.STORY && window.STORY.isOpen)) runErrors.push(f.replace(/^.*\/story\//, 'story/').replace(/\?.*$/, '') + ': ' + (ev.message || 'error'));
+  });
+
+  function start() {
+    btns.innerHTML = '';
+    status('Loading the manifest…');
+    var chain = window.STORY_FILES ? Promise.resolve() : loadScript(ROOT + 'story/manifest.js');
+    chain.then(function () {
+      var files = window.STORY_FILES || [], optional = window.STORY_OPTIONAL || [];
+      loadCss(ROOT + (window.STORY_CSS || 'story/story.css'));
+      var i = 0;
+      function next() {
+        if (i >= files.length) return Promise.resolve();
+        var f = files[i++];
+        if (loaded[f]) return next();
+        status('Loading ' + f + ' (' + i + ' / ' + files.length + ')');
+        return loadScript(ROOT + f).then(function () { loaded[f] = true; return next(); }, function (err) {
+          if (optional.indexOf(f) >= 0) { skipped.push(f); return next(); }
+          throw err;
+        });
+      }
+      return next();
+    }).then(open, function (err) {
+      status('Story Mode could not load.\n' + (err && err.message ? err.message : String(err)), true);
+      button('Try again', start).focus();
+      button('Back to the game', function () { location.href = ROOT + 'index.html'; });
+    });
+  }
+
+  function note(lines) {
+    if (!lines.length) return;
+    var n = document.createElement('div');
+    n.className = 'dev-note';
+    n.textContent = lines.join('\n');
+    document.body.appendChild(n);
+    setTimeout(function () { n.remove(); }, 12000);
+  }
+
+  function open() {
+    var S = window.STORY;
+    if (!S || typeof S.open !== 'function') { status('Story Mode loaded, but STORY.open is missing (main.js).', true); button('Try again', start); return; }
+    document.getElementById('dev-load').style.display = 'none';
+    var dev = ch === 99 || q.get('dev') === '1';
+    if (q.get('seed') !== null && typeof S.seed === 'function') S.seed(+q.get('seed'));
+    var known = ch !== null && S.story && S.story.has && S.story.has(ch);
+    try {
+      // With a registered chapter STORY.open starts it directly (seeded with the canon of earlier chapters).
+      S.open({ dev: dev, onExit: closed, chapter: known ? ch : undefined });
+      if (ch !== null && !known) note(['Chapter ' + ch + ' is not in this build (registered: ' + (S.story && S.story.ids ? S.story.ids().join(', ') : 'none') + ').']);
+      if (q.get('debug') === '1' && S.world) S.world.debug = true;
+    } catch (err) {
+      status('STORY.open failed: ' + (err && err.message ? err.message : err), true);
+      document.getElementById('dev-load').style.display = '';
+      button('Try again', function () { location.reload(); });
+      return;
+    }
+    var lines = [];
+    if (skipped.length) lines.push('Not in this build: ' + skipped.join(', '));
+    if (runErrors.length) lines.push('Errors while loading:\n' + runErrors.join('\n'));
+    note(lines);
+    if (q.get('auto') && S.test && S.test.autoplay) S.test.autoplay(true, q.get('auto'));
+    if (q.get('test') === '1') setTimeout(selfTest, 300);
+  }
+
+  function selfTest() {
+    var S = window.STORY;
+    var box = document.createElement('div');
+    box.className = 'dev-test';
+    box.innerHTML = '<button type="button">Close</button><h2>Sandbox self-test</h2><div>Running…</div>';
+    box.querySelector('button').addEventListener('click', function () { box.remove(); });
+    document.body.appendChild(box);
+    setTimeout(function () {
+      var body = box.querySelector('div'), r;
+      if (!S.sandbox || typeof S.sandbox.selfTest !== 'function') { body.textContent = 'S.sandbox.selfTest is missing (c99_sandbox.js did not load).'; return; }
+      try { r = S.sandbox.selfTest({}); } catch (err) { body.textContent = 'The self-test threw: ' + (err && err.message); return; }
+      var esc = function (t) { return String(t).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); };
+      var html = '<p class="' + (r.ok ? 'ok' : 'bad') + '">' + (r.ok ? 'All checks passed' : 'Failed: ' + esc((r.failed || []).join(', ') || r.error || '')) +
+        ' — ' + (r.passed || 0) + ' / ' + (r.checks || []).length + ', ' + r.time + ' sim s</p>';
+      (r.checks || []).forEach(function (c) { html += '<div class="' + (c.ok ? 'ok' : 'bad') + '">' + (c.ok ? '✓ ' : '✗ ') + esc(c.name) + '</div><div>&nbsp;&nbsp;' + esc(c.detail || '') + '</div>'; });
+      if (r.errors && r.errors.length) html += '<p class="bad">Errors:<br>' + r.errors.map(esc).join('<br>') + '</p>';
+      body.innerHTML = html;
+    }, 50);
+  }
+
+  function closed() {
+    var card = document.getElementById('dev-load');
+    card.style.display = '';
+    status('Story Mode closed. (In the game this returns to the lobby.)');
+    btns.innerHTML = '';
+    button('Open again', function () { card.style.display = 'none'; window.STORY.open({ onExit: closed, dev: ch === 99 || q.get('dev') === '1' }); }).focus();
+    button('Back to the game', function () { location.href = ROOT + 'index.html'; });
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>

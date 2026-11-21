@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story Pieces Gallery</title>
+<style>
+  :root { --bg: #0c0c11; --panel: #15151c; --line: #2a2a34; --gold: #e8c272; --red: #d8402f; --text: #cfc8b6; --dim: #8a8478; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 13px/1.4 'Courier New', monospace; }
+  h1, h2 { font-family: 'Iowan Old Style', Georgia, serif; font-weight: normal; color: var(--gold); margin: 8px 0 10px; }
+  h1 { font-size: 24px; } h2 { font-size: 18px; margin-top: 28px; }
+  .note { color: var(--dim); max-width: 1280px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 8px 0; color: var(--dim); }
+  .bar label { display: inline-flex; gap: 6px; align-items: center; }
+  select, input[type=range] { background: var(--panel); color: var(--text); border: 1px solid var(--line); font: inherit; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+  .scene { margin: 0 0 22px; }
+  .scene canvas { width: 1280px; max-width: 100%; aspect-ratio: 16 / 9; height: auto; background: #000; border: 1px solid var(--line); }
+  .scene .cap { color: var(--gold); margin: 4px 0; }
+  .scene .ms { color: var(--dim); margin-left: auto; }
+  .grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+  .cell { background: var(--panel); border: 1px solid var(--line); padding: 4px; }
+  .cell .t { color: var(--gold); margin-top: 3px; }
+  .cell .p { color: var(--dim); font-size: 10px; max-width: 460px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .cell.warn { border-color: var(--red); }
+  #status { color: var(--red); }
+</style>
+</head>
+<body>
+<h1>Story Mode: environment pieces</h1>
+<p class="note">Dev page for <code>story/pieces.js</code>: three composed 640x360 scenes (backdrop, parallax layers, weather, lighting) scaled x2, then every piece type. The blue figure is a scale stand-in (46 px) used only when <code>story/art.js</code> is not loaded. Room shells and the street ground are drawn here as stand-ins for <code>world.js</code>.</p>
+<div class="bar">
+  <label><input type="checkbox" id="animate" checked> animate</label>
+  <label><input type="checkbox" id="pan" checked> pan cameras</label>
+  <label><input type="checkbox" id="galleryLight" checked> gallery lighting</label>
+  <span id="status"></span>
+</div>
+<div id="scenes"></div>
+<h2>Every piece type</h2>
+<div class="grid" id="gallery"></div>
+
+<script>
+window.STORY = { headless: false };
+(function () {
+  'use strict';
+  const files = [['../core.js', true], ['../art.js', false], ['../pieces.js', true]];
+  const status = document.getElementById('status');
+  let i = 0;
+  (function next() {
+    if (i >= files.length) { boot(); return; }
+    const [src, required] = files[i++];
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = next;
+    s.onerror = () => { if (required) status.textContent = 'Could not load ' + src; else next(); };
+    document.head.appendChild(s);
+  })();
+
+  let S, U, P;
+  const scenes = [];
+  const cells = [];
+
+  /* ── stand-ins for world.js: street ground, room shell, actors ───────────── */
+  function drawStreet(c, L, w) {
+    const gy = L.ground, a = P.asphalt, wk = P.walk, cr = P.concrete;
+    U.R(c, 0, gy, w, 12, wk[2]); U.R(c, 0, gy, w, 1, wk[4]); U.R(c, 0, gy + 1, w, 1, wk[3]);
+    for (let x = 0; x < w; x += 32) { U.R(c, x, gy + 1, 1, 11, wk[1]); if (U.hash(x * 0.37) < 0.3) U.line(c, x + 9, gy + 3, x + 15, gy + 8, wk[1]); }
+    U.speckle(c, 0, gy + 2, w, 9, wk[3], Math.floor(w / 6), 3.1, true);
+    U.R(c, 0, gy + 12, w, 2, cr[3]); U.R(c, 0, gy + 14, w, 1, cr[0]);
+    U.vbands(c, 0, gy + 15, w, 360 - gy - 15 + 64, a[2], a[0], 5);
+    for (let x = 20; x < w; x += 48) U.R(c, x, gy + 40, 20, 1, U.mix(P.fadedYellow, a[2], 0.55));
+    U.speckle(c, 0, gy + 16, w, 40, a[3], Math.floor(w / 3), 7.7, true);
+  }
+  function drawRoom(c, L, w) {
+    const rm = L.room, top = rm.ceiling, gy = L.ground;
+    U.R(c, 0, -64, w, top + 64, '#0e0d12');
+    // ceiling soffit with a tile grid and a duct run, seen from just below
+    const cr = U.ramp(U.shade(rm.wall, -0.25));
+    U.R(c, 0, top - 10, w, 10, cr[2]); U.R(c, 0, top - 10, w, 1, cr[1]); U.R(c, 0, top - 1, w, 1, cr[4]);
+    for (let x = 0; x < w; x += 24) U.R(c, x, top - 9, 1, 8, cr[1]);
+    U.R(c, 0, top - 22, w, 6, '#1a1a20'); U.R(c, 0, top - 22, w, 1, '#2a2a32'); for (let x = 40; x < w; x += 120) U.R(c, x, top - 23, 3, 8, '#24242c');
+    if (rm.pattern === 'brick' || rm.pattern === 'concrete') U.wallFill(c, 0, top, w, gy - top, rm.pattern === 'brick' ? 'brick_dark' : 'concrete', 4.2);
+    else {
+      const r = U.ramp(rm.wall);
+      U.R(c, 0, top, w, gy - top, r[2]);
+      for (let x = 0; x < w; x += 70) U.RA(c, x + 20, top, 30, gy - top, r[3], 0.18);
+      if (rm.wall2) { const r2 = U.ramp(rm.wall2), wy = gy - 46; U.R(c, 0, wy, w, gy - wy, r2[2]); U.R(c, 0, wy - 2, w, 2, U.ramp(rm.trim || rm.wall)[3]); U.R(c, 0, wy, w, 1, r2[1]); }
+      U.streaks(c, 0, top + 2, w, 60, r[1], Math.floor(w / 40), 9.3, 0.25);
+    }
+    U.RA(c, 0, top, w, 10, '#000000', 0.3);
+    U.R(c, 0, gy - 4, w, 4, U.ramp(rm.trim || '#4a4a50')[1]);
+    const f = U.ramp(rm.floor);
+    U.vbands(c, 0, gy, w, 360 - gy + 64, f[2], f[0], 4);
+    if (rm.pattern === 'tile' || rm.floorPattern === 'tile') for (let x = 0; x < w; x += 16) { U.R(c, x, gy, 1, 60, f[1]); } else if (rm.floorPattern === 'wood') for (let y = gy + 4; y < gy + 60; y += 5) U.R(c, 0, y, w, 1, f[1]);
+    U.R(c, 0, gy, w, 1, f[4]);
+  }
+  // A 46 px scale stand-in when art.js is missing: blue track top, black pants, white shoes.
+  function standIn(c, x, gy, face, look) {
+    x = Math.round(x); gy = Math.round(gy);
+    const top = look === 'red' ? '#6a2626' : '#33507a', top2 = look === 'red' ? '#4a1a1a' : '#26405f';
+    c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(x - 7, gy - 1, 14, 2);
+    U.R(c, x - 5, gy - 2, 4, 2, '#cfcac0'); U.R(c, x + 1, gy - 2, 4, 2, '#cfcac0');
+    U.R(c, x - 4, gy - 20, 3, 18, '#1a1a1e'); U.R(c, x + 1, gy - 20, 3, 18, '#16161a');
+    U.R(c, x - 5, gy - 36, 10, 17, top); U.R(c, x - 5, gy - 36, 2, 17, top2);
+    U.R(c, x + face * 4, gy - 34, 3, 9, top2); U.R(c, x + face * 6, gy - 34, 3, 3, '#b08a6a');
+    U.R(c, x - 3, gy - 38, 6, 2, '#b08a6a'); U.R(c, x - 3, gy - 46, 7, 8, '#b08a6a'); U.R(c, x - 4, gy - 47, 8, 5, '#2a1d16'); U.R(c, x + face * 2, gy - 43, 2, 2, '#2a1d16');
+  }
+
+  /* ── a small renderer in world.js's order ─────────────────────────────────── */
+  const LAYERS = ['far', 'mid', 'back', 'front', 'fore'];
+  const PADY = 64;
+  // Each layer bakes into runs: static pieces collect into a canvas until an animated piece,
+  // whose moving part is then drawn live in its list position (so a crowd stays behind the ring
+  // ropes listed after it). world.js should keep the same order (see notes/pieces.md).
+  function newBake(L) {
+    const cv = document.createElement('canvas');
+    cv.width = L.w + 128; cv.height = 360 + PADY * 2;
+    const c = cv.getContext('2d');
+    c.imageSmoothingEnabled = false;
+    c.translate(0, PADY);
+    return { cv, c };
+  }
+  function bakeScene(sc) {
+    const L = sc.L;
+    sc.seg = {};
+    for (const n of LAYERS) {
+      const list = (L.layers[n] || []).filter((p) => S.pieces.active(p)), seg = [];
+      let b = null;
+      const bake = () => b || (b = newBake(L), seg.push(b), b);
+      if (n === 'back') { if (L.kind === 'interior') drawRoom(bake().c, L, b.cv.width); else drawStreet(bake().c, L, b.cv.width); }
+      for (const p of list) {
+        S.pieces.draw(bake().c, p, L, true);
+        if (S.pieces.isAnimated(p)) { seg.push({ p }); b = null; }
+      }
+      const hz = S.backdrop.hazeFor(L, n);
+      if (hz.k > 0) for (const s of seg) if (s.cv) { s.c.globalCompositeOperation = 'source-atop'; s.c.fillStyle = U.rgba(hz.color, hz.k); s.c.fillRect(0, -PADY, s.cv.width, s.cv.height); s.c.globalCompositeOperation = 'source-over'; }
+      sc.seg[n] = seg;
+    }
+  }
+  function drawLayer(c, sc, n, t) {
+    const par = S.light.layerPar[n], cam = sc.cam, ox = Math.round(-cam.x * par), oy = Math.round(-cam.y * par);
+    for (const s of sc.seg[n]) {
+      if (s.cv) { c.drawImage(s.cv, ox, oy - PADY); continue; }
+      c.save(); c.translate(ox, oy);
+      S.pieces.drawAnimated(c, s.p, sc.L, t);
+      c.restore();
+    }
+  }
+  function renderScene(sc, t, dt) {
+    const c = sc.ctx, L = sc.L, cam = sc.cam;
+    const t0 = performance.now();
+    if (panOn()) cam.x = Math.round((L.w - 640) * (0.5 - 0.5 * Math.cos(t * sc.panSpeed)));
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.imageSmoothingEnabled = false;
+    c.fillStyle = '#000'; c.fillRect(0, 0, 640, 360);
+    S.backdrop.draw(c, L, cam.x, cam.y, t);
+    drawLayer(c, sc, 'far', t); drawLayer(c, sc, 'mid', t); drawLayer(c, sc, 'back', t);
+    for (const a of sc.actors) {
+      const sx = a.x - cam.x, gy = (a.y || L.ground) - cam.y;
+      if (S.art && S.art.drawFigure) { try { S.art.drawFigure(c, sx, gy, a.face, a.pose, t, a.look, {}); continue; } catch (e) { /* stand-in below */ } }
+      standIn(c, sx, gy, a.face, a.standIn);
+    }
+    drawLayer(c, sc, 'front', t); drawLayer(c, sc, 'fore', t);
+    S.weather.update(dt, L);
+    S.weather.draw(c, L, cam);
+    S.light.composite(c, L, cam, null, t);
+    sc.msAcc = (sc.msAcc || 0) * 0.92 + (performance.now() - t0) * 0.08;
+  }
+
+  /* ── the three sample scenes ──────────────────────────────────────────────── */
+  function streetScene() {
+    return {
+      title: 'Rainy night: Kessler Avenue, Eastgate',
+      panSpeed: 0.05,
+      actors: [{ x: 282, face: 1, pose: 'leanWall', look: 'jin_street' }],
+      L: {
+        id: 'dev_street', name: 'Kessler Avenue', kind: 'exterior', w: 1280, ground: 300,
+        sky: { preset: 'night' }, backdrop: 'skyline', weather: 'rain', ambient: { dark: 0.6, fog: 0.12 },
+        layers: {
+          far: [],
+          mid: [
+            { t: 'building', x: 60, w: 120, h: 214, style: 'brick_dark', windows: { cols: 3, lit: 0.3 }, roof: { tank: true } },
+            { t: 'building', x: 430, w: 100, h: 236, style: 'stone', windows: { cols: 3, lit: 0.25 }, roof: { antenna: true } },
+            { t: 'building', x: 720, w: 130, h: 206, style: 'brick', windows: { cols: 3, lit: 0.3 }, roof: { tank: true, antenna: true } },
+          ],
+          back: [
+            { t: 'building', x: 0, w: 150, h: 196, style: 'brick', floors: 4, windows: { cols: 3, lit: 0.4, ac: 0.3 }, fireEscape: 1, roof: { tank: true }, shop: { sign: "MARGE'S DINER", color: '#7c3a31', awning: '#7c3a31', window: 'lit', neon: true } },
+            { t: 'alley_gap', x: 150, w: 48, h: 170 },
+            { t: 'building', x: 198, w: 132, h: 160, style: 'brick_red', windows: { cols: 3, lit: 0.25, boarded: 0.15 }, shop: { sign: 'SPIN CITY WASH', color: '#3d5168', window: 'lit' } },
+            { t: 'building', x: 330, w: 168, h: 222, style: 'brick_dark', floors: 5, windows: { cols: 4, lit: 0.3, curtains: 0.7 }, fireEscape: 2, roof: { tank: true, antenna: true }, door: { kind: 'metal' }, posters: ['boxing', { kind: 'missing', torn: true }, 'concert', { kind: 'jin_fight', torn: 0.6 }, 'ad', 'notice'] },
+            { t: 'building', x: 498, w: 140, h: 180, style: 'stone', windows: { cols: 3, lit: 0.35 }, shop: { sign: "KIM'S CORNER STORE", color: '#4f6852', awning: true, window: 'lit' } },
+            { t: 'building', x: 638, w: 124, h: 150, style: 'brick', windows: { cols: 3, lit: 0.15 }, shop: { sign: 'IRON PULSE FITNESS', color: '#5a4a3a', window: 'dark' } },
+            { t: 'building', x: 762, w: 156, h: 206, style: 'siding', windows: { cols: 4, lit: 0.5 }, roof: { antenna: true, chimney: true }, door: { fresh: true } },
+            { t: 'alley_gap', x: 918, w: 40, h: 160, light: false },
+            { t: 'building', x: 958, w: 170, h: 190, style: 'brick_red', windows: { cols: 4, lit: 0.2, broken: 0.1 }, fireEscape: true, shop: { sign: 'LIQUOR', color: '#6a2a2a', window: 'boarded' } },
+            { t: 'building', x: 1128, w: 152, h: 172, style: 'brick', windows: { cols: 3, lit: 0.4 } },
+            { t: 'sign', x: 1000, y: 168, text: 'BAR', neon: true, color: '#d9634f' },
+            { t: 'wires', x0: 0, x1: 1280, y: 112, sag: 18, shoes: true },
+            { t: 'stoop', x: 822, w: 34 },
+            { t: 'planter', x: 868, flowers: true },
+          ],
+          front: [
+            { t: 'trashbags', x: 118, n: 3 },
+            { t: 'dumpster', x: 175 },
+            { t: 'streetlight', x: 262 },
+            { t: 'puddle', x: 286, w: 52 },
+            { t: 'newspapers', x: 342 },
+            { t: 'payphone', x: 412 },
+            { t: 'hydrant', x: 470 },
+            { t: 'pole', x: 600 },
+            { t: 'mailbox', x: 648 },
+            { t: 'puddle', x: 700, w: 40 },
+            { t: 'streetlight', x: 904, flicker: true },
+            { t: 'bus_stop', x: 1010, sign: 'ROUTE 14' },
+            { t: 'bench', x: 1060 },
+            { t: 'car', x: 560, y: 334, color: '#5a3430', kind: 'sedan' },
+            { t: 'car', x: 1180, y: 334, color: '#3a4a5a', kind: 'wagon', face: -1 },
+          ],
+          fore: [{ t: 'fence', x: 40, w: 70, kind: 'iron', y: 368 }],
+        },
+      },
+    };
+  }
+  function rehabScene() {
+    return {
+      title: 'St. Agnes Long-Term Care: Rehabilitation Wing',
+      panSpeed: 0.08,
+      actors: [{ x: 300, face: 1, pose: 'bars', look: 'jin_rehab' }],
+      L: {
+        id: 'dev_rehab', name: 'Rehabilitation Wing', kind: 'interior', w: 780, ground: 300, sky: 'none', weather: 'dust',
+        ambient: { dark: 0.26, tint: '#1e2e36' },
+        room: { wall: '#5b6866', wall2: '#46524f', floor: '#6a6a62', pattern: 'tile', ceiling: 128, trim: '#8a8f86' },
+        layers: {
+          back: [
+            { t: 'window_city', x: 40, y: 150, w: 96, h: 60, view: 'day' },
+            { t: 'curtain', x: 34, w: 30, open: true },
+            { t: 'clock', x: 196, y: 150 },
+            { t: 'picture', x: 226, y: 160, kind: 'calendar' },
+            { t: 'bulletin_board', x: 380, y: 154, w: 52, h: 32 },
+            { t: 'picture', x: 444, y: 162, kind: 'certificate' },
+            { t: 'window_city', x: 470, y: 150, w: 80, h: 60, view: 'day' },
+            { t: 'door', x: 562, kind: 'double', label: 'WARD C' },
+            { t: 'chalkboard', x: 290, y: 160, w: 70, h: 32, lines: ['MON 9:00 BARS', 'WED 2:00 WALK', 'D. AHN'] },
+            { t: 'picture', x: 152, y: 178, kind: 'poster' },
+            { t: 'med_monitor', x: 690, y: 176 },
+            { t: 'ceiling_light', x: 150, kind: 'fluorescent' },
+            { t: 'ceiling_light', x: 360, kind: 'fluorescent', flicker: 0.6 },
+            { t: 'ceiling_light', x: 600, kind: 'fluorescent' },
+            { t: 'plant', x: 24 },
+            { t: 'water_cooler', x: 160 },
+            { t: 'mat', x: 236, w: 132, color: '#3a4a6a' },
+            { t: 'parallel_bars', x: 244, w: 116 },
+            { t: 'shelf', x: 396, w: 40, h: 60, items: 'boxes' },
+            { t: 'chair', x: 452, kind: 'plastic', face: -1 },
+            { t: 'curtain', x: 618, w: 46, open: true },
+            { t: 'bed', x: 680, kind: 'hospital', face: -1 },
+            { t: 'iv_stand', x: 740 },
+          ],
+          front: [{ t: 'wheelchair', x: 540, face: -1 }],
+        },
+      },
+    };
+  }
+  function arenaScene() {
+    return {
+      title: 'Calder Civic Arena, August 20, 1994',
+      panSpeed: 0.07,
+      actors: [{ x: 452, face: 1, pose: 'guard', look: 'jin_ring' }, { x: 512, face: -1, pose: 'guard', standIn: 'red', look: { h: 48, build: 'boxer', skin: '#8a5e44', hair: { style: 'buzz', color: '#1a1410' }, top: { kind: 'bare', color: '#8a5e44' }, bottom: { kind: 'trunks', color: '#7a2424' }, shoes: '#2a2a2a', extras: ['gloves:#8a2020'] } }],
+      L: {
+        id: 'dev_arena', name: 'Civic Arena', kind: 'interior', w: 960, ground: 300, sky: 'none', weather: 'smoke+dust',
+        ambient: { dark: 0.78, tint: '#1a1420' },
+        room: { wall: '#18161d', floor: '#2a2628', pattern: 'plain', ceiling: 28, trim: '#2a2a30' },
+        layers: {
+          // (mid would sit behind the room shell in an interior) the crowd stands a little higher
+          // than the ring floor so it reads as further back, behind the ropes
+          back: [
+            { t: 'bleachers', x: 0, w: 300, rows: 6, crowd: 0.8, y: 288 },
+            { t: 'bleachers', x: 660, w: 300, rows: 6, crowd: 0.8, y: 288 },
+            { t: 'crowd', x: 300, w: 360, rows: 4, density: 0.9, mood: 'cheer', y: 290 },
+            { t: 'banner', x: 330, y: 58, w: 300, text: 'CALDER CIVIC ARENA', color: '#6a2a2a' },
+            { t: 'stage_lights', x: 300, w: 360, y: 40 },
+            { t: 'spotlight', x: 250 },
+            { t: 'spotlight', x: 710 },
+            { t: 'ring', x: 330, w: 300, corners: ['#8a2a2a', '#2a3a6a'], part: 'back' },
+            { t: 'corner_stool', x: 346 }, { t: 'bucket', x: 358 },
+            { t: 'corner_stool', x: 614 },
+          ],
+          front: [{ t: 'ring', x: 330, w: 300, corners: ['#8a2a2a', '#2a3a6a'], part: 'front' }],
+          fore: [{ t: 'crowd', x: -80, w: 1240, rows: 1, y: 372, density: 0.8, mood: 'cheer' }],
+        },
+      },
+    };
+  }
+
+  /* ── controls per scene ───────────────────────────────────────────────────── */
+  const opt = (v, label) => '<option value="' + v + '">' + (label || v) + '</option>';
+  function sceneBar(sc, i) {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const L = sc.L, sky = typeof L.sky === 'object' ? L.sky.preset : L.sky;
+    let h = '<span class="cap">' + sc.title + '</span>';
+    if (L.kind === 'exterior') {
+      h += '<label>sky <select data-k="sky">' + ['night', 'dusk', 'dawn', 'day', 'overcast', 'storm'].map((s) => opt(s)).join('') + '</select></label>';
+      h += '<label>backdrop <select data-k="backdrop">' + ['skyline', 'foundry', 'river', 'towers', 'rowhouses', 'river+skyline', 'none'].map((s) => opt(s)).join('') + '</select></label>';
+    }
+    h += '<label>weather <select data-k="weather">' + ['rain', 'drizzle', 'snow', 'dust', 'smoke', 'embers', 'leaves', 'rain+smoke', 'smoke+dust', 'none'].map((s) => opt(s)).join('') + '</select></label>';
+    h += '<label>dark <input type="range" min="0" max="1" step="0.02" data-k="dark"></label>';
+    h += '<label>fog <input type="range" min="0" max="1" step="0.02" data-k="fog"></label>';
+    h += '<span class="ms"></span>';
+    bar.innerHTML = h;
+    bar.querySelectorAll('[data-k]').forEach((el) => {
+      const k = el.dataset.k;
+      el.value = k === 'sky' ? sky : k === 'dark' || k === 'fog' ? L.ambient[k] || 0 : String(L[k] || 'none');
+      el.addEventListener('input', () => {
+        const v = el.value;
+        if (k === 'sky') L.sky = { preset: v, moon: v === 'night' || v === 'dawn' };
+        else if (k === 'dark' || k === 'fog') L.ambient[k] = +v;
+        else { L[k] = v === 'none' ? null : v; if (k === 'weather') S.weather.reset(L); }
+        if (k === 'sky') bakeScene(sc);   // far/mid haze follows the sky
+        if (!animOn()) renderScene(sc, sc.t, 0);
+      });
+    });
+    sc.msEl = bar.querySelector('.ms');
+    return bar;
+  }
+
+  /* ── gallery: one canvas per piece type ───────────────────────────────────── */
+  const SAMPLES = {
+    building: [240, 240, { x: 20, w: 190, h: 200, windows: { cols: 4, lit: 0.4 }, fireEscape: true, roof: { tank: true, antenna: true }, shop: { sign: 'DELGADO GROCERY', color: '#4f6852', awning: true }, posters: ['boxing', 'concert'] }],
+    wall: [180, 160, { x: 10, w: 160, h: 130, posters: ['boxing', { kind: 'missing', torn: true }, 'concert', 'notice'], pipe: true }],
+    alley_gap: [120, 200, { x: 30, w: 60, h: 170 }],
+    streetlight: [120, 160, { x: 46 }], pole: [110, 190, { x: 55 }], wires: [240, 90, { x0: 0, x1: 240, y: 20, sag: 14, shoes: true }],
+    fireescape: [120, 200, { x: 30, w: 60, floors: 3 }], water_tank: [80, 70, { x: 40 }], dumpster: [100, 60, { x: 50 }],
+    trashbags: [80, 50, { x: 40 }], newspapers: [80, 40, { x: 40 }], pallet: [90, 50, { x: 45, n: 3 }], crates: [100, 70, { x: 50, n: 3 }],
+    barrel: [70, 70, { x: 35, fire: true }], payphone: [70, 90, { x: 35 }], hydrant: [60, 50, { x: 30 }], mailbox: [60, 60, { x: 30 }],
+    bench: [80, 50, { x: 40 }], bus_stop: [110, 100, { x: 55, sign: 'ROUTE 14' }], car: [140, 60, { x: 70, color: '#6a3a32' }],
+    fence: [140, 70, { x: 10, w: 120 }], gate: [90, 80, { x: 25, w: 40 }], stoop: [70, 40, { x: 20, w: 30 }], stairs: [100, 70, { x: 20, w: 60, h: 40 }],
+    planter: [60, 50, { x: 30, flowers: true }], tree: [120, 130, { x: 60 }],
+    poster: [60, 80, { x: 20, kind: 'jin_fight', torn: true }], flyer: [60, 70, { x: 30, text: 'LOST DOG' }], notice: [80, 80, { x: 20, lines: ['RENT DUE', 'NO LOITER'] }],
+    graffiti: [100, 60, { x: 20, w: 60 }], sign: [130, 90, { x: 15, text: 'LAUNDROMAT', neon: true, color: '#7fb0c8' }], window: [70, 90, { x: 25, w: 20, h: 26, lit: true, curtains: true }],
+    door: [70, 70, { x: 25, kind: 'wood' }], awning: [100, 70, { x: 20, w: 60 }], billboard: [160, 220, { x: 20, w: 120, text: 'CALDER SAVINGS' }],
+    laundry_line: [170, 80, { x0: 10, x1: 160, y: 20 }], basketball_hoop: [90, 120, { x: 45 }], garden_plot: [100, 50, { x: 15, w: 70 }],
+    mural: [180, 110, { x: 10, w: 160, h: 70 }], memorial: [80, 60, { x: 40 }], caution_tape: [140, 60, { x0: 10, x1: 130, y: 26 }],
+    rubble: [90, 50, { x: 15, w: 60 }], burned_wall: [150, 160, { x: 15, w: 120, h: 130 }], scaffold: [140, 160, { x: 15, w: 110, h: 130 }],
+    puddle: [100, 40, { x: 20, w: 60 }], smokestack: [110, 210, { x: 55, h: 160 }], bridge: [280, 110, { x: 0, w: 280 }], river: [280, 120, { x: 0, w: 280, y: 20, h: 86 }],
+    bed: [100, 70, { x: 50 }], curtain: [90, 220, { x: 20, w: 50 }], iv_stand: [50, 90, { x: 25 }], med_monitor: [60, 90, { x: 30 }], wheelchair: [70, 50, { x: 35 }],
+    parallel_bars: [130, 60, { x: 15, w: 100 }], mat: [100, 30, { x: 20, w: 60 }], desk: [100, 50, { x: 50 }], chair: [50, 50, { x: 25 }], table: [80, 50, { x: 20 }],
+    filing_cabinet: [70, 60, { x: 35, n: 2 }], shelf: [80, 80, { x: 20 }], locker: [100, 70, { x: 50, n: 4 }], tv: [70, 70, { x: 35, on: true, content: 'boxing' }],
+    radio: [50, 40, { x: 25 }], sofa: [80, 50, { x: 15, w: 50 }], fridge: [60, 70, { x: 30 }], stove: [60, 50, { x: 30 }], sink: [60, 50, { x: 30 }], counter: [90, 50, { x: 15, w: 60 }],
+    lamp: [60, 70, { x: 30, kind: 'floor' }], ceiling_light: [90, 120, { x: 45, kind: 'pendant' }], picture: [60, 80, { x: 24, kind: 'photo' }], clock: [50, 90, { x: 25 }],
+    bulletin_board: [80, 90, { x: 20 }], chalkboard: [90, 90, { x: 15, lines: ['JAB CROSS', 'SLIP'] }], boxes: [80, 60, { x: 40, label: 'MIN' }],
+    heavy_bag: [60, 220, { x: 30 }], speed_bag: [60, 90, { x: 30 }], ring: [320, 170, { x: 10, w: 300, corners: ['#8a2a2a', '#2a3a6a'] }],
+    bleachers: [200, 100, { x: 10, w: 180, crowd: true }], crowd: [220, 80, { x: 10, w: 200, mood: 'cheer' }], spotlight: [80, 220, { x: 40 }],
+    corner_stool: [50, 40, { x: 25 }], bucket: [40, 40, { x: 20 }], banner: [140, 220, { x: 20, w: 100, text: 'CHAMPION' }], bowling_lanes: [320, 70, { x: 10, w: 300 }],
+    forklift: [90, 70, { x: 45 }], shelving: [150, 120, { x: 15, w: 120 }], container: [150, 80, { x: 75 }], loading_dock: [130, 60, { x: 15, w: 100 }],
+    roll_door: [80, 70, { x: 15, w: 50, open: 0.4, lit: true }], catwalk: [150, 130, { x: 15, w: 120 }], pipes: [180, 220, { x: 10, w: 160 }], safe: [60, 50, { x: 30, open: true }],
+    cage: [90, 100, { x: 15, w: 60 }], office_window: [80, 80, { x: 15, w: 50, lit: true }], workbench: [90, 50, { x: 15, w: 60 }], boiler: [80, 90, { x: 40 }],
+    tool_wall: [90, 90, { x: 15, w: 60 }], elevator: [60, 60, { x: 30, open: true }], glass_wall: [180, 220, { x: 10, w: 160 }], plant: [50, 60, { x: 25 }],
+    art: [70, 90, { x: 15, w: 40 }], reception: [120, 60, { x: 15, w: 90 }], window_city: [110, 130, { x: 15, w: 80, view: 'night' }], fire_damage: [110, 110, { x: 15, w: 80 }],
+    soot: [80, 70, { x: 10, w: 60 }], candles: [50, 30, { x: 25 }], flowers: [50, 40, { x: 25 }], mattress: [80, 40, { x: 40 }], stairs_interior: [100, 80, { x: 15, w: 70 }],
+    rug: [90, 30, { x: 15, w: 60 }], phone_wall: [50, 60, { x: 25 }], mirror: [50, 80, { x: 25 }], trophy_case: [80, 60, { x: 15, w: 50 }], vending: [60, 70, { x: 30 }],
+    water_cooler: [50, 60, { x: 25 }], copier: [60, 50, { x: 30 }], stage_lights: [220, 230, { x: 10, w: 200 }],
+  };
+  function buildGallery() {
+    const host = document.getElementById('gallery');
+    for (const type of S.pieces.types()) {
+      const smp = SAMPLES[type] || [140, 120, { x: 60 }];
+      const cw = smp[0], ch = smp[1], p = Object.assign({ t: type }, smp[2]);
+      const el = document.createElement('div');
+      el.className = 'cell' + (SAMPLES[type] ? '' : ' warn');
+      const cv = document.createElement('canvas');
+      cv.width = cw; cv.height = ch; cv.style.width = cw * 2 + 'px'; cv.style.height = ch * 2 + 'px';
+      const info = JSON.stringify(smp[2]).replace(/"/g, '');
+      el.innerHTML = '<div class="t">' + type + (S.pieces.isAnimated(p) ? ' <span style="color:#8a8478">(animated)</span>' : '') + '</div><div class="p" title="' + info + '">' + info + '</div>';
+      el.insertBefore(cv, el.firstChild);
+      host.appendChild(el);
+      const L = { id: 'cell_' + type, kind: 'interior', w: cw, ground: ch - 14, room: { ceiling: 10 }, ambient: { dark: 0.5 }, weather: type === 'puddle' ? 'rain' : null };
+      cells.push({ type, p, L, cv, ctx: cv.getContext('2d'), lights: S.pieces.lights(p, L), live: S.pieces.isAnimated(p) });
+    }
+  }
+  function drawCell(cell, t) {
+    const c = cell.ctx, L = cell.L, w = cell.cv.width, h = cell.cv.height;
+    c.setTransform(1, 0, 0, 1, 0, 0); c.imageSmoothingEnabled = false;
+    c.fillStyle = '#272932'; c.fillRect(0, 0, w, L.ground);
+    c.fillStyle = '#1b1c22'; c.fillRect(0, L.ground, w, h - L.ground);
+    c.fillStyle = '#34363f'; c.fillRect(0, L.ground, w, 1);
+    S.pieces.draw(c, cell.p, L, false);
+    const lit = document.getElementById('galleryLight').checked;
+    if (lit) S.light.composite(c, L, { x: 0, y: 0, zoom: 1 }, cell.lights, t, { w, h });
+    else for (const l of cell.lights) { c.fillStyle = 'rgba(255,220,120,0.9)'; c.fillRect(Math.round(l.x) - 1, Math.round(l.y) - 1, 3, 3); }
+  }
+
+  /* ── loop ─────────────────────────────────────────────────────────────────── */
+  const animOn = () => document.getElementById('animate').checked;
+  const panOn = () => document.getElementById('pan').checked;
+  function boot() {
+    S = window.STORY; U = S.pieces.util; P = S.pieces.pal;
+    status.textContent = S.art ? '' : 'art.js not loaded: figures are stand-ins';
+    status.style.color = '#8a8478';
+    const host = document.getElementById('scenes');
+    [streetScene(), rehabScene(), arenaScene()].forEach((sc, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'scene';
+      const cv = document.createElement('canvas');
+      cv.width = 640; cv.height = 360;
+      sc.cv = cv; sc.ctx = cv.getContext('2d'); sc.cam = { x: 0, y: 0, zoom: 1 }; sc.t = 0;
+      wrap.appendChild(sceneBar(sc, i));
+      wrap.appendChild(cv);
+      host.appendChild(wrap);
+      bakeScene(sc);
+      scenes.push(sc);
+    });
+    buildGallery();
+    for (const cell of cells) drawCell(cell, 0);
+    document.getElementById('galleryLight').addEventListener('change', () => { for (const cell of cells) drawCell(cell, S.time); });
+    let last = performance.now(), frame = 0;
+    for (const sc of scenes) renderScene(sc, 0, 1 / 60);
+    (function loop(now) {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      if (animOn()) {
+        S.time += dt;
+        for (const sc of scenes) { sc.t = S.time; renderScene(sc, S.time, dt); }
+        // animated or flickering cells at ~15 fps
+        if (++frame % 4 === 0) for (const cell of cells) if (cell.live || cell.lights.some((l) => l.flicker)) drawCell(cell, S.time);
+        if (frame % 30 === 0) for (const sc of scenes) if (sc.msEl) sc.msEl.textContent = sc.msAcc.toFixed(1) + ' ms/frame';
+      }
+      requestAnimationFrame(loop);
+    })(last);
+    // Console helpers for screenshots: view(i, cssWidth) sizes one scene; sheet(page) shows every
+    // gallery canvas at 1x packed onto 800x600 pages; sheet(-1) hides it; at(i, camX) parks a camera.
+    const sheetCv = document.createElement('canvas');
+    sheetCv.style.cssText = 'position:fixed;left:0;top:0;width:100vw;z-index:9;image-rendering:pixelated;background:#000;display:none';
+    document.body.appendChild(sheetCv);
+    window.__piecesDev = {
+      scenes, cells, S,
+      view(i, px) { const all = document.querySelectorAll('.scene canvas'); all.forEach((c, k) => { c.style.width = (k === i ? px || 1280 : 1280) + 'px'; c.style.maxWidth = 'none'; }); if (all[i]) all[i].scrollIntoView(); },
+      at(i, x) { document.getElementById('pan').checked = false; scenes[i].cam.x = x; renderScene(scenes[i], scenes[i].t, 0); },
+      // Paint a bare backdrop study (sky, far bands, weather) into scene 0's canvas; pauses the loop.
+      bd(sky, backdrop, weather, camX, t, dark) {
+        document.getElementById('animate').checked = false;
+        const c = scenes[0].ctx, cam = { x: camX || 0, y: 0, zoom: 1 };
+        const L = { id: 'bd', kind: 'exterior', w: 1600, ground: 300, sky, backdrop, weather, ambient: { dark: dark === undefined ? 0.5 : dark }, layers: {} };
+        c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = '#000'; c.fillRect(0, 0, 640, 360);
+        S.backdrop.draw(c, L, cam.x, 0, t || 10);
+        drawStreet(c, L, 640);
+        for (let i = 0; i < 40; i++) S.weather.update(1 / 30, L);
+        S.weather.draw(c, L, cam);
+        S.light.composite(c, L, cam, [], t || 10);
+      },
+      sheet(page) {
+        if (page < 0) { sheetCv.style.display = 'none'; return 0; }
+        sheetCv.width = 800; sheetCv.height = 600;
+        const c = sheetCv.getContext('2d');
+        c.fillStyle = '#000'; c.fillRect(0, 0, 800, 600);
+        let x = 0, y = 0, rowH = 0, pg = 0;
+        for (const cell of cells) {
+          const w = cell.cv.width, h = cell.cv.height + 9;
+          if (x + w > 800) { x = 0; y += rowH + 2; rowH = 0; }
+          if (y + h > 600) { pg++; x = 0; y = 0; rowH = 0; }
+          if (pg === page) { c.drawImage(cell.cv, x, y); c.fillStyle = '#e8c272'; c.font = '8px monospace'; c.fillText(cell.type, x + 1, y + cell.cv.height + 8); }
+          x += w + 2; rowH = Math.max(rowH, h);
+        }
+        sheetCv.style.display = 'block';
+        return pg + 1;
+      },
+    };
+  }
+})();
+</script>
+</body>
+</html>

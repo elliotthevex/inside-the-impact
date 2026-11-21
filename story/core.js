@@ -605,6 +605,7 @@
 
   /* ── Save / load ──────────────────────────────────────────────────── */
   const SLOTS = ['auto', 1, 2, 3];
+  const SANDBOX = 99;
   const slotKey = (slot) => 'save.' + slot;
   S.saveSlots = SLOTS.slice();
   // A copy of G without the chapter snapshots (they would nest) — used for snapshots themselves.
@@ -635,11 +636,13 @@
         chapter: G.chapter, chapterTitle: def ? def.title : null, loc: G.loc, locName,
         playtime: Math.round(G.playtime), when: Date.now(), version: S.VERSION,
       };
-      if (slot === 'auto' && opts.backup) {
+      if (slot === 'auto' && opts.backup && G.chapter !== SANDBOX) {
         const prev = S.store.get(slotKey('auto'), null);
         if (prev && prev.G) S.store.set('save.autoBackup', prev);
       }
-      S.store.set(slotKey(slot), { meta, G: clone(G), resume: resume ? clone(resume) : null });
+      // The movement sandbox (chapter 99) autosaves to its own unlisted key so it never replaces the campaign's.
+      const key = slot === 'auto' && G.chapter === SANDBOX ? 'save.sandbox' : slotKey(slot);
+      S.store.set(key, { meta, G: clone(G), resume: resume ? clone(resume) : null });
       S.events.emit('saved', { slot, label: meta.label });
       return true;
     } catch (err) { S.fail(err, { source: 'save' }); return false; }

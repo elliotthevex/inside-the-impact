@@ -17,6 +17,12 @@ Canon sources, in order of authority: `ref-story.pdf` (wins over everything) →
 9. **Residents of Alder Row show a name only after Jin speaks to them.** Until then the label reads "Resident". Names learned are reused in both endings.
 10. Jin's HP stays at 100 all game (per ARCHITECTURE: training never adds HP). His injury is expressed through `body.power`, breath, and which verbs are allowed.
 11. **Hana always ends up holding a copy of the evidence** (so the PDF's "people outside the building hold copies" is always true). Other holders depend on relationships.
+12. **Ch6's timeline board will not accept a single cause.** Its four lanes are the PDF's four failures; dragging one card to "What killed them?" is answered and returned, and the board resolves only with the center left empty. This is how the game obeys "do not claim a single answered letter would have prevented every tragedy."
+13. **Ch8's stop/continue is played, not picked.** After the knockdown, Sal rings the Ch0 bell over and over; walking to the neutral corner stops, and only a second deliberate attack press continues (the first press only raises the fist), so nobody "continues" by mashing.
+14. **Ch9's deadline is stated once and never counts down.** The consideration days end only when the player sleeps. Alder Row cannot be visited before Ch10, so its residents stay strangers.
+15. **Allies at Alder Row come for Alder Row**, because they read the closing memo in their Ch8 envelopes, not because Jin asked them. In Ending Two they arrive only after the refusal (so the choice is made without knowing who will come); in Ending One the closest of them arrives, sees, and leaves.
+16. **Ending Two closes Umma's note on the Housing Court judgment:** Jin finally signs for his held 1994 purse ($9,400 after fees) and spends it on 3B's arrears, two stones with their names, and rent. He stays poor.
+17. The Boston program in the offer is the fictional **Beacon Street Institute**; no real hospital is named.
 
 ---
 
@@ -232,6 +238,8 @@ The PDF's four recurring questions, asked at growing scale. Each row is a flagge
 | **Q3 — abandon a commitment for an investigative opportunity?** | wait for Hana vs. go alone (`ch1_records_route`) | — | — | — | boiler vs. site office (`ch5_left_repair`) | — | Lucho's corner vs. Ray tonight (`ch8_lucho_commitment`) | — |
 | **Q4 — keep hurting someone after getting what you need?** | — | Benny Szabo (`ch2_collector_after`) | Slim, carry or finish (`ch3_slim_carried`) | Dutch (`ch4_dutch_after`) | — | — | Ray Castell (`ch8_ray_after`, canon) | — |
 
+Added in the Chapters 6–10 pass: **Q1** Ch6 giving 4D back (`ch6_gave_back_4d`, the 4D question's second chance); **Q4** Ch7 Rook offers his face once his admission is out (`ch7_hit_rook`); **Q2** Ch9 is literal about time: threatening Owen saves eight floors of stairs and costs Owen his job; **Q3** Ch8 is chosen by which bus Jin takes.
+
 ### Choice flags (complete list)
 
 | Flag id | Values | Set where | Read where |
@@ -241,6 +249,7 @@ The PDF's four recurring questions, asked at growing scale. Each row is a flagge
 | `ch0_told_teddy` | bool | Ch0 locker room: tell Teddy about the offer or not | Ch2 Teddy ("You told me about the coat. I told you we'd win anyway.") / ("You never said a word about a coat? Jesus, kid."); Ch8 Teddy corner line |
 | `ch0_resistance` | 0–3 | Ch0 round 3: counts counters landed and guard holds while sabotaged | Ch8 Ray's pre-fight line; Ch8 memory `mem_08_corner` variant |
 | `ch1_pike_stance` | `played_along` / `insisted` | Ch1 Pike's second visit: answer to "your name?" | Ch1 freedom (played along: day-room pass early; insisted: phone privileges revoked, Hana sees it); Ch2 collectors' timing (insisted: van already waiting at Kessler Ave; played along: van arrives at dusk); Ch6 Pike's file note on Jin |
+| `ch1_told_hana_boxing` | bool | Ch1 parallel bars, second week | `hana` +1; Ch6 Sunny's line |
 | `ch1_records_route` | `with_hana` / `alone_at_night` | Ch1, finding the transfer form | Hana rel (+2 / 0); Ch1 Hana scene variant; Ch6 Hana line ("You could have trusted me." / "We found it together. I'm not stopping now.") |
 | `ch1_fare_source` | `hana_loan` / `activities_jar` / `mr_bell` | Ch1 leaving St. Agnes, bus fare | Ch1 Hana; Ch6 Hana (repay prompt or the jar line); Ch9 Penner (only if jar: "Even the bingo money."); Ch10 Jin's reflection |
 | `ch2_collector_after` | `let_go` / `hit_again` | Ch2 alley, after Benny names Lenny | Ch3 Lenny ("Benny says you let him walk" / "Benny's jaw is wired"); Ch6 Benny at Pike's office (steps aside / is in hospital); Ch10 Benny on the crew (steps aside / fights) |
@@ -268,6 +277,11 @@ The PDF's four recurring questions, asked at growing scale. Each row is a flagge
 | `ch6_strippers` | `talked_down` / `fought` | Ch6 Lindell House ruin | flavour only (the fight is short either way) |
 | `ch6_pike_statement` | bool | Ch6 Pike's office: make him write it down | adds `ev_pike_statement`; Ending Two epilogue line about Pike |
 | `ch6_hana_repaid` | bool | Ch6, if `ch1_fare_source == hana_loan` | Hana +1 |
+| `ch6_gave_back_4d` | bool | Ch6 Ada's front room (only if `ch5_took_unit_4d`) | `courts` +1; removes 4D from `take_count`; Ch7 Rook; Ch9 Penner; Ch10 thought |
+| `ch6_okafor_photo` | bool | Ch6 side quest | Ch9 night; Ending Two vignette |
+| `ch6_flowers` | bool | Ch6 cemetery ($5) | Ch9 night; map |
+| `ch7_hit_rook` | bool | Ch7 end of the confrontation | `harm_count`; Ch7 meeting bruise; Ch9 night Rook |
+| `ch7_lucho_promise` | `yes` / `try` | Ch7 after the meeting | Ch8 commitment lines |
 | `ch7_truth_told_by` | `jin` / `rook` | Ch7 after the confrontation | how the residents' reactions sequence plays; Rook's later standing; Mara line |
 | `ch7_rook_answer` | `would_have_asked` / `dont_know` / `not_this` | Ch7, Rook asks "What would you have done?" | Ch9 night Gus/Ada lines; Ch10 Jin's last thought |
 | `ch8_lucho_commitment` | `kept` / `abandoned` | Ch8 opening | Lucho rel (+2 / −2); Ch8 approach difficulty (kept = heavier security two nights later) |
@@ -281,8 +295,8 @@ The PDF's four recurring questions, asked at growing scale. Each row is a flagge
 | `ch10_choice` | `accept` / `refuse` | Ch10 at the gate | **the ending** |
 
 ### Derived values (computed, never shown as numbers)
-- `harm_count` = number of: `ch2_collector_after=hit_again`, `ch3_lenny_method=pressed`, `ch4_roz=threatened`, `ch4_dutch_after=kept_going`, `ch6_asher_method=threatened`, `ch8_ray_after=continued`, `ch9_owen=threatened`.
-- `take_count` = number of: `ch1_fare_source=activities_jar`, `ch4_envelope=taken` with `ch5_envelope_outcome ∈ {kept, none}`, `ch5_took_unit_4d`, `cellar_dives_taken > 0`.
+- `harm_count` = number of: `ch2_collector_after=hit_again`, `ch3_lenny_method=pressed`, `ch4_roz=threatened`, `ch4_dutch_after=kept_going`, `ch6_asher_method=threatened`, `ch7_hit_rook`, `ch8_ray_after=continued`, `ch9_owen=threatened`.
+- `take_count` = number of: `ch1_fare_source=activities_jar`, `ch4_envelope=taken` with `ch5_envelope_outcome ∈ {kept, none}`, `ch5_took_unit_4d` (unless `ch6_gave_back_4d`), `cellar_dives_taken > 0`.
 - `jin_voice` = `restrained` (harm 0), `mixed` (1–2), `hard` (3+). Used **only** to pick line variants: Jin's thoughts, how he speaks to frightened people, and how others describe him ("You don't swing at people who are down" vs. "Everybody's heard what you did to Dutch"). The ending never reads it.
 - `support_at_alder` = the set of allies who appear in Ending Two (see Ch10). Built from relationships, not from `jin_voice`.
 
@@ -539,7 +553,7 @@ Calder is a river city: the Calder River runs west to east across the bottom of 
 
 | Node | Place (district) | Locations | Unlocks | How it changes later |
 |---|---|---|---|---|
-| `n_kessler` | Kessler Avenue (Eastgate) | `kessler_ave`, `kessler_412_stairs`, `apt_3b_1994`, `okafor_3a`, `kessler_roof`, `kessler_alley` | Ch0 (apartment), Ch2 | Ch0: August evening, a festival banner, the family's window lit. Ch2: December, posters buried, someone else's curtains in 3B. Ch6: Mrs. Okafor has a framed copy of Min's photo of her cake if Jin brought it. Ch9 night: Okafor's light on; she waves. Epilogues: Ending Two shows Jin buying milk on Kessler. |
+| `n_kessler` | Kessler Avenue (Eastgate) | `kessler_ave`, `kessler_412_stairs`, `apt_3b_1994`, `okafor_3a`, `kessler_roof`, `kessler_alley`, `hollow_tap` (Ch9) | Ch0 (apartment), Ch2 | Ch0: August evening, a festival banner, the family's window lit. Ch2: December, posters buried, someone else's curtains in 3B. Ch6: Mrs. Okafor has a framed copy of Min's photo of her cake if Jin brought it. Ch9 night: Okafor's light on; she waves. Epilogues: Ending Two shows Jin buying milk on Kessler. |
 | `n_sunnys` | Sunny's Diner (Eastgate) | `sunnys` | Ch2 | Augie's TV shows a different fight each chapter; in Ending Two it is the title fight Jin will never be in. |
 | `n_ironpulse` | Iron Pulse Fitness, formerly Marsh Boxing Club (Eastgate) | `iron_pulse` | Ch2 (after hours, if Teddy met) | Ch2: Nautilus machines, the old ring roped off for storage. Ch8: Teddy has unrolled the old ring canvas to train Jin. Ending Two: Saturday kids' class. |
 | `n_monarch` | Monarch Hotel / Harbor Light shelter (Eastgate) | `monarch_room5` / `harbor_light` | Ch2 | The evidence wall grows: each new evidence card adds a pinned paper. |
@@ -548,13 +562,13 @@ Calder is a river city: the Calder River runs west to east across the bottom of 
 | `n_dockroad` | Harlan Freight Depot (Dock Road, riverfront) | `depot_riverlot`, `depot_yard`, `depot_warehouse`, `depot_offices`, `depot_counting`, `depot_dutch_office` | Ch4 | Ch6+: padlocked; a sign "HARLAN FREIGHT HAS MOVED"; the dispatch window has a new face (or Roz, if let go, has quit). |
 | `n_courts` | Foundry Courts (Northside) | `courts_yard`, `courts_lobby_a`, `courts_workshop`, `courts_boiler`, `courts_gym`, `courts_community_room`, `courts_site_office`, `courts_4d` | Ch5 | Ch6: unit 4D (if taken) is Jin's rest point; residents bark about the week. Ch7: the truth; the yard divides. Ch9 night: a resident vigil, or ordinary laundry, depending on `ch7_truth_told_by`. Epilogues. |
 | `n_garrison` | Garrison Street | `garrison_st`, `lindell_ruin`, `garrison_suds` | Ch6 | Ch9 night: someone has left flowers at the fence if Jin did. |
-| `n_downtown` | Downtown: City Hall Annex, 88 Market St, Kwik Copy | `annex_hall`, `annex_property_room`, `market_st`, `fund_office`, `fund_storage`, `kwik_copy` | Ch6 | Ch7+: the Fund office "FOR LEASE". Ch8 dawn: Kwik Copy opened early by Dot. |
+| `n_downtown` | Downtown: City Hall Annex, 88 Market St, Kwik Copy | `annex_hall`, `annex_property_room`, `market_st`, `fund_stair`, `fund_office`, `fund_storage`, `kwik_copy` | Ch6 | Ch7+: the Fund office "FOR LEASE". Ch8 dawn: Kwik Copy opened early by Dot. |
 | `n_cemetery` | Calder Municipal Cemetery | `cemetery_s14` | Ch6 | Ch9 night: flowers still there if bought. |
 | `n_council` | Northside Community Council HQ (a former savings bank, Northside Ave) | `council_front`, `council_hall`, `rook_office`, `council_records` | Ch7 | Ch9 night: Rook alone with the lights off; he speaks only if Jin knocks. |
-| `n_civic` | Calder Civic Arena (Downtown east) | `civic_concourse`, `civic_dressing_b`, `civic_stairwell`, `civic_ring`, `civic_press` | Ch0, then Ch8 | Ch1–7 locked: "Ray Castell's title defense is in May. The doors are chained." Ch8: dark arena, only the ring lights. Ending One: full house. |
+| `n_civic` | Calder Civic Arena (Downtown east) | `civic_dock` (Ch8), `civic_concourse`, `civic_dressing_b`, `civic_stairwell`, `civic_ring`, `civic_press` | Ch0, then Ch8 | Ch1–7 locked: "Ray Castell's title defense is in May. The doors are chained." Ch8: dark arena, only the ring lights. Ending One: full house. |
 | `n_armory` | Calder Armory | `armory_floor` | Ch8 (if `ch8_lucho_commitment == kept`) | — |
 | `n_riverpath` | Riverside path | `river_path` | Ch2 | Ice in Ch2–4, mud in Ch5–6, green in Ch8–10. |
-| `n_ashgrove` | Ashgrove Tower (Downtown west) | `ash_lobby`, `ash_security`, `ash_floor22`, `ash_stairwell`, `ash_floor30`, `ash_boardroom` | Ch9 | Ending One: Jin's press conference in the lobby. |
+| `n_ashgrove` | Ashgrove Tower (Downtown west) | `ash_plaza`, `ash_lobby`, `ash_security`, `ash_floor22`, `ash_stairwell`, `ash_floor30`, `ash_boardroom` | Ch9 | Ending One: Jin's press conference in the lobby. |
 | `n_alder` | Alder Row (Southbank, across the river) | `alder_street`, `alder_gate`, `alder_garden` | Ch10 only (arrival by van, never by map) | Ending One: boarded. Ending Two: occupied, a co-op meeting flyer on the gate. |
 
 ---
@@ -1365,3 +1379,939 @@ None hostile. Combat-adjacent activities only:
 ## Chapter ending and state handed on
 - **Ending beat:** Friday, 10 pm, the roof of Building D. Snow. Mara comes up the ladder with two bottles of beer (if `mara ≥ 2`; otherwise Jin is alone). Mara: "You're good with your hands, for a boxer." Jin: "I'm good with my hands for a lot of things." Mara: "Stay a while. Courts could use a guy who carries." She leaves him there. Camera eases out to 0.75: the lit windows of four buildings, the dead stacks behind. Thought: "Bought forty-one days after I went down. I can't prove it. I don't want it to be true." (He suspects; he has no evidence that establishes it.) Card: "March. Garrison Street."
 - Handed to Ch6: skills complete (uppercut, flurry); training cap 3; rest point (4D, Mara's cot if `mara ≥ 2`, or the Monarch); relationships `mara`, `courts`, `lucho`; Foundry Courts node stays open and changes with every later chapter.
+
+---
+# Chapter 6 — Undelivered
+
+**Chapter card:** "Undelivered" · "Garrison Street · City Hall Annex · 88 Market Street · March 3–8, 1997"
+
+## Date, mood, palette, weather
+- Monday, March 3 to Saturday, March 8, 1997. The week is split into **half-days** shown on the journal page header ("Tue · afternoon"). Each lead costs one half-day; sleeping at the rest point moves to the next morning. Nothing expires: the half-days only give the week a shape and let the city change its light.
+- Mood: patient and documentary at first, then grief, then something colder and more exact. The anger of Chapter 2 becomes a list of names, dates and one signature.
+- Palette: the Annex in institutional green walls, beige counters and frosted glass with gold-leaf window numbers; Garrison Street in sooty brick, the Lindell House ruin black and charred behind white plastic sheeting that flaps; Garrison Suds warm yellow behind steamed windows; Market Street blue-gray with the pink neon tooth of Brandt Dental; the cemetery the only open sky in the chapter, pale and cold.
+- Weather: thaw. Monday rain; Wednesday river fog that swallows the top floors; Friday clear and hard; Saturday morning bright, frost on the grass in Section 14.
+
+## Gameplay identity
+**Walking Min's route two years late.** The player reads, compares, queues, listens and sorts. Three leads are open at once and can be done in any order (MapleStory-style hub investigation), and two short confrontations both have a way out that isn't a fight. The chapter's main activity is the **timeline board**, built in two passes, which will not let the player blame a single thing.
+- Exploration 25% · dialogue 25% · investigation 35% · combat 8% · activities 7% (folding sheets, the window run-around, the board).
+- Target length: 22–25 minutes. No new combat skills: the toolkit is complete (PDF: "By now, the player can have the full core combat toolkit").
+
+**Rest point this chapter** (where the evidence wall and sleep live): unit 4D if `ch5_took_unit_4d` and not given back; otherwise Mara's cot behind the parts rack if `rel.mara ≥ 2`; otherwise Monarch Room 5 (if rent paid) or Harbor Light. The wall is the same object in all four, so the board works everywhere.
+
+## Locations
+| id | Name | Size | Layout (left → right; layers) | Props and storytelling | Light / sound | Exits |
+|---|---|---|---|---|---|---|
+| `annex_hall` | City Hall Annex, ground floor | 1600 × 360 | Revolving door → security desk (guard Ruben with a newspaper) → bench rows (a woman with a stroller, an old man with a folder of carbons) → red take-a-number dispenser ("NOW SERVING 41") → **Window 2** Housing Court Records → **Window 3** Housing Authority → **Window 5** Building Department → **Window 7** Mail Return / Unclaimed → elevator (basement) | A sign over every window: "ALL REQUESTS IN WRITING — FORM 7B". A wall clock four minutes slow. A poster: "CALDER WORKS WHEN YOU DO". Scuffs on the floor in front of each window where people have stood for years. | Fluorescent, green walls; the number dispenser's ding, two typewriters, rain on the high windows | Market Street (bus stop), elevator → `annex_property_room` |
+| `annex_property_room` | County property room (basement) | 900 × 360 | Elevator → wire-cage counter (Mr. Dukes) → shelving aisles of cardboard boxes labelled by surname and date → a reading table under one hanging lamp → floor drain, mop bucket | Box labels in marker: "ALVAREZ — 11/95", "SEO — LINDELL — 2/96", "UNKNOWN MALE — RIVER — 1/96". A clipboard on the cage: "UNCLAIMED PROPERTY HELD 24 MONTHS, THEN DISPOSED". The Seo box is tagged "DISPOSE AFTER 3/15/97". (A fact, not a timer. It tells the player how close it came.) | One lamp over the table, the rest in shadow; a pipe dripping; the elevator's hum | Elevator |
+| `garrison_st` | Garrison Street | 1800 × 420, exterior | Route 14 bus stop → Duffy's Pawn (grate down) → **Garrison Suds** (lit, steamed windows) → vacant lot with a burnt mattress → **Lindell House** behind a chain-link fence and flapping plastic → a telephone pole with **Min's flyer**, weathered, still stapled → Garrison Realty office (shuttered; a new sign: "FOR SALE — DEVELOPMENT OPPORTUNITY — GARRISON REALTY") → the street's end at the rail cut | Min's flyer: "HAVE YOU SEEN JIN SEO? Boxer, 26. Last seen Calder Civic Arena 8/20/94. Call Min 555-0193 / Lindell House Rm 9" with the passport photo from the poster. Three layers of staples: she came back to re-staple it. Someone has left a plastic rose in the fence (Mrs. Okafor's church). | Rain Monday, fog Wednesday; sodium lamps; plastic sheeting flapping; a freight train in the rail cut every few minutes | Bus stop (map), Suds door, the fence gap → `lindell_ruin` |
+| `lindell_ruin` | Lindell House (burnt) | 1000 × 600 (three floors; vertical) | **Ground (y 540):** front hall, collapsed stair (impassable) → rear hall → the **rear exit**: a steel door, a length of chain still looped through the push bar, the padlock melted into a lump. **Exterior fire escape (right side):** ladder, then a gap where the 2nd-floor landing fell (jump + **air dash** across). **2nd floor (y 360):** the copper strippers working on the wiring; Room 4. **3rd floor (y 180):** a hall with a scorched ceiling and an **empty smoke-detector bracket**, **Room 6** (the shell of a space heater, the floor burned through around it), **Room 9** (Min and Umma's: two iron bedframes, a scorched wall calendar, the window Min photographed the back door from). | The calendar's February 1996 page survived in one corner: "Sat 2/10 — Mrs. O bday — CAKE" circled. The rest is ash. Snow blows in through the roof onto Room 9's floor. | Gray daylight through holes; drips; wind; the strippers' radio (a ballgame) | Fence gap → `garrison_st` |
+| `garrison_suds` | Garrison Suds laundromat | 900 × 360 | Door with a bell → a row of washers → dryers → **the folding table** (Wendell Asher) → change machine → back-room door | A coffee can with tape on the counter: "LINDELL HOUSE FIRE — FAMILIES FUND — THANK YOU", from 1996, dusty, two quarters in it. A bulletin board of handwritten room ads. A sign: "NO DYEING. NO SLEEPING. NO KIDDING. — MGMT". | Warm yellow, steam; the dryers' tumble and the buzzer when one finishes | Street |
+| `market_st` | Market Street, downtown | 1400 × 360, exterior | Route 9 bus stop → **Kwik Copy** (red sign; wedding invitations in the window) → a newsstand (Calder Ledger, Ring Magazine with Ray Castell on the cover: "THE PROMISE KEPT") → **88 Market St**: Brandt Dental on the ground floor (pink neon tooth), a street door with a directory: "2F — CALDER FOUNDRY RELIEF FUND — G. PIKE" → First Calder Savings → an alley with a dumpster | The newsstand guy reads the Ring cover aloud to nobody: "Castell, May seventeenth. Who's he even fighting?" | Blue dusk, neon pink, office windows going dark | Bus stop, Kwik Copy, 88 Market (stair door), alley |
+| `fund_stair` | 88 Market St, stairwell | 360 × 540 (vertical) | Street door → narrow stair with a landing at y 360 → 2F door with gold letters "CALDER FOUNDRY RELIEF FUND" | A rubber plant dying on the landing. The dentist's drill audible through the wall. | One bulb, the neon tooth through a frosted window | Street, `fund_office` |
+| `fund_office` | Calder Foundry Relief Fund | 960 × 360 | Reception (empty desk; a calendar from 1995 still on January) → **Pike's office** (desk, **locked right-hand drawer**, a filing cabinet, a **shredder** running, a window on the neon tooth) → **storage room** door (locked; Pike's key) | A framed photo of the foundry's last shift, 1993, with the Fund's logo printed on the mat: a charity built on a picture of men it never paid. A wastebasket of shredded paper strips (half of the "AHN, D." file). | Desk lamp, shredder whine, a radiator | Stair, storage |
+| `fund_storage` | Storage room | 640 × 360 | Door → steel shelving → **a mail tray labelled "1180 — RECEIVED — HOLD"** → a stool | Other trays: "1180 — FORWARD W.R.", "1180 — DISCARD". The HOLD tray holds only nine envelopes. | Bare bulb | Office |
+| `kwik_copy` | Kwik Copy, Market Street | 800 × 360 | Counter with a bell → two big copiers → a curtain to the one-hour photo lab → break corner with staff cubbies | One cubby still has a name tag taped to it: "MIN". Dot never took it down. A photo strip pinned above the counter: Dot and Min pulling faces, 1993. | Fluorescent; copier rhythm; the lab fan | Street |
+| `cemetery_s14` | Calder Municipal Cemetery, Section 14 | 1400 × 420, exterior | Gate (a flower cart, $5 bunches) → gravel path between old family plots → **Section 14**: flat county markers in rows, numbers only → **96-031 and 96-032**, side by side, a small wooden cross between them painted white → a bench → a view down the hill to the river, the foundry stacks and the downtown towers (Ashgrove Tower the tallest, lit at the top even in daylight) | The cross reads in hand-painted letters: "MI-OK & MIN-JI SEO — ST. COLUMBA'S REMEMBERS". Someone has kept the grass around it clipped. | Clear cold light, a high wind, crows, distant traffic | Gate (map) |
+
+Existing locations used: `sunnys` (the booth by the window), `okafor_3a` (side), `stagnes_dayroom` (side), `courts_yard` and Ada's front room (side), `iron_pulse`, `courts_gym`, `cellar` (training and dives).
+
+## NPCs present
+| id | Where / idle | Key lines | Barks | Reacts to |
+|---|---|---|---|---|
+| `dukes` | **Leon Dukes**, 63, property clerk: 44 px, gray cardigan, sleeve garters, a pencil behind each ear; behind the cage, `writeDesk` | "Seo. Seo... Two boxes came in, one was water damage. This is the one that's left. You're cutting it close, son — fifteenth they go to the incinerator." / on ID: "I need something that says Seo with your face on it." | "Number, please." | ID route (see S6.2) |
+| `hale` | **Bernice Hale**, 58, Window 5 clerk: 42 px, cat-eye glasses on a chain, purple cardigan, a radio earpiece for the ballgame | "Seo. The girl with the camera. Every two weeks. She brought her own carbon paper because ours ran out." / "I'm not sending you round the windows. She went round them enough for both of you." | "Five! Number forty-four!" | The run-around; she ends it |
+| `asher` | **Wendell Asher** (cast), Garrison Suds, folding sheets that never end | Patient: "I had the key. On my ring. The whole time. Fire was on three, I was asleep on one. I got four people out the front. I never thought of the back." Threatened: "The door was chained. Owner's orders. That's all I know." | "Dryer six sticks. Kick it low." | `ch6_asher_method` |
+| `fitz` + 2 | **Fitz Mahoney** and two cousins, copper strippers on Lindell's 2nd floor: `thug` looks, hard hats, a shopping cart of wire outside | "Building's condemned, pal. Finders keepers." / talked down: "...Your people? Jesus. Okay. Okay, we're gone. Take whatever you want, we didn't touch three." | "Watch the floor, it's soft." | `ch6_strippers` |
+| `dot` | Kwik Copy counter, red polo, toner on her sleeves | "You're Min's brother. You're Min's brother who's *alive*." (a long beat) "She worked Saturdays so your mom didn't have to fold sheets on Saturdays. You know that?" / on the film: "One hour. Sit. I'm not letting you walk around with Min's roll undeveloped." | "Copies are seven cents. For you, they're seven cents." | Returns in Ch8 (copy run) |
+| `pike` | Fund office, feeding the shredder in shirtsleeves, his raincoat on the chair | See S6.6 | — | `ch1_pike_stance` (his file on Jin), `ch2_collector_after` (who guards him) |
+| `benny` / `carl` | `fund_stair` landing | Benny (if `let_go`): "You let me walk. I'm walking." (steps down past Jin and out into the street) / Carl: "Pike pays me to stand here. So I'm standing here." | — | `ch2_collector_after` |
+| `hana` | Sunny's booth by the window, Friday evening, off duty (navy peacoat, gray scarf), a manila envelope on the table | See S6.8 | — | `ch1_records_route`, `ch1_told_hana_boxing`, `ch1_fare_source`, `rel.hana` |
+| `augie` | Sunny's grill | "Booth by the window's yours. Nobody sits there Fridays anyway." | "Pie's cherry or nothing." | — |
+| `okafor` | 3A (side) | "She made the cake herself. Three layers, it leaned like the Tower of Pisa. We ate the whole thing." | — | `ch6_okafor_photo` |
+| `elena` | Ada's front room in Building B (side, only if `ch5_took_unit_4d`), three kids asleep on Ada's sofa | "You're the boxer in 4D? ...It's nice, 4D. The light's good in the morning." (no blame; that's what makes it land) | — | `ch6_gave_back_4d` |
+| `bell` | St. Agnes day room (side) | "Did you find your people, son?" | — | — |
+
+## Interactables
+| id | Label | Examine (actual text) | Unlocks |
+|---|---|---|---|
+| `o_min_flyer` | Flyer on the pole | Photo viewer: the flyer. Thought: "Three layers of staples. She kept coming back to put it up again." | — |
+| `o_rear_door` | Rear exit | "A chain through the push bar. The padlock melted shut. Somebody had to put this here. Somebody had to lock it every night." | Board card (with `ev_building_complaints`) |
+| `o_detector_bracket` | Bracket (3rd floor hall) | "A smoke-detector bracket. No smoke detector." | Board card |
+| `o_heater_shell` | Space heater (Room 6) | "Room six. This is where it started. Somebody was cold." (no blame placed on the resident) | — |
+| `o_room9_calendar` | Calendar scrap (Room 9) | "'Sat 2/10 — Mrs. O bday — CAKE.' The day before." | — |
+| `o_room9_window` | Window | "From here you can see the back door. She stood here with the camera." (only after `ev_film_roll`: "This is where she took it.") | — |
+| `o_fund_can` | Coffee can (Suds) | "'Lindell House fire — families fund.' Two quarters." Option: drop $5 (no flag; Asher sees it: "...Thanks.") | — |
+| `o_box_seo` | Box "SEO — LINDELL — 2/96" | Opens the **box viewer** (items one at a time, see S6.3) | `ev_min_notebook` ★, `ev_calloway_invoice`, `ev_umma_timecards`, `ev_umma_note`, `ev_shopping_list`, `ev_robe`, camera (→ `ev_film_roll`), `mem_robe` |
+| `o_win2` | Window 2 | Housing Court records (after the run-around) | `ev_housing_court` |
+| `o_win3` | Window 3 | Housing Authority archive | `ev_ha_application` |
+| `o_win5` | Window 5 | Building Department file | `ev_building_complaints` ★ |
+| `o_win7` | Window 7 bin | If not `ch2_took_mailbox`: "Return-to-sender bin. 'SEO' in the S drawer." | `ev_returned_letter` |
+| `o_tray_hold` | Tray "1180 — RECEIVED — HOLD" | "Nine envelopes. Min's handwriting. Every one stamped received. Not one opened." | `ev_min_letters` ★ |
+| `o_tray_forward` | Tray "1180 — FORWARD W.R." | "Empty. Whatever went to W.R. went." | — |
+| `o_pike_drawer` | Locked drawer | Locked until Pike opens it ("Pike's key. Pike's drawer.") | `ev_pike_memo` ★, `ev_rook_maintain` ★ |
+| `o_shredder_basket` | Wastebasket | "Shredded strips. I can read 'AHN, D.' on four of them." | — |
+| `o_foundry_photo` | Framed photo (Fund office) | "The foundry's last shift. A charity printed its name on a picture of men it never paid." | — |
+| `o_min_cubby` | Cubby "MIN" (Kwik Copy) | "Dot never took her name down." | — |
+| `o_markers` | Markers 96-031, 96-032 | "Numbers. The county gave them numbers." With flowers: "Yellow ones. Umma liked yellow. She said they were loud." | `ch6_flowers` |
+| `o_cross` | Wooden cross | "'Mi-ok & Min-ji Seo — St. Columba's remembers.' Mrs. Okafor's church." | — |
+
+## Quests
+| id | Kind | HUD objective | Completion | Reward / consequence |
+|---|---|---|---|---|
+| `q6_main` | main | "Find out how they lived. Not only how they died." → (three leads, shown together) "The Annex: ask under Seo." · "Lindell House, Garrison Street." · "Pick up Min's film at Kwik Copy." (appears after the box) → "Put it in order." (board, pass 1) → "P.O. Box 1180. 88 Market Street." → "Read them." → "Sunny's. Hana's waiting." → "Put it in order." (pass 2) → "Section 14." | Each lead's ★ items; both board passes; the Fund discovery; Sunny's; the cemetery | Evidence; the chapter's turn |
+| `q6_side_okafor` | side | "Bring Mrs. Okafor the cake picture." | Dot prints a second copy of frame 2; give it at 3A | `ch6_okafor_photo`; her framed copy appears in later chapters |
+| `q6_side_bell` | side | "Mr. Bell asked about your people." | Visit the St. Agnes day room | Bell's line; the empty name-card slot on 214-B |
+| `q6_side_hana_repay` | side (only if `ch1_fare_source == hana_loan`) | "You owe Hana ten dollars." | Give $10 at Sunny's | `ch6_hana_repaid`, `hana` +1 |
+| `q6_side_4d` | side (only if `ch5_took_unit_4d`) | (no objective shown; Elena's presence in Ada's window is the prompt) | Talk to Elena; choose | `ch6_gave_back_4d` |
+| `q6_side_saturday` | side (if `ch3_mo_deal == accepted` and dives < 2) | "Saturday at the Cellar." | Same as Ch4 | +$150, `cellar_dives_taken` +1 |
+
+## Scripted scenes, beat by beat
+**S6.1 Monday: the wall.** Chapter card over Jin's notebook: "March. Okafor said: ask under Seo." Rest point, morning. Jin pins `ev_okafor_account` on the evidence wall; the camera eases in to 1.3 on the card and holds. Thought: "I know how they died. I don't know how they lived the last year and a half." The three leads appear together in the HUD (a small stacked list; the minimap shows three markers on the world map: Downtown, Garrison Street, and a pencil "?" over Market Street that stays pencil until the box gives the address).
+
+**S6.2 The Annex (lead A).**
+- **ID at the cage.** Mr. Dukes needs "something that says Seo with your face on it." Jin takes out the Athletic Commission license from the property bag (`ev_property_tag`; it was found with the ★ transfer form, so the player always has it). The card has the passport photo. Dukes looks at the photo, at Jin, at the photo: "You look like you're being arrested for tax fraud." Jin stops. (Min's line, from Ch0, out of a stranger's mouth.) Thought: "That's what she said." Dukes, not knowing why the man in front of him has gone quiet: "...It's a compliment. Most people look dead in these." He brings out the box.
+- (Fallback if the player somehow lacks the card: Dukes phones Mrs. Okafor, whose number is on the claimant sheet; she vouches; the line about the photo is said by Okafor down the phone instead.)
+- **S6.3 The box (sit at the reading table; no enemies, no timer).** The box viewer shows one item at a time with a soft lift sound. Order is fixed so the mundane comes before the pleading:
+  1. `ev_shopping_list` (Min's handwriting): "rice 20 lb · gochugaru · lightbulbs (hall!) · Tri-X film x2 · card for Mrs. O's birthday · ask Dot re: Sat shift". Thought: "Lightbulbs, hall, exclamation mark. The hall was dark."
+  2. Min's Pentax K1000, film still in it, counter at 8. Thought: "Eight frames. She never finished the roll." → new lead: "Pick up Min's film at Kwik Copy."
+  3. `ev_umma_note` (inside Jin's own gym bag, returned to the family by the Civic Arena lost and found): the Sunny's napkin: "Jin-ah. After, Sunny's, the booth by the window. Min is paying (she says). Don't shower too long. — Umma". The camera does not move. Thought: "I never got there."
+  4. `ev_robe`: the navy robe, the E of EASTGATE half re-stitched, the needle still in it. Holding E on it plays **`mem_robe`** (memory filter): Umma at the kitchen table at night, counting stitches in Korean under her breath, Min asleep behind the curtain. Thought after: "She was fixing it. For when I came back."
+  5. `ev_umma_timecards` (Royal Linen Service): sixty-two-hour weeks; margin notes "Sat. — extra 4 hrs. For Min's books." / "Sun. off. Church, then Box 1180 letter w/ Min."
+  6. `ev_calloway_invoice`: "$350. Subject not located under given name."
+  7. `ev_min_notebook` ★: two years of calls and fares. The viewer opens on the page that matters: "Calder Gen records — 'transferred, sponsor confidential' — they said write to the sponsor: P.O. Box 1180" and, below, a column: "Box 1180 — letter #1 ✓ #2 ✓ ... #9 ✓ — no answer". Thought: "Box 1180. Pike's card says Box 1180." The pencil "?" over Market Street is inked.
+  - After the last item, the player can sit at the table as long as they like (camera eases out to 0.85; the drip; the elevator hum). The objective only reappears when Jin stands.
+- **S6.4 The windows (activity: the run-around).** The player wants the court, housing and building records. Each window has its own number queue; the dispenser dings. Window 3 needs Form 7B stamped at Window 2; Window 2 stamps only Housing Court requests and sends Jin back to 3 with "claimant ID for the household member"; Window 3 says the application is filed under the head of household and needs "proof of the claimant's relationship"... A small counter in the corner of the HUD counts **"Trips: 1 … 2 … 3"**. Thought on trip 2: "She did this. In block capitals. Twice a week." On trip 3, Bernice Hale at Window 5 looks up at the name on his form, takes off her glasses, and leaves her window (the queue groans). She walks the papers to Windows 2 and 3 herself. "I'm not sending you round the windows. She went round them enough for both of you." She hands him three folders: `ev_housing_court` (with Umma's handwritten note on the back about the purse held "until the fighter signs for it"), `ev_ha_application` (seven months, three resubmissions, "pending — incomplete: whereabouts of household member SEO JIN"), and `ev_building_complaints` ★ (three complaints; the second is a petition whose first signature is "Seo Min-ji, Rm 9"). Hale: "The inspector rescheduled twice. I typed both reschedules. I'm sorry. I typed them." (Most staff are ordinary people: she is one of them.)
+  - If `ch2_took_mailbox` is false, Window 7's bin has `ev_returned_letter`. Hale points at it on the way back.
+
+**S6.5 Garrison Street (lead B).** Arrival by Route 14 in rain (or fog on Wednesday). The flyer on the pole is the first interactable in the player's path.
+- **Garrison Suds: Wendell Asher (Q2: threaten a frightened witness to save time?).** Asher folds sheets at the long table. He knows who Jin is from the flyer; he's looked at it every day for a year.
+  - Asher: "You're the brother. From the poster." He keeps folding. "I was night man at Lindell. I'm not anymore."
+  - Jin: "Who chained the back door?"
+  - Asher's hands stop. "...I've got forty sheets for the Holiday Inn by four."
+  - **Choice `ch6_asher_method`:**
+    - "[Help him fold. Let him talk while he works.]" → `patient`. Activity: **folding** (12 sheets; a two-button rhythm: grab corners when the sheet billows, fold when it falls; mistakes cost nothing but time). Umma folded hotel sheets at Royal Linen; the player does it beside a stranger while he tells it. Between sheets, Asher's account comes out in pieces: the owner, Dimitri Lazarou of Garrison Realty, told him to chain the rear door at night "against squatters"; Min asked him twice to unlock it ("She said 'Mr. Asher, if there's a fire, we're on three.' I said 'Talk to Mr. Lazarou.' She did. She wrote letters. She was good at letters."). On the last sheet he takes a folded note out of his wallet and puts it on the stack: **"Chain rear door nights. Squatters. — D.L."** "I kept it. In case. In case of what, I don't know. In case somebody ever asked me." Then the line that matters: "I had the key. On my ring. The whole time. Fire was on three, I was asleep on one. I got four people out the front. I never thought of the back." He asks nothing of Jin. `ev_asher_testimony` (full, with the owner's note); Asher becomes a possible copy holder and witness.
+    - "[Grab the sheet out of his hands. You don't have all day.]" → `threatened`. Jin pulls the sheet away; Asher flinches into the dryers (`cower`). "The door was chained. Owner's orders. That's all I know." He goes out the back door and doesn't come back. `ev_asher_testimony` (partial: no note, no name beyond "owner"). `harm_count` +1. Faster: about 90 seconds instead of four minutes.
+  - Neither option is hidden or misrepresented; the brackets say what Jin does.
+- **Lindell House.** Through the fence gap. Ground floor: the rear exit and its chain (`o_rear_door`). The collapsed stair means the only way up is the exterior fire escape: a short climbing section (one-way platforms, then the fallen landing: jump and **air dash** across; a tip appears only if the player fails twice: "Jump, then DASH in the air."). This is traversal, not combat, and uses the full toolkit gently.
+- **2nd floor: the copper strippers (short confrontation, `ch6_strippers`).** Fitz and his cousins are pulling wire from the walls into a duffel. Fitz: "Building's condemned, pal. Finders keepers."
+  - "My mother and sister lived on three." → `talked_down`. Fitz takes off his hard hat. "...Your people? Jesus. Okay. Okay, we're gone. Take whatever you want, we didn't touch three." They leave with the duffel half full.
+  - "Get out." → Fitz: "Or what?" → `fought`. 3 `thug` on a floor with **soft spots** (marked by darker, sagging boards; anyone standing on one for more than 1 s drops a few pixels and is stunned; that includes Jin). A 30-second fight; it teaches nothing new and is not meant to. They flee down the fire escape.
+- **3rd floor.** The hall: the empty detector bracket. Room 6: the heater shell (the text does not blame the resident: "Somebody was cold."). **Room 9**: the two bedframes, the calendar scrap ("Sat 2/10 — Mrs. O bday — CAKE"), the window over the back door. A sit glint on the windowsill. If Jin sits: camera eases out to 0.8 showing all three floors in section, snow falling through the roof into Room 9; Jin's thoughts, one by one: "She stood here." / "The cake was the day before." / "I was on Hillcrest. Thirty-seven ceiling tiles." No music; wind.
+
+**S6.6 Kwik Copy (lead C, after the box).** Dot sees the Pentax before she sees Jin. Then she sees Jin. "You're Min's brother. You're Min's brother who's *alive*." She doesn't hug him; she takes the camera very carefully, like it's hot. "One hour. Sit." The player can wait (sit, time passes) or go do another lead and come back. The **photo viewer** opens on `ev_film_roll`, eight frames, and the player steps through them with Dot's commentary:
+1. Umma asleep on the Route 9 bus, her head on the window. Dot: "Your mom slept on every bus in Calder."
+2. Mrs. Okafor's birthday cake, three layers, leaning. Dot: "Min made that. It leaned like the Tower of Pisa." (→ `q6_side_okafor`: Dot prints a second copy unasked.)
+3. **The chained rear door of Lindell House**, date-stamped 01/28/96 in orange. Dot goes quiet. "She said she was taking it to Channel 8 if they didn't fix it."
+4. Umma laughing at Sunny's, in the booth by the window, a fork in the air.
+5. Min's reflection in a shop window, holding a stack of "HAVE YOU SEEN JIN SEO?" flyers, sticking her tongue out at the camera.
+6–8. Snow on Garrison Street, three nearly identical frames. Dot: "She always shot three of everything. In case."
+- Dot: "She worked Saturdays so your mom didn't have to fold sheets on Saturdays. You know that?" If `ch0_purse_dream == umma_saturdays`: Jin: "That was supposed to be my job." Dot: "Yeah. She said."
+
+**S6.7 Board, pass 1 (at the rest point, after leads A and B).** The **timeline board** (activity) opens on the evidence wall. Four horizontal lanes, labelled in Jin's handwriting, matching the PDF's four failures:
+- **"The search cost them"** (`ev_min_notebook`, `ev_calloway_invoice`, `ev_umma_timecards`, the flyer)
+- **"Help was delayed or sent elsewhere"** (`ev_housing_court`, `ev_ha_application`, `ev_returned_letter`)
+- **"The building was known"** (`ev_building_complaints`, `ev_film_roll` frame 3, `ev_asher_testimony`)
+- **"Someone kept me hidden"** (`ev_transfer_form`, `ev_current_file`, … and a blank card that reads only "Box 1180 — 9 letters — ?")
+The player drags cards to dates along the top (Aug 1994 → Feb 1996). A wrong placement just slides back with Jin's thought ("No. That was after the court date."); there's no failure. When the first three lanes are full, the fourth lane's gap glows: Jin's thought: "Nine letters to one box. Somebody opened that box every week." Objective: "P.O. Box 1180. 88 Market Street."
+
+**S6.8 88 Market Street (the confrontation, and the discovery).**
+- **The stair (short confrontation).** On the landing:
+  - If `ch2_collector_after == let_go`: Benny is there with Carl. Benny looks at Jin, at the knuckles, and says "You let me walk. I'm walking." He goes down past Jin and out into the street. Carl, alone: "Pike pays me to stand here. So I'm standing here." **E6.2**: 1 `collector` (Carl) on a narrow stair. Short.
+  - If `hit_again`: Benny isn't there ("Benny's in the hospital. Jaw's still wired," Carl says. "Pike hired me a friend."). **E6.2**: Carl + Vic (`collector` + `thug`) on the stair.
+  - The stair is narrow (one enemy can attack at a time; the landing gives room to circle). Teaches nothing new; tests the slip against a big committed swing in a tight space.
+- **Pike's office.** Pike is feeding the "AHN, D." file into a shredder in his shirtsleeves. He sees Jin and doesn't stop feeding it, which is somehow worse. His file on Jin is on the desk, top sheet visible: `ch1_pike_stance == insisted` → "Patient agitated. Monitor."; `played_along` → "Patient cooperative. Low risk." Jin's thought (insisted): "Agitated. I said my own name." / (played along): "Low risk. I said 'Daniel' to get a phone call."
+- **Present (evidence confrontation, no fail state).** Pike: "There's nothing here for you, Daniel. The Fund closed in January. There's no box."
+  - Present `ev_min_notebook` ("Box 1180, letters 1–9"): Pike: "Letters come. I forward what I'm told to forward."
+  - Present `ev_transfer_form` ("Transfer authorized by G. Pike for sponsor"): Pike stops the shredder. "...I'm a bookkeeper with a fund. I forwarded what I was told to forward."
+  - Wrong presentations just get "That's not mine," and nothing is lost.
+  - Pike takes a key off his ring and puts it on the desk without looking up. "Storage. The tray says hold. I held."
+- **The storage room.** Three trays. "FORWARD W.R." is empty. "DISCARD" has catalogues. "**RECEIVED — HOLD**" holds nine envelopes in Min's handwriting, each date-stamped received, none opened (`ev_min_letters` ★). Jin does not open them here. Thought: "Not here."
+- **The drawer.** Back in the office, Pike sees the bundle in Jin's hands, and does the thing frightened clerks do: he proves it wasn't him. He unlocks his own drawer and puts two sheets on the desk, side by side, squared to the edge.
+  - Doc viewer, typewriter, slow: **`ev_pike_memo`** ★ "Jan 9, 1995. Walter — The sister has written seven times and is now asking St. Agnes and Calder General directly. The mother has applied to your Eastgate tenant fund. How do you want this handled? — G.P."
+  - Doc viewer, handwriting (Rook's slanted hand on Northside Community Council letterhead): **`ev_rook_maintain`** ★ "Gerald — Maintain. No contact. Nothing from our fund under that name. It holds or everything goes. Once. — W.R. 1/12/95"
+  - On "Maintain." the ambience drops out entirely. No heartbeat, no sting: silence for two seconds, then the radiator ticks. The camera eases in on Jin from 1.0 to 1.2 over four seconds and stops.
+  - Jin's thought: "Walter." / "Everybody at the Courts says 'Walter' like a prayer." / "He sat on Ada's stoop and said he was sorry for what happened to me."
+  - Pike: "You see? Instruction. I'm a clerk. I had a mortgage." (`harm_count` options are not offered here; nothing in this scene lets Jin hit him.)
+- **Choice `ch6_pike_statement`:**
+  - "Write it down. All of it. Sign it." → true. Pike writes for four minutes of game time (time-skip fade: the neon tooth flickers on, the street goes dark). Two pages in his tidy hand (`ev_pike_statement`): the name change came "from Mr. Rook, through the Harlan people"; he held the family's letters on instruction; he was paid $1,500 a month. He signs. "Will this... is this going to a lawyer?" Jin: "It's going to a lot of people."
+  - "[Leave. You have what you came for.]" → false. Pike, as Jin goes: "I never opened them. I want you to know that. I never read a word."
+- **No combat after this.** The stair is empty when Jin goes down (Carl has gone). The objective changes to "Read them." Market Street at dusk; the newsstand guy says "Night" and nothing else.
+
+**S6.9 Sunny's: the booth by the window (Friday evening).** Jin takes the Route 9 to Kessler. Augie: "Booth by the window's yours. Nobody sits there Fridays anyway." Jin sits where Umma's napkin told him to sit two and a half years ago. The camera frames him from outside through the window glass (rain streaks, the neon "SUNNY'S" reversed), then cuts inside.
+- **The letters (letter viewer; read any, all, or none; each is short).** Min's voice, not only pleading:
+  1. *Sept 3, 1994:* "Calder General says you were 'transferred' and the 'sponsor is confidential.' What sponsor? You don't have a sponsor. You have me. Write back."
+  2. *Oct 1, 1994:* "Section eight was LOUD. I got a picture of you in the tunnel before. You look good. When you wake up I'll give it to you, and you have to say it's a good picture."
+  3. *Nov 19, 1994:* "Mrs. O's tomatoes died. Umma made japchae for the whole floor. You'd have eaten three plates and said you were cutting weight."
+  4. *Dec 24, 1994:* (variant by `ch0_purse_dream`) "Umma still says when you're back she's quitting Saturdays. / Umma still says when you're back she's paying the rent off 'and the rent after that' — she says it in your voice. / Umma still says when you're back I'm getting a door. I'm going to slam it so hard."
+  5. *Feb 12, 1995:* "I paid a detective. $350. In two parts. Don't be mad. He didn't find you either. Nobody finds you. It's like you're under a different name." (Jin's thought: "I was.")
+  6. *Apr 13, 1995:* "Umma went to court in her good coat. They gave us thirty days. Thirty. She asked them for your purse and they said you have to sign for it."
+  7. *June 20, 1995:* "New address: Lindell House, Room 9, Garrison St. It's fine. The radiator works if you kick it. Don't worry. (Worry a little.)"
+  8. *Oct 31, 1995:* "I did a petition about the back door. Eleven signatures. I'm good at petitions now. I'm good at a lot of boring things now."
+  9. *Jan 29, 1996:* "Jin-ah. Writing to the Box again, because it's the only address anyone gave me. Umma says hi. Umma says eat. I took a picture of the back door; if they don't fix it I'm taking it to Channel 8. Mrs. O turns 65 on the 10th, I'm making the cake, pray for her. If you're reading this, come home. If you can't come home, write. If you can't write, I'll find you anyway. — Min"
+  - After the ninth, no line for four seconds. Then Jin's thought: "The tenth was the cake. The eleventh was the fire." He puts the letters back in their order.
+- **Hana arrives** (after the player closes the viewer, never during). Peacoat, scarf, rain on her shoulders. She slides into the booth across from him and puts a manila envelope on the table.
+  - Hana: "Dr. Whitlow pulled your Athletic Commission physical. The fourth metacarpal you broke at nineteen. Dental records from your gym's insurance. She signed it this afternoon." `ev_whitlow_affidavit` ★. "It says you are who you say you are. In a form a judge has to read."
+  - If `rel.hana ≥ 3`: a second sheet. "And this. Our switchboard log. I went through November '95 on my lunch breaks." `ev_st_agnes_calllog`: "11/02/95 14:10 — caller Seo, Min-ji — asking for patient SEO, JIN — no such patient." Hana: "She called my building. You were down the hall from the switchboard. I was probably at the bars with somebody else."
+  - Hana (by `ch1_records_route`): `with_hana` → "We found the first one together. I'm not stopping now." / `alone_at_night` → "You could have trusted me, you know. With the records. I'm here anyway."
+  - If `ch1_told_hana_boxing`: "You told me about the fight, on the bars, the second week. I didn't write it down. I should have written it down."
+  - If `ch1_fare_source == activities_jar`: Hana, carefully: "Mrs. Alvarez cancelled the bingo prizes in December. The jar was short. I didn't put it together until you'd gone." She waits. (`hana` −1, applied now, once.) Jin can answer "It was me." (no flag; Hana: "I know. Six-forty. I covered it. Don't do that again to people who have less than you.") or say nothing.
+  - If `ch1_fare_source == hana_loan` and Jin has $10: "[Pay Hana back. $10.]" → `ch6_hana_repaid` (`hana` +1). Hana takes it without making a thing of it. "Good. Now I can buy my own pie."
+  - Jin shows her the memo and the reply. Hana reads "Maintain" twice. She says the PDF's caution aloud, in her own words, because she's the one person who would: "Would one answered letter have saved them? I don't know, Jin. Nobody gets to know. He made sure nobody gets to know." Then: "He didn't light the fire. He kept them from finding you, and he kept money from them, on purpose, for a building full of other people. That's what he did. That's enough."
+  - Optional: `mem_sunnys` triggers if the player examines the booth's sugar dispenser afterwards (1993: Min counting out quarters, forty cents short, Umma pretending not to notice).
+
+**S6.10 Board, pass 2 (Saturday morning, rest point).** The fourth lane fills: `ev_min_letters`, `ev_pike_memo`, `ev_rook_maintain`, `ev_st_agnes_calllog` (if held), `ev_pike_statement` (if held). Then the board asks one question in the center, in Jin's handwriting: **"What killed them?"**
+- The player may drag any single card into the center. Each time, the card slides back to its lane and Jin answers it: `ev_rook_maintain` → "No. Not just that. He didn't chain the door." / `ev_building_complaints` → "No. They'd have moved, if anyone had helped them move." / `ev_min_notebook` → "No. Looking for me isn't what killed them."
+- A button on the board reads **"Leave the center empty."** (also offered from the start; the player never has to try a card). When chosen, all four lanes light from left to right, and Jin's thought writes itself across the top: "Not one thing. Four things. One of them had a signature."
+- The completion text in the journal under the claim *What happened to Umma and Min*: "Their search cost them time and money. Help was delayed and redirected. The building's danger was known and left. And Walter Rook, told they were looking, chose to keep Jin hidden and keep his fund closed to them."
+
+**S6.11 Section 14 (ending; no combat anywhere near it).** See below.
+
+## Encounters
+- **E6.1 Lindell House 2nd floor** (only if `ch6_strippers == fought`): 3 `thug` (Fitz has a crowbar: a longer, slower swing that can't be slipped, only backdashed), soft floor spots as shared hazards. 30 s. Checkpoint at the fire-escape window. After: they flee; nobody is questioned.
+- **E6.2 88 Market stair:** 1 `collector` (Carl) or `collector` + `thug` (Carl, Vic), depending on `ch2_collector_after`. Narrow stair (`maxAttackers: 1` on the steps, 2 on the landing). Checkpoint at the street door. After: Carl goes down the stairs holding his jaw; if Vic was there, he follows. Nobody is questioned; Jin has nothing to ask them.
+- Optional training: Iron Pulse (Teddy), the Courts' gym (Lucho), the Cellar (Mari), the river path. Optional Saturday dive at the Cellar. All at cap 3.
+- **Explicitly no encounter** after S6.8's discovery, at Sunny's, on the board, or at the cemetery.
+
+## Choices made here
+| Flag | Options | Immediate | Later |
+|---|---|---|---|
+| `ch6_asher_method` | patient / threatened | Folding activity and full account with Lazarou's note / 90-second partial account | Asher is a copy-holder candidate (`patient` only) and testifies in Ending Two ("Wendell Asher told the grand jury about the key on his ring."). `threatened`: `harm_count` +1; Ch9 Penner: "You frightened an old man in a laundromat. Efficient." |
+| `ch6_strippers` | talked_down / fought | Short fight or none | Flavour only: Ch9 night, if talked down, Fitz waves from a scrap truck on Garrison Street. |
+| `ch6_pike_statement` | bool | `ev_pike_statement` | Ch7: can be presented to Rook (Rook: "Gerald always did want somebody to blame in writing."). Ending Two epilogue: "Gerald Pike's two handwritten pages were Exhibit 14." |
+| `ch6_hana_repaid` | bool | `hana` +1, −$10 | Ch9 night Hana line ("You paid me back. Nobody pays me back."). |
+| `ch6_gave_back_4d` | bool (only if `ch5_took_unit_4d`) | Elena: "You're the boxer in 4D? ...It's nice, 4D. The light's good in the morning." Options: "[Give 4D back to the Vasquez family.]" / "[Keep it.]". Giving it back: Jin moves to Mara's cot (or the Monarch); Elena's kids carry their own boxes up on Sunday; `courts` +1; `take_count` no longer counts 4D. | Ch7 Rook's "same animal" line changes to: "You gave it back. I noticed. I never gave anything back." Ch9 Penner skips the 4D line. |
+| `ch6_okafor_photo` | bool | Okafor frames it | Ch9 night: the frame is on her TV, the light on; Ending Two: she shows it to Jin again. |
+| `ch6_flowers` | bool ($5) | Yellow flowers on 96-031 / 96-032 | They stay (fresh) for every later visit; Ch9 night they've been replaced by someone else's flowers too (Okafor's church). |
+
+## Chapter ending and state handed on
+- **Ending beat (Saturday, March 8, morning).** The cemetery gate; the flower cart (the player can buy yellow flowers for $5 or not; the scene plays the same). The camera follows Jin along the gravel path at 0.9, then lets him walk ahead into Section 14 while it stays back (Jin small among numbered markers). At 96-031 and 96-032, he kneels (`kneel`). No dialogue box at all for six seconds: wind, crows. Then thoughts, one per press:
+  - "Umma. Min."
+  - "You went to court in your good coat."
+  - "You made the cake. It leaned."
+  - (by `ch0_purse_dream`) "I was going to pay the rent and the rent after that." / "You were going to have Saturdays." / "You were going to have a door."
+  - "He wrote 'once.'"
+  - He stands; the sit glint on the bench lights. If he sits, the camera eases out to 0.7 and tilts up the hill to the river and the towers; Ashgrove Tower's lit top is the brightest thing in the frame (no comment; Chapter 9 will). Thought: "I want to hear him say it. To me."
+- Card: "Friday, March 21. Northside."
+- Completion screen: "Choices made: [You helped Wendell Asher fold sheets while he talked. / You pulled the sheet out of Wendell Asher's hands.] [You talked the men in Lindell House into leaving. / You fought the men in Lindell House.] [Gerald Pike wrote it down. / You left Gerald Pike with his shredder.] [You gave 4D back.] [You paid Hana back.] [You left flowers.]" Evidence: up to 17. Memories: `mem_robe`, `mem_sunnys`.
+- Handed to Ch7: the full *What happened to Umma and Min* claim; `ev_pike_memo`, `ev_rook_maintain` (★ for Ch7's third link); `ev_whitlow_affidavit`; optional `ev_pike_statement`, `ev_st_agnes_calllog`, `ev_asher_testimony`; `rel.hana`; Courts relationship adjusted by 4D; map nodes `n_garrison`, `n_downtown`, `n_cemetery` inked; the Fund office "FOR LEASE" from Ch7.
+
+---
+# Chapter 7 — What Your Life Bought
+
+**Chapter card:** "What Your Life Bought" · "Northside Community Council · Friday, March 21, 1997"
+
+## Date, mood, palette, weather
+- Friday, March 21, 1997, the first day of spring. 7:40 am at the rest point → 9:30 am Council HQ → 11:00 am Rook's office → 7:00 pm the Courts' community room → 11:00 pm the roof of Building D.
+- Mood: the quietest anger in the game. A conversation with the weight of a title fight, then a room full of people Jin knows hearing something they can't un-hear.
+- Palette: Council HQ is a 1921 savings bank. Cracked and patched white marble, brass teller cages turned into volunteer desks, tall arched windows full of pale spring light; Rook's office in the old bank president's room: dark wood panels, a green banker's lamp, framed photos of eleven years of meetings. The Courts at night: rain, amber windows, some lit and some deliberately dark.
+- Weather: bright, wet, windy morning (puddles on Northside Ave reflect the bank's columns); clouds by afternoon; rain at the Courts from 6 pm.
+
+## Gameplay identity
+**Make the argument.** In the morning the player assembles a three-link chain on the board and sees exactly which link is missing. At the Council the missing pieces are found in a vault and a safe. The confrontation with Rook is played as a **presentation duel**: Rook's statements against the player's evidence, three links, no fail state, the camera closing in a step with each link. It is the chapter's boss and there are no punches in it. One short fight happens before it (Harlan Street men pushing the Council around); none happens after.
+- Exploration 20% · dialogue 40% · investigation 25% · combat 10% · activities 5% (the chain board).
+- Target length: 18–22 minutes.
+
+## Locations
+| id | Name | Size | Layout (left → right; layers) | Props and storytelling | Light / sound | Exits |
+|---|---|---|---|---|---|---|
+| `council_front` | Northside Avenue, Council HQ | 1400 × 420, exterior | Route 22 bus stop → a closed Woolworth's → **the bank**: four stone columns, "NORTHSIDE SAVINGS & LOAN · 1921" carved over the door, a vinyl banner "NORTHSIDE COMMUNITY COUNCIL — 11 YEARS OF KNOCKING ON DOORS" → front steps → side lot (Rook's brown Oldsmobile) → a **black Lincoln Town Car** double-parked, engine running | A hand-painted sandwich board on the steps: "FREE TAX HELP TUES · TENANT RIGHTS THURS". The Lincoln's plates frame says "HARLAN FREIGHT — WE MOVE CALDER". | Bright wet spring; traffic; a church bell for nine-thirty | Bus stop (map), front door |
+| `council_hall` | Banking hall | 1600 × 480 (main floor y 420; mezzanine balcony y 200, stair at x 1300) | Revolving door → marble floor (patched with mismatched gray tiles) → **teller cages** converted into volunteer desks (a phone bank, a copier, a coffee urn) → the **photo wall** → the **vault door** (propped open; `council_records`) → stair up → mezzanine balcony → Rook's office door (frosted glass: "W. ROOK") | The photo wall, 1986–1996: Ada at City Hall in 1991 holding "212 FAMILIES — 1 BUILDING AT A TIME"; a Calder Ledger clipping, 1988: "BAKE SALE RAISES $1,214 FOR FOUNDRY TENANTS"; Sept 30, 1994: the ribbon-cutting at the Courts, Rook with scissors, Gus at the edge of the frame not smiling. | Arched windows throw long bright rectangles across the marble; fluorescent tubes in the cages; phones ringing, a copier, volunteers' voices echoing | Front door, vault, mezzanine |
+| `council_records` | The vault (records) | 640 × 360 | Vault door (two feet thick; the 1921 time-lock still visible) → shelves of binders "EXEC SESSION MINUTES 1986–" → a dehumidifier → a stool | A binder spine lettered "1994" in Nell's neat capitals. A box of unsold bake-sale cookbooks, 1989. | Single bulb; the dehumidifier hum; the hall's echo muffled | Hall |
+| `rook_office` | Rook's office | 900 × 360 | Door → two visitor chairs (one with a cushion "for Ada's back") → **Rook's desk** (green banker's lamp, coffee can of pens, the framed photo of Ada cutting the ribbon) → the window over Northside Ave → **wall safe** behind a painting of Calder Foundry pouring at night → coat rack (flat cap, an umbrella) | A small photo face-down on the windowsill: Rook's late wife Dolores (d. 1990). A list taped inside the desk's pencil drawer, in Rook's hand, 1994: the 212 households by building, a tick by every one. | Window light in the morning, the banker's lamp by noon (clouds); a clock; traffic below | Mezzanine |
+| `courts_community_room` | Community room (existing) | 1000 × 360 | Rows of folding chairs, the coffee urn, Nell's easel | Tonight the easel is blank. Somebody has put out the bake-sale table anyway, out of habit. | Fluorescent; rain on the windows | Yard |
+| `courts_yard`, `courts_roof_d` | (existing) | — | Evening: residents in clusters, porches, one argument, Ada alone on her stoop | Some windows deliberately dark: people who don't want to talk tonight. | Rain, the boiler ticking (it was fixed in Ch5, or by now in any case) | — |
+
+## NPCs present
+| id | Where / idle | Key lines | Barks | Reacts to |
+|---|---|---|---|---|
+| `rook` | His office; at the window with his hands behind his back when Jin comes in | See S7.4 | — | Everything the player has |
+| `nell` | Council hall, at a teller-cage desk with a stack of Courts forms; later at the Courts | "I just do the forms. I believed the forms." / "The deed's the deed. It's recorded. Nobody can take the buildings for this." | "Sign-in sheet, please." | Gives `ev_chp_schedule` if Jin doesn't have it |
+| `carrow` | **Vince Carrow**, front steps then the hall, leather jacket, clipboard, never raises his voice | "Mr. Rook's expecting this. Five-one. He knows." / leaving: "You're the boxer. Huh. Mr. Penner's gonna want to hear about you." | "Easy. Easy. It's paperwork." | First appearance; returns in Ch10 |
+| `volunteers` | **Marjorie** (70s, phone bank) and **Kwame** (20s, copier) | Marjorie: "Walter's in a mood. He's been in a mood since Christmas." / Kwame: "Don't mind the Lincoln. They come every couple weeks. Walter goes gray after." | "Council, this is Marjorie." | They hide behind the cages during the fight |
+| Courts residents | Community room at 7 pm: `ada`, `gus`, `darnell`, `tasha`, `keisha`, `andre`, `mara`, `lucho`, `nell`, `elena` (if still waiting or moved in) | See S7.6 | — | `ch4_envelope`, `ch5_*`, `ch6_gave_back_4d`, `ch7_truth_told_by` |
+
+## Interactables
+| id | Label | Examine (actual text) | Unlocks |
+|---|---|---|---|
+| `o_board_chain` | Evidence wall (rest point) | Opens the **chain board** (S7.1) | — |
+| `o_photo_wall` | Photo wall | "Eleven years of meetings. Ada with a sign at City Hall, 1991. A bake sale, 1988: twelve hundred and fourteen dollars." | Journal note |
+| `o_ribbon_photo` | Photo: Sept 30, 1994 | "The ribbon. Walter with the scissors. Gus at the edge, not smiling. Forty-one days." | — |
+| `o_lincoln` | Black Lincoln | "'Harlan Freight. We move Calder.' Engine running." | — |
+| `o_binder_1994` | Binder "1994" | Doc: `ev_council_minutes`. Thought: "'Ask where it comes from.' Gus said it in a room in 1994. Nobody did." | `ev_council_minutes` |
+| `o_binders_old` | Binders 1986–1993 | Doc (summary page in Nell's hand): "Bake sales 1986–93: $1,214 / $880 / $1,530 / $640 / $1,102 / $910 / $1,288. City HOME applications: denied 1987, 1989, 1990; partial 1992 ($38,000). Letters to the Calder Foundry pension trustee: 31. Replies: 2." Thought: "Eight years of asking politely." | Journal note (feeds Rook's defense) |
+| `o_households_list` | List in the pencil drawer (after the confrontation, if Rook leaves the office open) | "Two hundred and twelve names, by building. A tick by every one. 3B: Pruitt, Ada. 1C: Lindqvist, G." | — |
+| `o_safe` | Wall safe | Locked: "Behind the foundry painting. A bank safe. I'm not opening that." (Rook opens it in S7.4) | `ev_wire_640k` ★ |
+| `o_dolores` | Photo, face down | "A woman laughing on a boardwalk. He put her face-down." | — |
+
+## Quests
+| id | Kind | HUD objective | Completion | Reward / consequence |
+|---|---|---|---|---|
+| `q7_main` | main | "Put the chain together." → "Northside Community Council." → (fight) → "The vault. 1994." → "Walter Rook. Mezzanine." → (confrontation; HUD hidden) → "The Courts. Seven o'clock." → "Get some air." | Board opened; minutes read; confrontation complete; meeting complete; roof | `ev_council_minutes`, `ev_wire_640k` ★, `ev_rook_testimony` ★, `ev_alder_letter`; next lead: Ray Castell |
+| `q7_side_marjorie` | side | "Marjorie's phone bank is short a caller." | Read one call script into the phone (a 30-second scene: Jin calling a city councilman's answering machine about Northside streetlights; the script is the Council's daily, ordinary work) | Marjorie: "You've got a phone voice. Who knew." Nothing else; it's the Council doing ordinary good work on the same morning. |
+| `q7_side_ada` | side (evening) | "Ada's on her stoop alone." | Sit with her (`sitCurb` beside her kitchen chair) | Her line (see S7.7); no reward |
+
+## Scripted scenes, beat by beat
+**S7.1 The chain board (morning, rest point).** The evidence wall opens in a new mode: three links drawn as chain rings across the top, each with the PDF's sentence in Jin's handwriting, and slots under each:
+- **Link 1, "The fight was fixed, and it paid."** Slots: who did it (`ev_lenny_tape` / `ev_lenny_statement`), who paid (`ev_lenny_receipt`, `ev_depot_ledger_94`), what it paid (`ev_depot_ledger_94`'s "book settlement: Castell KO R3–5, receivable via A.C. 2,100,000").
+- **Link 2, "A share of it bought Foundry Courts."** Slots: what the Courts cost and when (`ev_chp_schedule`; if Jin skipped it in Ch5, this slot reads "Nell's file"), what the depot paid for (`ev_chp_disbursements`), **where the Council's $640,000 came from (empty)**, **who voted for it (empty)**.
+- **Link 3, "Hiding me protected all of them."** Slots: the false name (`ev_transfer_form`), who paid for the bed (`ev_depot_ledger_94`'s St. Agnes deposit line), who knew the family was looking (`ev_pike_memo`), who decided (`ev_rook_maintain`).
+- Filling the slots is quick (a minute; the player drags cards they already own). The two empty slots in Link 2 pulse. Jin's thought: "The Council paid six hundred and forty thousand in September. I can't prove it was the fight's money. Not yet." Objective: "Northside Community Council."
+- If the player leaves without opening the board, the objective still advances; the board is how the chapter shows what's missing, not a gate.
+
+**S7.2 Northside Avenue: the Lincoln.** Jin arrives by bus. The camera holds a wide (0.85) on the bank's columns and the Lincoln idling in front of them. Inside the hall, Vince Carrow is at Nell's desk with two enforcers behind him, holding out a typed letter in a clear sleeve.
+- Carrow: "For Mr. Rook. He's expecting it. Five-one. He knows."
+- Nell: "Mr. Rook is in a meeting. I can take a message."
+- Carrow: "This is the message." He puts it on her forms. She pushes it back. One of the enforcers shoves her chair, hard; it rolls into the teller cage and she goes down with it. Marjorie screams from the phone bank.
+- Jin is already walking. (No choice: the PDF's Jin doesn't stand by, and the fight is short.) Carrow steps back out of the way, clipboard to his chest: "Easy. Easy. It's paperwork."
+
+**S7.3 After the fight: Nell and the vault.** Carrow has watched the whole fight from the revolving door. He writes something on the clipboard, leaves the sleeve on the floor, and goes: "You're the boxer. Huh. Mr. Penner's gonna want to hear about you." (The first time the player hears the name Penner. The Journal's People tab adds "Penner — ?".) The Lincoln pulls away.
+- Nell, getting up, straightening her cardigan: "Thank you. They come every couple of weeks. Walter goes gray after." She picks up the sleeve and reads the top line without meaning to: "...'in support of Alder Commons, a mixed-income redevelopment'? What's Alder Commons?"
+- If Jin doesn't have `ev_chp_schedule`: Nell, when he asks about the purchase: "It's in my file. I have a copy here, for the auditors." She hands it over. "I just do the forms. I believed the forms." (She doesn't know why he's asking yet; she will by tonight.)
+- The vault: `o_binder_1994` gives `ev_council_minutes`: "Sept 26, 1994, executive session. Bridge financing from H.F. Co. accepted for Foundry Courts purchase, deadline 9/30. Moved W. Rook, carried 3–1 (G. Lindqvist opposed: 'Ask where it comes from.')". The board's "who voted" slot fills with a click the player hears even though the board isn't open (a small chain-link sound and a journal badge). The old binders (`o_binders_old`) give the eight years of polite asking.
+- Thought: "Gus. In a room in 1994. 'Ask where it comes from.'"
+
+**S7.4 The confrontation (Rook's office).** The mezzanine stair; the frosted glass door: "W. ROOK". The HUD hides completely. Letterbox on. Rook is at the window, hands behind his back. He doesn't turn round.
+- Rook: "Nell says you put three of Dutch's people on my marble." A beat. "Thank you for that. Sit down, Jin. Ada's chair has the cushion."
+- **Presentation duel.** Rook makes a statement; the player opens the evidence ring (a radial menu of the claim's cards) and presents one. Correct cards advance the link; any other card gets a short reply from Rook and the player tries again. Nothing is lost, there is no timer and no health bar. The camera moves one step closer with each link (zoom 1.0 → 1.15 → 1.3), and Rook's posture changes: standing at the window → sitting behind the desk → standing to open the safe → sitting heavily, rubbing his knuckles.
+- **Link 1.**
+  - Rook: "I don't know anything about a fixed fight. I run a tenants' council. We do taxes on Tuesdays."
+  - Present `ev_lenny_tape` → (tape plays: "...in the cup, before the walk... Freight office on Dock Road pays. Brannigan hands it over.") Rook: "Harlan Street does a lot of things. I don't ask."
+  - Present `ev_council_minutes` → Rook reads his own motion. "...Bridge financing. It was bridge financing. A loan. I didn't ask where Dutch got it."
+  - Present `ev_depot_ledger_94` (the "book settlement" line) → Rook takes off his reading glasses. "Two million one hundred thousand." He says it like a man hearing the number for the first time in a while. Link 1 closes (a chain-ring sound).
+- **Link 2.**
+  - Rook (sitting now): "The money came in September. Your fight was in August. Lots of money moves in September."
+  - Present `ev_chp_schedule` ("NCC capital contribution $640,000, received 9/27/94") → Rook: "Received. Yes. From the outfit. Bridge financing. I've said that."
+  - Jin: "Where did the outfit get it?" Rook doesn't answer. Jin: "Open the safe."
+  - Long hold (3 s). Rook gets up, takes the foundry painting off the wall, and opens the safe himself. He puts a single sheet on the desk and squares it to the edge, exactly the way Pike did. `ev_wire_640k` ★: "9/27/94 · $640,000.00 · from Harlan Freight Co. escrow, ref ASH-0894 · to Northside Community Council capital account." Thought: "ASH." (The Journal's "Penner — ?" entry gains a pencil line: "ASH-0894?")
+  - Rook: "Six hundred and forty thousand. Out of two million one. They kept the rest. It went up the river to people who've never set foot on Northside." Link 2 closes.
+- **Link 3.**
+  - Rook: "The hospital was Dutch's idea. A clean bed, a different name, so nobody asks the Commission questions. You were looked after. I made sure you were looked after. Every month."
+  - Present `ev_pike_memo` → Rook: "Gerald worried. Gerald always worried."
+  - Present `ev_rook_maintain` → Rook looks at his own handwriting for a long time. He doesn't touch it. (If `ev_pike_statement` is presented instead or after: "Gerald always did want somebody to blame in writing.") Link 3 closes; all three rings light on screen, and the chain is shown once, whole, the PDF's sentences in Jin's handwriting: **"The forced result produced the payout. A negotiated share financed Foundry Courts. My concealment protected everyone involved."**
+- **The admission (`ev_rook_testimony` ★).** No more presenting. Rook talks. The player advances lines; nothing else.
+  - Rook: "Dutch came to me in July. At Starlite Lanes, in the lounge, over a pitcher nobody drank. He said there'd be a fight, and a result, and a share. He said the kid loses a fight he'd lose anyway in two years, and nobody gets hurt. I said yes. I said yes in July, Jin."
+  - Rook: "I was in section twelve. Round two, I watched your legs go. I knew what I was looking at. I stood up. I was going to walk to the Commission table and say stop it. Dutch was in the next seat. He said, 'Sit down, Walter. It's almost over.'" A beat. "And I sat down."
+  - Rook: "When Gerald told me you might not wake up, I said keep paying St. Agnes. Keep him comfortable. Keep the name. I paid for your bed every month out of the same money. I told myself that was something."
+- **His defense (concrete, the PDF's demand).** Rook takes the list out of his pencil drawer and reads from it without needing to look.
+  - Rook: "Ada Pruitt, 3B, forty-one years; her husband died in that bedroom. Gus Lindqvist, 1C, foundry lungs. The Greers: Darnell's mother then, Darnell and his kids now. The Reyes boy. The Kowalczyks. Two hundred and twelve households. The pension trustee had a buyer, Mid-State Parking, and the sale closed September thirtieth. I had eleven years of bake sales." He taps the 1988 clipping on the wall without looking at it. "Twelve hundred and fourteen dollars."
+  - Rook: "Ada sat in that chair and cried. People I'd known twenty years begged me. Polite never worked. Not once in eleven years. Dutch worked in three weeks."
+  - Rook: "And I told myself once. A man can live a long time on once."
+- **Jin's answer** (canon; the line is fixed, its delivery varies by `jin_voice`):
+  - Jin: "Nobody asked me."
+  - (restrained) "You had a list. Two hundred and twelve names. You had my name too. You just didn't put a line next to it." / (mixed) "You read me a list. Was my name on it? Was Umma's? Min wrote to you nine times." / (hard) "Nobody asked me. Nobody asked my mother. You asked Dutch."
+  - Rook: "No. Nobody asked you." He doesn't defend that.
+- **Reflections of the player's own choices** (only the ones that happened; Rook names them because he has been watching too):
+  - If `ch5_took_unit_4d` and not `ch6_gave_back_4d`: "I gave you 4D. I took it from a woman with three children and gave it to you, and you took it. We're the same animal, Jin. We just had different-sized rooms." / if given back: "You gave 4D back. I noticed. I never gave anything back."
+  - If `ch4_envelope == taken` and `ch5_envelope_outcome == kept`: "And Dock Road's payroll. That was you. Mara's crew went a week without. You see how easy it is? You see how it doesn't feel like anything at the time?"
+  - If `jin_voice == hard`: "You've hurt people to get to this office. You had reasons. So did I." / if `restrained`: "You got all the way here without hurting anybody who didn't swing first. I couldn't have done that. I never tried."
+- **Rook's question, `ch7_rook_answer`.** Rook: "What would you have said? If I'd come to you in July. Two hundred and twelve households against one fight. What would you have said?"
+  - "You'd have had to ask me. That's the point. You didn't." → `would_have_asked`. Rook: "And you'd have said no, and I'd have lost the buildings, and you'd have your mother. That's the arithmetic I didn't want to do."
+  - "I don't know. I don't know what I'd have said." → `dont_know`. Rook, very quietly: "...Thank you for that. That's more than I gave you."
+  - "Not this. Whatever I'd have said, not this." → `not_this`. Rook: "No. Not this. I'd agree with you, if it was mine to agree."
+- **What the outfit wants now.** Rook picks up Carrow's sleeve from where Jin put it on the desk.
+  - Rook: "They own the roof money now. Every month the Courts' maintenance comes through Dock Road because I let it start. Now they want a letter. Alder Row, across the river: a co-op, twenty-four families. Somebody's going to build 'Alder Commons' where it stands. They want the Council's name on a lie that says Northside supports clearing it. If I don't sign by May first, the roof money stops, and the Courts' bank calls the note." He hands it over: `ev_alder_letter` (unsigned; clipped note "Sign by 5/1. — H.S."). "I haven't signed it. I don't know if that's because I'm better than I was or because I'm more scared."
+- **The lead.** Jin: "Who's A.C.? Who said when?" Rook: "I never knew who. Dutch told me after, laughing, that Castell's trainer took a phone call at the end of round two. Somebody up the river said 'now.' Castell knows. He was there for it." Objective (shown after the scene): "Ray Castell."
+- **The last beat in the office (`ch7_hit_rook`, the Q4 ladder at the smallest scale).** Rook comes round the desk and stands in front of Jin with his hands at his sides. "If you want to hit me, do it now. There's nobody to see."
+  - "[Hit him.]" → true. One punch (Jin's real punch animation, a heavy hit-stop, no spark effect). Rook goes into the bookcase and sits down on the floor. He touches his mouth. "...That's fair." `harm_count` +1. The bruise is on his face at the meeting tonight and in Ch9.
+  - "No." → false. Rook nods. "No." He sits back down. Nothing more; the game doesn't praise the player for it.
+- **`ch7_truth_told_by`.** Rook: "They'll have to know. The Courts. Let me tell them. Tonight. It should come from me."
+  - "[Let Rook tell them. Stand at the back.]" → `rook` (`courts` +1: they heard it from him).
+  - "[No. I'll tell them.]" → `jin`. Rook: "...All right. Nell will call the meeting. I'll be in my office if anybody wants to come and shout." He doesn't come.
+- Letterbox off. The HUD fades back in. **No combat after this anywhere in the chapter.**
+
+**S7.5 Afternoon (free).** Northside in clouds. The player can train at the Courts' gym (Lucho is distracted: "Something's up. Nell called a meeting. Nell never calls meetings."), sit at the bus stop, or go straight to the Courts. Kids are playing in the yard as if nothing has happened, because for them nothing has yet. Jin's thoughts on the bench by the garden beds: "Keisha's tomatoes. Bought with my fight." / "I came here thinking it was a front."
+
+**S7.6 The meeting (7 pm, community room, rain).** Nell has put out the chairs. Forty people. The camera works like a play again (static wide at 0.9), but this time it does not zoom on speakers: it stays wide and lets the whole room be seen reacting at once.
+- **If `rook` tells it:** Rook stands at the front table in his corduroy blazer (with a bruise if `ch7_hit_rook`; Ada: "Walter, your face." Rook: "I walked into something I'd earned."). He tells it plainly, in order: July, the lounge at Starlite, the share, section twelve, "Sit down, Walter," the hospital, the name, the letters. He doesn't say "for you"; he says "I did it." Jin stands at the back by the coffee urn and is pointed at once, by Rook: "That's Jin Seo. You know him as the man who carried your radiators."
+- **If `jin` tells it:** Jin stands at the front. The player doesn't type a speech: he puts four cards on Nell's easel (the dialogue shows them as he pins them: the transfer form, the wire, the memo, "Maintain"). Jin: "My name is Jin Seo. Two and a half years ago I fought Ray Castell at the Civic. I was drugged in the dressing room. Your Council took a share of the money that made. It bought these buildings. Walter Rook kept me under another name so nobody would ask. My mother and sister looked for me until they died." Rook's chair is empty. Everyone looks at it.
+- **Reactions, one after another, each in its own body language** (the PDF: some reject Rook immediately, some can't reconcile gratitude with it, a few turn on Jin out of fear; never all ungrateful, never fraud):
+  - **Gus** stands up first and puts on his cap. "I poured iron forty years for a man who sold us to a bank. Now I find out who bought us back. Wonderful." (If `ch5_meeting_stance == independence`: on his way out, to Jin: "You said it out loud in February. Thank you for that.") He leaves. **Rejects Rook immediately.**
+  - **Ada** doesn't stand. She holds her purse in her lap with both hands. "He saved my home and he took your life. Both. I can't hold both, Jin." (If `ch5_meeting_stance == roof`: "You voted for my ceiling. I still have a dry ceiling. I don't know what to do with that.") (If `ch5_donation ≥ 50`, first: "You put money in the can. I saw.") **Can't reconcile it.**
+  - **Darnell** is on his feet. "So what now? You got your truth. I got two kids and a lease that says Courts Housing Partnership. Is the bank going to take it back because some gangster paid for it?" (If `ch4_envelope == taken` and `ch5_envelope_outcome == kept`: "And Harlan Freight got hit the same night our envelope 'didn't come.' That was you. You took our pay to get here." Jin can answer "It was me." or say nothing; both are shown plainly; `rel.courts` −1 if silent.) **Angry at Jin because he's afraid.**
+  - **Tasha**, a hand on Darnell's arm: "Darnell's not mad at you. He's scared. It comes out the same."
+  - **Elena Vasquez** (if she's at the Courts): "Can they take it back? The buildings?" **Nell** answers, firmly, the one thing she's sure of: "No. The deed's the deed. It's recorded. The roof is real. The boiler is real." (The benefits are not fraudulent, per the PDF.)
+  - **Keisha**, to Tasha, too loudly: "Are we still allowed to live here?" Nobody answers her for a moment.
+  - **Mara** has been standing against the back wall with her arms crossed the whole time. "I fixed these pipes with that money. I'd fix them again. That's the worst part." (Variant: `ch5_envelope_outcome == confessed`: to Jin, quieter, later: "You told me about the envelope. That's the only reason I'm still talking to you." / `kept`: she says nothing to Jin at all tonight; the tin was short and she has done the arithmetic.)
+  - **Nell**: "I just do the forms. I believed the forms."
+  - **Lucho** says nothing in the room. He stacks chairs afterwards, alone, until Jin helps or leaves.
+- **The yard after.** Rain. The residents split into three clusters on three porches. If `rook` told it, Rook's Oldsmobile is still in the lot; he sits in it with the engine off; nobody goes to it except, after a while, Ada, who stands at the driver's window and says something the player can't hear. If `jin` told it, the lot is empty.
+
+**S7.7 Lucho's ask (the commitment for Chapter 8).** Lucho finds Jin by the gym stairs, hands in his overalls.
+- Lucho: "Whatever happens with Walter. April eleventh. The Armory. Golden Gloves. Thirty-three, last year they let me. Thirty-four, they don't." He shrugs. "I need a corner who's been there."
+- "I'll be there." → `ch7_lucho_promise = yes` / "I'll try." → `try`. Lucho: "Try's fine. Be there." Both create the commitment the player will be asked to keep or break in Chapter 8. (A third option is not offered: Lucho isn't asking for an answer about anything else tonight.)
+- Optional: sit with Ada on her stoop (`q7_side_ada`). She talks without looking at him. "My husband used to say the Courts would outlive all of us. I think he meant it nicely." Then: "Come Sunday. I'll make soup. I don't know what else to do."
+
+## Encounters
+**E7.1 The banking hall** (the chapter's only fight; arena x 200–1200 on the marble; checkpoint at the revolving door).
+- 2 `enforcer` (Harlan Street muscle: hold a high guard that absorbs jabs, then commit to a shoulder charge with a long wind-up; the charge can be slipped at the last moment for a counter, or dashed through during the dodge window) + 2 `thug`. `maxAttackers: 2`.
+- **No tips.** This is the first fight since Chapter 4 that assumes the full toolkit and says nothing. The hall's teller cages break up the space; the volunteers duck behind them (Marjorie under the phone desk, Kwame behind the copier). Hooks for the two thugs, uppercut-launch the lighter one, slip-counter the charges.
+- Carrow never fights. He stands in the revolving door and watches (he is the reason Penner "has followed his progress" in Ch9).
+- After: the enforcers limp out to the Lincoln. Nobody is questioned; Carrow already said what he came to say.
+
+## Choices made here
+| Flag | Options | Immediate | Later |
+|---|---|---|---|
+| `ch7_rook_answer` | would_have_asked / dont_know / not_this | Rook's reply | Ch9 night: Gus or Ada quotes it back if Rook told them ("He said you said you didn't know. That's the most honest thing anybody's said about any of this."). Ch10: Jin's last thought before the gate uses it ("You'd have had to ask." / "I don't know what I'd have said." / "Not this."). |
+| `ch7_hit_rook` | bool | One punch, `harm_count` +1 | Rook's bruise at the meeting; Ch9 night Rook: "My lip's healed. I'd have let you do it twice." / (false) "You didn't hit me. I've been trying to decide all month whether that was mercy or contempt." |
+| `ch7_truth_told_by` | jin / rook | Who stands at the front; `courts` +1 if `rook` | Ch9 night: if `rook`, the Courts hold a vigil for the Seo family in the yard (Nell's idea; candles in jars on the garden beds); if `jin`, ordinary laundry on the lines and the residents divided, some nodding to Jin, some not. Ending Two: Rook testifies (both cases), but only after `rook` does he speak at the Courts' Sunday meeting again. |
+| `ch7_lucho_promise` | yes / try | Lucho's reply | Ch8 opening line when the conflict arrives ("You said you'd be there." / "You said you'd try."). |
+
+## Chapter ending and state handed on
+- **Ending beat (11 pm, roof of Building D, rain easing).** Jin climbs the ladder alone. Below, the yard: four buildings, the windows lit and dark in a pattern that wasn't there last week. If `rel.mara ≥ 2`, Mara comes up after a minute, no beer this time, and stands beside him. Mara: "I'm going to fix the boiler controls tomorrow. Because it's Saturday and they need fixing." Jin: "I know." Mara: "I'm not saying that to make you feel better. I'm saying it because I don't know what else is true." She goes down. If not, Jin is alone. The camera eases out to 0.7. Thought: "He had a list. Two hundred and twelve names. He had my name too." Then: "Castell. He was there for 'now.'"
+- Card: "April. Calder Civic Arena."
+- Completion screen: "Choices made: [You told Rook he'd have had to ask. / You told Rook you don't know what you'd have said. / You told Rook: not this.] [You hit Walter Rook once. / You didn't hit Walter Rook.] [Rook told the Courts himself. / You told the Courts yourself.] [You told Lucho you'd be in his corner. / You told Lucho you'd try.]"
+- Handed to Ch8: the complete chain (`ev_council_minutes`, `ev_wire_640k`, `ev_rook_testimony`, `ev_alder_letter`); the lead "Ray Castell"; Journal person "Penner — ?" with "ASH-0894?"; the commitment to Lucho (April 11); `rel.courts`, `rel.mara`, `rel.lucho` after the meeting; Council HQ stays open on the map (Rook's office lit late every night through Ch9).
+
+---
+# Chapter 8 — The Man in the Other Corner
+
+**Chapter card:** "The Man in the Other Corner" · "Calder Civic Arena · April 11–14, 1997"
+
+## Date, mood, palette, weather
+- Friday, April 11, 1997 (Lucho's bout at the Calder Armory, 7 pm; Ray's light-security night). Sunday, April 13 (Ray's heavier-security night, if Jin keeps the promise). The copy run at dawn the morning after Ray: Saturday April 12 or Monday April 14.
+- Mood: dread and familiarity. Everything echoes Chapter 0 a half-step off: the same building, emptier; the same bell, rung by a different hand; the same corner, with whoever Jin kept. Then the emptiness after winning.
+- Palette: the Armory is warm and crowded (tungsten bulbs, red-white-blue bunting, folding chairs, popcorn). The Civic at night is the Chapter 0 palette with the crowd taken out: deep navy and charcoal, the ring the only white-hot thing, the blue and red corner pads. The copy run is dawn blue through Kwik Copy's window, then the first green on the river path (spring).
+- Weather: Friday mild rain; Sunday clear and warm for April, windows open in Eastgate; dawn fog that lifts.
+
+## Gameplay identity
+**Mastery and its limits.** A promise that costs something to keep (Q3), a night in another man's corner where the player reads a fight instead of throwing it, a security run through a building the player already knows, then the personal climax: Ray Castell, in the same ring, under the same lights, with attack patterns the player has seen before and can now answer. Then a dawn of photocopies and doorsteps.
+- Exploration 15% · dialogue 20% · investigation 10% · combat 40% · activities 15% (the corner at the Armory, the copy run).
+- Target length: 22–25 minutes (Armory 6, approach 5, Ray 6, after and copies 6).
+
+## Locations
+| id | Name | Size | Layout (left → right; layers) | Props and storytelling | Light / sound | Exits |
+|---|---|---|---|---|---|---|
+| `armory_floor` | Calder Armory, drill hall | 1600 × 480 (bleachers at y 260 and 160) | Doors with a ticket table ("GOLDEN GLOVES · CALDER DISTRICT · $5") → bleachers on the left (Keisha, Andre, Tasha, Ada with a cushion, Darnell after his shift) → the ring (amateur, blue canvas, x 600–1000) with **Lucho's corner** on the left → judges' table → the dressing area behind a canvas curtain (Lucho's stool, a bucket, Vaseline, a towel) | A hand-painted banner from the Courts: "LUCHO — FOUNDRY COURTS — LAST DANCE". Programs on the chairs: "Bout 14: L. Reyes (Foundry Courts BC) vs K. Shaw (Calder PAL)". | Tungsten, haze; crowd of a few hundred, bell (a cheap electric buzzer, not brass: deliberately unlike the Civic's bell) | Doors (map) |
+| `civic_dock` | Calder Civic, loading dock | 900 × 360 | Street → the dock ramp → the **dock door** ("kick it low": Deshawn's or Lenny's tip; otherwise the night guard's route) → service corridor | Road cases stencilled "CASTELL — MAY 17 — TITLE DEFENSE". A banner in plastic wrap: "THE PROMISE KEPT". | Sodium lamp; a dumpster lid banging in the wind | Street, `civic_concourse` |
+| `civic_concourse` | Backstage concourse (Ch0 location, 1997 state) | 1600 × 360 | Same layout as 1994: corridor → press room door → stairwell door → **Dressing Room B** → tunnel | The 1994 taped arrows "BLUE CORNER →" are still on the floor, faded and half-scraped. A new sign on Dressing Room B: "VISITORS". A security guard's chair with a paperback face-down. | Half the fluorescents off; footsteps echo; no crowd at all | Dock, press room, stairwell, Dressing Room B, tunnel |
+| `civic_press` | Press room | 720 × 360 | Folding tables, the backdrop with sponsor logos (Riverside Ford, Calder Ledger), a podium | The same backdrop as the July 1994 press conference; a fresh poster for May 17 pinned over it. | One lamp | Concourse |
+| `civic_dressing_b` | Dressing Room B (1997) | 720 × 360 | Same as Ch0: bench and lockers → taping table → **the water cooler with a stack of paper cups** → footwork floor → heavy bag → mirror | The X marks on the floor are still there under new tape. The cups are the same brand. | Bare bulbs; the clock (stopped at 4:10) | Concourse |
+| `civic_stairwell` | Service stairwell (1997) | 360 × 540 | Ground → mid-landing (empty) → roof door | The coffee can of butts is still on the mid-landing. The "EX T" sign still has its dead letter. Nobody stands under the bulb. | One caged bulb | Concourse |
+| `civic_ring` | Main floor, dark | 1280 × 360 | Tunnel mouth → **blue corner** (stool, a bucket; Teddy if present) → ring (x 440–840) → **red corner** (Ray's gym bag, his robe on the ropes) → ringside: the **timekeeper's table with the brass bell** (Sal), press row with its old phones, **row 3** seat behind the red corner (empty, one seat folded down) → bleachers in darkness | Section 8 sign in the dark bleachers on the left, where Umma and Min sat. The Channel 8 riser, empty. | Only the ring lights (white cones) and the exit signs; the rest is black. The ring ropes creak. When Sal strikes the bell, it is the exact sample from Ch0's cold open. | Tunnel |
+| `kwik_copy` | (Ch6) at dawn | — | Dot unlocks at 5 am; the lights flicker on one row at a time | Min's cubby; Dot has put a coffee for Jin on it. | Copiers warming up (a rising hum), the light bar sweeping | Street |
+| `river_path` | Riverside path (spring state) | (existing) | — | First green on the willows; the ice is gone. Ashgrove Tower across the river. | Birds, the river | — |
+
+## NPCs present
+| id | Where / idle | Key lines | Barks | Reacts to |
+|---|---|---|---|---|
+| `lucho` | Armory dressing area (if kept), wrapping his own hands, bouncing | "Half a second, bang-bang-bang-bang, then get out. You tell me if I forget." / at the stool: "I'm fine. Send me." | "Feet! ...That's my line. You say it." | `ch8_lucho_commitment`, `ch8_lucho_call`, `ch7_lucho_promise` |
+| `kenny` | **Kenny Shaw**, 24, Calder Police Athletic League, red headgear | (no lines; a fighter seen from the corner) | — | — |
+| `deshawn` | The Cellar (Thursday, if `rel.deshawn ≥ 0`) | "He drops that right shoulder. Every time. I sparred him two weeks in '96. When it's real, his back heel comes up. When it's a feint, the heel stays down." / "Friday and Sunday nights he works out alone with Sal. Sunday the promoter's people are in for the press tour." | — | `rel.deshawn` (tip only if ≥ 1) |
+| `teddy` | Iron Pulse (Thursday) then Jin's corner at the Civic, if `rel.teddy ≥ 2` | "Same corner. I'm not leaving it this time." / "Jin. Look at me. Are you all right? If you're not, I stop it. I'll stop it this time." | "Feet." | `ch3_cup`, `ch0_told_teddy`, `ch8_hands` |
+| `ray` | In the ring, hitting Sal's mitts | See S8.6 | — | `ch0_resistance`, `cellar_dives_taken`, `ch8_hands` |
+| `sal` | **Sal Bruno**, 66, Ray's trainer: holding mitts; later at the timekeeper's table | "Ray. Ray, this isn't — " / (at the bell) "That's it! That's it! He's done! Jin, he's DONE!" | — | `ch8_ray_after` |
+| `guards` | Concourse and dock | Friday: "Building's closed, pal." Sunday: radio chatter ("Lobby to dock, we got a walk-in.") | — | Sunday only: `brezinski`, the promoter's head of security (`director`): a stout man in a blue blazer with an earpiece, who never leaves the press-room door |
+| `dot` | Kwik Copy, 5 am, keys in hand, a coat over her pajamas | "You call me at four in the morning, it better be for Min." / "Copies are seven cents. Today they're free. Don't tell my manager." | — | — |
+| copy holders | At their own places (see S8.9) | One line each | — | Relationship and witness flags |
+
+## Interactables
+| id | Label | Examine (actual text) | Unlocks |
+|---|---|---|---|
+| `o_sunnys_tv` | Augie's TV (Thursday) | Channel 8 sports: "Champion Ray Castell, preparing for his May seventeenth defense, is training behind closed doors at Calder Civic Arena, Friday and Sunday nights, with heavy security expected for Monday's media day." | The Civic lead (always available, whatever Deshawn thinks of Jin) |
+| `o_tape_arrows` | Floor arrows | "'BLUE CORNER.' Two and a half years. Nobody scraped them off all the way." | — |
+| `o_cups_1997` | Paper cups by the cooler | "Cups." (The same one word as Chapter 0. Now it's the most frightening word in the game.) | — |
+| `o_mirror_1997` | Mirror | "Scar. Thinner. Same hair." | — |
+| `o_press_backdrop` | Press backdrop | Holding E plays **`mem_presser`**: July 1994, the press conference, Ray's handshake held a beat too long, his eyes going past Jin to someone at the back of the room. | `mem_presser` |
+| `o_stair_landing` | Mid-landing | "Nobody under the bulb tonight." | — |
+| `o_section8` | Section 8 sign (dark bleachers) | "Section eight. She said wave." | — |
+| `o_row3` | Row 3 seat | "Folded down. Somebody sat here and watched." | — |
+| `o_brass_bell` | The bell | "The bell. Brass. Two strikes for a round. I heard this one for a long time." | — |
+| `o_ray_bag` | Ray's gym bag | (after the fight) His appearance schedule | `ev_alder_closing` ★ |
+| `o_copier` | Copier | Copy activity | — |
+
+## Quests
+| id | Kind | HUD objective | Completion | Reward / consequence |
+|---|---|---|---|---|
+| `q8_main` | main | "Find out where Ray Castell trains." → (Friday, two objectives shown together, see S8.2) → "Calder Civic. Get to the ring." → (fight; HUD hidden) → "Make copies. Kwik Copy opens at five if Dot says so." → "Get the envelopes to people who'll keep them." → "Ashgrove Tower." | TV or Deshawn; the choice by walking; Ray done; copies made; at least Hana's envelope delivered | `ev_sal_notebook` ★, `ev_alder_closing` ★, `ev_ray_statement` (stop only); copy holders |
+| `q8_lucho` | side → **commitment** | "Lucho's corner. Calder Armory, seven o'clock." | Go to the Armory on Friday (kept) or not (abandoned) | `ch8_lucho_commitment` |
+| `q8_teddy` | side (if `rel.teddy ≥ 2`) | "Teddy unrolled the old canvas." | Iron Pulse, Thursday: one mitts round on the old Marsh ring canvas | Teddy comes to the Civic |
+| `q8_hana_call` | side | "Call Hana." | The payphone in the Civic concourse after the fight | `hana` +1 |
+
+## Scripted scenes, beat by beat
+**S8.1 Thursday, April 10: where Ray trains.** Chapter card over Jin's notebook: "Castell. Sal Bruno. 'Now.'" Two ways to learn the schedule, both always available:
+- Sunny's: Augie turns the TV up (`o_sunnys_tv`). Augie: "Castell. That's the guy who — " He looks at Jin. "...I'll turn it down."
+- The Cellar: Deshawn on the bench by the lockers (if `rel.deshawn ≥ 0`; if `≤ −1` he walks past Jin and only says "Not my business anymore"). With `rel.deshawn ≥ 1` he adds the tell and the dock door: "Loading dock door sticks. Kick it low." With `ch3_deshawn_dive == accepted`: "You let me eat that night. I'll tell you what I know."
+- If `rel.teddy ≥ 2` (`q8_teddy`): Iron Pulse after ten. Teddy has unrolled the old Marsh Boxing Club canvas over the Nautilus floor and taped the corners down. One mitts round where Teddy mimics the right hand with the shoulder drop. Teddy: "Same corner. I'm not leaving it this time."
+
+**S8.2 Friday, 6 pm: the promise (Q3: abandon a commitment when an investigative opportunity appears?).** At the rest point, the HUD shows **two objectives at once**, stacked, with their costs written plainly:
+- "Lucho's corner. Calder Armory, seven o'clock." (`ch7_lucho_promise`: "You said you'd be there." / "You said you'd try.")
+- "Calder Civic. Ray works out with one guard on the door tonight. Sunday the promoter's security will be in."
+- Jin's thought: "Tonight it's Ray, Sal and an old man on a chair. Sunday it's a building full of people with radios."
+- There is no menu. The choice is made **by which bus Jin takes** from the stop on Kessler: the Route 22 to the Armory or the Route 9 to the Civic. The stop's sign shows both, and pressing E at it gives: "[Route 22 — the Armory. Ray can wait until Sunday.]" / "[Route 9 — the Civic. Lucho will have to fight without you.]" Autosave before.
+  - Armory → `ch8_lucho_commitment = kept`. Ray happens on Sunday with heavier security (E8.2 Sunday version).
+  - Civic → `abandoned`. Ray happens tonight with light security (E8.2 Friday version). Lucho fights without Jin.
+
+**S8.3 The Armory (only if kept): working a corner.** The drill hall; the Courts' banner; the Courts' kids in the bleachers (Keisha waves both arms). Lucho wrapping his own hands behind the curtain: "You came." (If `try`: "You tried. Look at that.")
+- **The corner activity (3 rounds × 2 minutes, Lucho vs Kenny Shaw).** Jin stands on the apron; the camera frames the ring from Lucho's corner (zoom 1.0). The player does not control Lucho. During each round, four call buttons are mapped to directions: **"Feet!"** · **"Jab!"** · **"Turn him!"** · **"Hands up!"** Kenny shows readable habits: after two jabs he drops his left (call "Turn him!"); when Lucho stands flat-footed on the ropes (call "Feet!"); when Kenny loads his right hand his rear heel comes up (call "Hands up!"). A correct call at the right moment makes Lucho do the thing (a small win for that exchange); a wrong or late call does nothing and costs nothing. This is the player reading openings from outside the fight, the same skill they need for Ray, taught where nothing is at stake for Jin.
+- **The stool between rounds:** a one-line choice of advice (three options, each true: "He drops the left after two jabs." / "Stop standing on the ropes." / "Breathe. You're winning."). Lucho repeats whatever he's told under his breath, like Jin used to.
+- **Round 3: the call (`ch8_lucho_call`).** Halfway through, Kenny catches Lucho with a right hand; a cut opens over Lucho's left eye; Lucho's legs go for a second (the Ch0 debuff visuals, faint, on Lucho's sprite: his outline doubles for a moment). He survives to the bell. On the stool the referee leans over the ropes to the corner: "Corner? He good?" Lucho, blood running into his eye: "I'm fine. Send me." The camera holds on Jin at zoom 1.4, the same framing as Teddy in Chapter 0. No timer; the ref waits.
+  - "[Throw the towel.]" → `stopped`. The towel lands on the canvas; the crowd boos; the Courts' bleacher goes quiet. Lucho shoves the stool. Later, in the dressing area, with a butterfly bandage on his eyebrow: "You did right. I hate you a little. Buy me a sandwich." (`lucho` +2 for keeping the commitment, no further change.)
+  - "[Send him out.]" → `sent`. Lucho goes out and finishes on his feet. He loses a split decision. The cut needs four stitches at the Armory's doctor table. Lucho, while they stitch: "Thanks for trusting me." A beat. "My legs were gone, you know. In the third. You knew." He isn't angry. He isn't absolving anyone either. (`lucho` +2.)
+  - Neither result is better. The game does not grade it. The completion screen says only what Jin did.
+- Ada, leaving: "Lucho's mother would have liked you in the corner." Keisha: "Did we win?" Tasha: "We came."
+
+**S8.4 The approach (Friday or Sunday night).** Route 9 to the Civic. The building is dark except for one row of high windows. Jin takes the loading dock (Deshawn's "kick it low" saves a door-forcing animation; otherwise the night guard's rounds open it on a 20-second loop). Inside, the concourse in half-light. The 1994 arrows on the floor. See E8.1 for the fights. Optional stops (all on the way, none required):
+- **Press room** (`mem_presser`).
+- **The stairwell**: the empty mid-landing under the bulb. Jin's thought: "He said it was advice." (`ch0_refusal_line` quoted back in Jin's head: "'I'm not for sale.' / 'My mother's in section eight.' / 'Move. I've got a fight.'")
+- **Dressing Room B**: the cups, the mirror. Here **`ch8_hands`** is chosen at the taping table:
+  - "[Wrap your hands. Tape, like a boxer.]" → `wraps`. If Teddy is here, he wraps them (`sit` on the bench, Teddy kneeling with the tape). Mechanically: `power 0.65`, counter-cross damage ×1.3 (clean technique rewarded).
+  - "[The knuckles.]" → `knuckles`. Mechanically: `power 0.90`, counters ×1.0. Teddy, if present, looks at them and then at Jin: "...Your hands. Your call." 
+  - The numbers are tuned so both are equally winnable; the choice is about what this fight is.
+- **Teddy and the cup** (if Teddy is here). Teddy fills a paper cup at the cooler and holds it out. The camera holds on the cup at 1.5 for one second longer than is comfortable.
+  - If `ch3_cup == drank`: Teddy sees Jin's face, takes the cup back, and drinks half of it himself first. "It's water, kid. Watch me." He swallows. "...See? Water." He holds it out again. (Drinking is optional; nothing changes either way.)
+  - If `poured`: Jin takes the cup and pours it into the sink. He takes the second cup Teddy fills and pours that out too. Teddy looks at the sink, then drinks from the cooler bottle directly, like a kid. "Fair."
+- **The tunnel.** Letterbox on. Walking out of the tunnel into a dark arena is the Chapter 0 walk-out with the crowd removed: the same camera move (track from behind at 1.2, pull out to 0.85 as he reaches the apron), but silence instead of the roar, and the ropes creaking.
+
+**S8.5 Ray (before the bell).** Ray is in the ring hitting Sal's mitts in a gray sweatshirt, burgundy track pants. Sal sees Jin first. The mitts come down. Ray turns.
+- Ray (by `ch0_resistance`): 0–1: "You went down like you'd been told." / 2–3: "You were still throwing in the third. I felt it. I still feel it in this hand."
+- Ray: "I didn't put anything in your cup. I just didn't stop. You want to hang me for not stopping?"
+- Jin: "I want to know who said 'now.'"
+- Sal flinches. Ray sees him flinch.
+- If `cellar_dives_taken > 0`: Ray: "I hear you took dives in a bowling-alley basement. You want to talk to me about clean?"
+- Ray (by `ch8_hands`): wraps: "Tape. Okay. Like a fighter." / knuckles: "Brass. Okay. That's what this is."
+- Ray: "You want it, come get it. Same corner." He points his glove at the blue corner. "Sal. Ring it."
+- Sal: "Ray, this isn't a — " Ray: "Ring the bell, Sal."
+- Jin walks to the blue corner. (If Teddy is here, Teddy is already on the apron with a towel.) Sal at the timekeeper's table. Two strikes of brass: the exact sound that opened the game.
+
+**S8.6 Between rounds: the same stool.** After round 1 and round 2, the corner scene, camera at 1.4 on the stool, exactly framed like `s0_corner`.
+- **With Teddy** (`mem_corner` shard ③): Teddy: "What do you see?" Jin: "Shoulder. He drops the right shoulder." Teddy: "Then don't be there when it comes." A beat. "Jin. Look at me. Are you all right? If you're not, I stop it. I'll stop it this time." Jin: "I'm all right." Teddy (if `ch0_told_teddy`): "You told me about a coat once. I didn't listen. I'm listening." Teddy: "Hands up. Chin down. Go." This time it's a question first.
+- **Alone** (`mem_corner` ③ variant): Jin on the stool, the bucket empty, nobody on the apron. Thought: "Nobody to tell. Nobody to send me out." Then: "So I send myself."
+- After round 2, `mem_row3` shard ② can trigger if the player looks at Ray's corner: Sal glances at the empty row-3 seat by reflex. Ray, across the ring, catches Jin looking: "Sal always looks there. Some guy in a camel coat. Every fight there was a guy like that." (The coat is never identified as the one who ordered anything.)
+
+**S8.7 The end of the fight (`ch8_ray_after`, played, not picked).** See E8.2 for the fight. When Ray's condition reaches zero:
+1. The knockdown plays in slow motion (0.25) and freezes on Ray's shoulder hitting the canvas; input is ignored for 1.0 s and the buffer is flushed (so nobody "continues" by mashing the last combo).
+2. The HUD is gone. Ray is on one elbow, trying to get up, unable to. He is no longer a threat; his guard won't come up.
+3. **Sal starts ringing the bell.** Not two strikes: over and over, the brass bell from Chapter 0, struck by the man who stood in the other corner while it rang for Jin. Sal, shouting over it: "That's it! That's it! He's done! Jin, he's DONE!"
+4. The **neutral corner** (the white pad) is lit by the ring light. Walking into it is stopping. There is no prompt text on screen except a small "E — walk away" when Jin is beside Ray, and nothing at all elsewhere.
+5. If the player presses ATTACK near Ray: the **first press** does not hit. Jin raises his fist over Ray and holds (a new pose, the punch frozen at its start). The thought line appears: *"He's done."* The **second press** commits: Jin hits a man on the canvas. Each blow is muffled, with no hit-stop, no sparks and no shake; Sal is screaming; the bell keeps going. After the second blow the screen cuts to black on the impact; the bell continues over black for two seconds, exactly like the end of Chapter 0, then stops. → `continued`, `harm_count` +1.
+6. If the player walks to the neutral corner (or presses E): → `stopped`. Jin leans on the white pad with both forearms; the bell stops after three more strikes; Sal sits down on the floor behind the table.
+7. If the player does nothing: nothing happens. The bell keeps ringing. After 15 seconds, one thought: *"Walk away. Or don't."* There is no timer and no default.
+- **After `stopped`:** Ray, on his back, speaking to the lights: "I saw your eyes go in the first. In '94. I knew. Sal came back from the phone and said 'now,' and I threw. I could've held you. I could've hugged you till the bell. I threw." `ev_ray_statement`. "You don't know what it is to be the guy everybody's paycheck stands on. Sal's kids. My cutman. The Ford dealer with my face on a billboard on Route 9. I was going to be nobody in two years. You were going to make it one night." Then: "His name's Penner. Sal wrote it down. Sal writes everything down." Sal brings the notebook from Ray's bag and holds it out with both hands: `ev_sal_notebook` ★ ("End R2 — press-row phone, L. Penner (Ashgrove): 'Now.' Told Ray: he's done, go.").
+- **After `continued`:** fade in on Sal kneeling over Ray, a towel under Ray's head. Sal doesn't look at Jin. He takes the notebook out of the gym bag and throws it; it slides across the canvas to Jin's feet. "Take it. Take it and get out of my building." `ev_sal_notebook` ★. No `ev_ray_statement`.
+- Either way, Ray's open gym bag shows his appearance schedule (`ev_alder_closing` ★): "Alder Commons · Closing Fri May 9, 1997, 10:00, Ashgrove Tower 30F · Site to be delivered vacant · Community partner: NCC · Celebrity ambassador: R. Castell (TBC) / alternative under discussion." Jin's thought: "'Alternative under discussion.'"
+
+**S8.8 No restoration.** Ray is helped out down the tunnel by Sal (stopped: leaning on him; continued: Sal half-carrying him). The arena is empty. Jin sits on the stool in the blue corner (the player can stand up whenever they want; the camera waits).
+- The camera eases out slowly from 1.2 to 0.6 until the ring is a small white square in a black building. One ring light clicks off on its timer.
+- Thoughts, one per press: "I thought it would sound like something." / "Umma's still dead. Min's still dead." / "Two and a half years are still gone." / "My hands are shaking." (They are: a cosmetic tremor on Jin's idle pose for the rest of the night; his walk has the Ch1 limp again, `limp 0.25`, until the next sleep. The fight was short and desperate; this is what it cost.)
+- If Teddy is here, he sits on the apron below the stool and says nothing for a while. Then: "Come on. I'll drive." (stopped) / "...Come on. I'll drive. We'll talk about it some other year." (continued)
+- **Payphone in the concourse** (`q8_hana_call`): Hana, half asleep: "Jin? It's two in the morning." Jin: "It's done. Ray." Hana: "Are you hurt?" Jin (stopped): "No. He is. I stopped." / (continued): "...I didn't stop." Hana (stopped): "Okay. Okay. Go home. Call me tomorrow." / (continued): a long silence. "Go home, Jin." (`hana` +1 for calling; `hana` −1 separately if `continued`, as the registry states.)
+- **No combat after this.** The guards, if any are still standing, are gone.
+
+**S8.9 Dawn: the copy run (activity) and the envelopes.** A payphone at 4:10 am. Dot: "You call me at four in the morning, it better be for Min." Jin: "It's for Min." Dot: "...I'll be there at five."
+- **Kwik Copy.** Dot unlocks in a coat over her pajamas; the lights come on one row at a time. **Copy activity:** the player feeds pages (each evidence item becomes a sheet; the copier's light bar sweeps; a satisfying stack grows on the tray). Jin's thoughts run over the sheets as they copy, one per claim. Dot staples. On Min's cubby she has put a coffee for Jin.
+- **The envelopes (`copy_holder_*`).** A table of manila envelopes; the player writes a name on each from the list of people who would keep one. Eligible names appear only if they qualify; ineligible people are not shown (the hidden-option rule), and the list is honest about why someone isn't there only in Jin's thought ("Lenny ran. Lenny won't keep anything for me."):
+  - **Hana** (always; pre-written; her envelope is first).
+  - **Mara** (`rel.mara ≥ 1`), **Teddy** (`rel.teddy ≥ 1`), **Lenny** (`rel.lenny ≥ 1`), **Deshawn** (`rel.deshawn ≥ 1`), **Roz** (`ch4_roz == let_go`: her postcard c/o Teddy gave her sister's address in Millport), **Asher** (`ch6_asher_method == patient`), **Dot** (always offered: "Me? ...Yeah. Give me one. I'll put it in Min's cubby.").
+  - The player can make as many envelopes as there are names; more holders means a faster, wider exposure in Ending Two's epilogue. Fewer is allowed.
+- **The delivery walk (optional except Hana).** The HUD: "Get the envelopes to people who'll keep them." Each is a short scene at that person's place, one line each, while the city wakes up:
+  - Hana, St. Agnes staff door, 7 am shift change: "I'll keep it at my mother's. She keeps everything. She has my baby teeth." (`hana` holder.)
+  - Mara, the Courts' workshop, at the vise: she reads the first page standing up, then puts the envelope in the pay tin and closes the lid. "Safest place in Northside. Nobody's ever wanted what's in there."
+  - Teddy, Iron Pulse: tapes it under the ring apron. "Thirty years I hid cigarettes there."
+  - Lenny, the pinsetter loft at Starlite (if patient): "I'll say it again. To a lawyer, a judge, whoever. Just don't make me say it to you twice."
+  - Deshawn, the Cellar: puts it in his Bible. "Good book. Lot of evidence in it already."
+  - Roz: a blue mailbox on Market Street (mailed; her reply arrives in Ch9 as a postcard: "Got it. Sister says I'm crazy. I'm keeping it.").
+  - Asher, Garrison Suds: folds the envelope into a pillowcase without looking at it. "In case."
+  - Dot keeps hers in Min's cubby.
+
+## Encounters
+**E8.1 The approach** (no tips; mastery; checkpoints at the dock door and at the tunnel mouth).
+- **Friday version (abandoned):** dock: 1 `guard` (an old night man who, after one exchange, sits down on his chair and says "I'm sixty-four. Go on."); concourse: 1 `boxer` (Ray's sparring partner Tito, leaving late with his bag; he fights because he thinks Jin is a robber, and stops when he recognises him: "You're — oh. Oh. I'm not in this, man."). Two minutes of combat at most.
+- **Sunday version (kept):** dock: 2 `guard`; concourse: 2 `guard` + **`director`** (Brezinski, the promoter's head of security, on a radio; nearby guards attack faster while he talks; hit him first); press-room corridor: 1 `boxer` (Tito) + 1 `guard`. About four minutes. The cost of keeping the promise is real and stated.
+- Guards have batons (`guard`: long arc, not slippable, backdash it); the director stays back near the press-room door.
+
+**E8.2 Ray Castell** (`A.bout`: `ring {x0:440, x1:840}`, `opponent {type:'champion', name:'Ray Castell', opts:{patternSet:'ch8'}}`, `rounds:3`, `roundTime:60`, `allowLoss:true` (retry from round 1, line: "Again. Watch the heel."), `crowd:false`, `bell:true` (Sal), `corner:'s8_corner'`).
+- **Patterns the player already knows from Chapter 0** (now readable): ① double jab then step right; ② **the right hand** after a ~0.25 s right-shoulder drop (slip it; the best counter in the game); ③ body hook → head hook (backdash, don't slip); ④ lean-back counter if Jin throws three jabs in a row.
+- **New, to test mastery:** ⑤ **the feint**: the shoulder drops and a jab comes instead, then the real right a beat later. It punishes slipping on the shoulder alone. The difference is the back heel (it lifts only for the real one). Tip shown only if `rel.deshawn ≥ 1` (Deshawn's line as a HUD tip at the start of round 2: "When it's real, his back heel comes up."). Without it, Teddy (if present) says it after round 1; without either, the player has to see it. ⑥ **clinch-and-lean** when Jin's breath is under 30%: Ray closes, ties Jin up and leans, draining breath; break with a backdash on his first step or a short uppercut inside (Ray can't be launched, but the uppercut breaks the clinch).
+- **Round 3:** Ray throws pattern ② twice in a row, the 1994 finish. Countering both ends it if it hasn't ended already.
+- **Jin's limits:** breath recovery is 15% slower each round (round 3 audibly ragged). The fight is tuned to be won in round 2 or 3 by a player who counters; a player who trades ends up exhausted. "His speed allows him to win a short, desperate encounter" is the tuning target.
+- **Ray as a boss:** poise (he doesn't flinch from jabs after the first two in a sequence), no launch loops, recovers from stagger in 0.6 s.
+- **After:** S8.7 (the played choice). Then S8.8. No further combat in the chapter.
+
+**E8.3 Lucho vs Kenny** (activity, see S8.3; Jin does not fight).
+
+## Choices made here
+| Flag | Options | Immediate | Later |
+|---|---|---|---|
+| `ch8_lucho_commitment` | kept / abandoned | Which night, how much security; the Armory or not | `kept`: `lucho` +2; Lucho fights beside Jin in Ending Two if `rel.lucho ≥ 2`. `abandoned`: `lucho` −2; Monday, in the Courts' gym, Lucho with a healing cut: "Kenny Shaw. Split decision. A guy from the bus garage held my bucket. Keisha cried. You weren't there." Ch9 night: Lucho is polite and nothing else. |
+| `ch8_lucho_call` | stopped / sent (only if kept) | Lucho's line | Ch10 reflection before the gate: "I threw the towel for Lucho. Nobody threw it for me." / "I sent Lucho out. He said his legs were gone. I knew." Ending Two teaching vignette: Lucho tells the kids about it (either version). |
+| `ch8_hands` | wraps / knuckles | Power and counter numbers; Ray's and Teddy's lines | Ending Two: the knuckles are on the Monarch windowsill (knuckles) or in the river (wraps; the player sees Jin drop them off the river path in S8 dawn if `wraps`, a small optional interaction on the bridge: "[Drop them.]"/"[Keep them.]", no flag beyond the epilogue prop). |
+| `ch8_ray_after` | stopped / continued (played) | Ray's statement or Sal's anger; `harm_count` +1 if continued | Teddy (−1 if continued), Hana (−1), Mara (−1), Deshawn and Lucho lines; Ch9 Penner ("You stopped. Interesting." / "You didn't stop. Good. Neither do we."); Ending Two: stopped → Ray sends a typed statement to the Athletic Commission; continued → Ray's camp closes ranks and Sal's notebook is the only account from that corner. |
+| `copy_holder_*` | bool each | Envelopes | Ch9 Penner names them aloud; Ending Two epilogue texture (how fast and how wide the exposure goes). |
+
+## Chapter ending and state handed on
+- **Ending beat.** After the last delivery the player chooses (or Hana's alone, if that's all), the river path in the late morning: green on the willows, the river high with melt. Jin stops at the rail. Across the water, Ashgrove Tower. He takes out Sal's notebook and the closing memo, one in each hand. Thought: "Penner. Ashgrove. Friday, May ninth, ten o'clock." Then: "'Alternative under discussion.'"
+- A short cut to Sunny's a few days later (no control, 8 s): Augie's TV: "Champion Ray Castell has withdrawn from his May seventeenth title defense, citing [a hand injury (continued) / personal reasons (stopped)]." Augie: "Huh. Castell pulled out." He looks at Jin's hands. He doesn't say anything else.
+- Card: "May. Ashgrove Tower."
+- Completion screen: "Choices made: [You kept your promise to Lucho. / You went after Ray instead of working Lucho's corner.] [You threw the towel for Lucho. / You sent Lucho back out.] [You fought Ray with taped hands. / You fought Ray with the knuckles.] [You stopped when Ray couldn't defend himself. / You kept hitting Ray after he was down.] Envelopes: [names]."
+- Handed to Ch9: `ev_sal_notebook` ★, `ev_alder_closing` ★, `ev_ray_statement` (opt.); copy holders; `harm_count`, `jin_voice` final except for Ch9's Owen; `rel.*`; the Civic closed again ("CASTELL DEFENSE POSTPONED" banner); Ashgrove Tower inked on the map.
+
+---
+# Chapter 9 — The Offer
+
+**Chapter card:** "The Offer" · "Ashgrove Tower · May 6–8, 1997"
+
+## Date, mood, palette, weather
+- Tuesday, May 6, 1997, 8:10 pm to 10:40 pm: the tower. Wednesday May 7 and Thursday May 8: **the consideration days**, free roam, as long as the player likes. The chapter ends when the player chooses to sleep on Thursday night.
+- Mood: cold, clean, airless in the tower; then the warmest, saddest free-roam in the game, because everyone Jin meets is someone the player made (or didn't make) a relationship with.
+- Palette: the tower is the anti-Eastgate: pale granite, white marble, brushed steel, clear glass, gray carpet, cool white light with no warmth anywhere; the only warm colour on 30F is the city itself through the glass, a field of amber windows far below. Outside the tower, the city is in full spring: green on Kessler, open windows, a ballgame on every radio.
+- Weather: Tuesday clear and windy (the tower hums in the wind at the top); Wednesday warm; Thursday rain in the evening, clearing after midnight.
+
+## Gameplay identity
+**Climb to the people who decide, then be given the decision.** A vertical assault through spaces that have never seen a fight (security in blazers, glass, carpet, an elevator car), a frightened analyst who can be talked to or used, a boardroom where the player is offered everything and is allowed to ask anything, and then two days to walk around Calder and hear what everybody thinks without any of them deciding for him.
+- Exploration 25% · dialogue 35% · investigation 5% · combat 30% · activities 5%.
+- Target length: 22–25 minutes (tower 12, consideration 10+ at the player's pace).
+
+## Locations
+| id | Name | Size | Layout (left → right; layers) | Props and storytelling | Light / sound | Exits |
+|---|---|---|---|---|---|---|
+| `ash_plaza` | Ashgrove Plaza | 1200 × 420, exterior | Route 9 stop → a dry fountain → a bronze statue "THE WORKER" (a foundry man with a ladle, commissioned by Ashgrove Capital, 1991) → the tower's revolving doors | The plaque on the statue: "In honor of the men and women who built Calder. — Ashgrove Capital". Jin's thought: "They bought a statue of Mara's father." | Uplights on the granite; wind; the fountain's empty basin | Bus stop (map), lobby |
+| `ash_lobby` | Lobby | 1400 × 540 (mezzanine at y 300) | Revolving door → **security desk** (two guards, monitors) → turnstiles → elevator bank (keycard after 7 pm: "After hours: authorized cards only") → **freight corridor** behind a steel door → mezzanine with the tower model in a case | A Calder Ledger rack: "ASHGROOVE TO BRING 'ALDER COMMONS' TO SOUTHBANK — 400 UNITS, RETAIL". A press-conference podium stored against a wall: it will be used in Ending One. | Cool white, the lobby echo, a floor polisher somewhere | Plaza, freight corridor → `ash_security`, elevators (card) |
+| `ash_security` | Security level and freight elevator | 900 × 360 + the **freight car** (a 160 × 120 box that rises through a lit shaft) | Monitor room (every floor on a wall of screens, including 22 and 30) → locker room → the freight elevator | On one monitor: a man in a camel coat walking down a 30F corridor, then gone. | Monitor glow, the elevator's motor | Lobby, freight car → `ash_floor22` |
+| `ash_floor22` | 22F, Acquisitions | 1600 × 360 | Freight lobby → **cubicles** (grey partitions, the hum of a printer) → Owen Tully's cubicle (lamp on, a cold coffee) → the **project room** ("ALDER — DELIVERY DAY 5/9 — T-3" on a whiteboard; a fax machine spitting pages) → copier alcove → stairwell door | The whiteboard has the plan as bullet points: "· NCC letter (pending — W.R.) · ambassador (Castell out — alt.) · HS crew x 12 · Ch. 8 at 9:00 · voluntary surrender forms x 24". A child's drawing on Owen's partition: "DADDY'S OFFICE IS IN THE SKY". | Fluorescent, half the floor dark; the fax; the building's air hum | Freight, stairwell |
+| `ash_stairwell` | Fire stairwell 22–30 | 360 × 1440 (eight flights; landings every 180 px; the camera follows vertically) | Switchback flights with landings; floor numbers stencilled; a fire hose cabinet on 26; a door to each floor (locked except 30) | Somebody's cigarette break spot on 27: a coffee can of butts, the same as the Civic stairwell. | Emergency lighting, red-white; the stairwell's echo amplifies every footstep and radio | 22, 30 |
+| `ash_floor30` | 30F, executive corridor | 1800 × 360 | Stair door → **reception** (empty desk, an orchid) → a glass-walled corridor with the city on the left → art on the right (abstract canvases in beige) → the security chief's post → **boardroom doors** (double, frosted glass, "A") | Every surface clean. A cleaning cart left mid-corridor with a radio playing Korean news on 1490 AM, quietly: the night cleaner, Mrs. Paik, who nods to Jin and keeps vacuuming. (The one person on 30F who goes home to Eastgate.) | Cool white; the city glow; the vacuum | Stairwell, boardroom |
+| `ash_boardroom` | Boardroom | 1100 × 360 | Doors → the long table (twelve chairs) → **Celeste Ashgrove** at the far end → **Lyle Penner** standing by a glass case with the architectural model of **Alder Commons** → floor-to-ceiling windows: the river, Southbank, and the actual Alder Row as a row of small lit windows → **the man in the camel coat** at the window, back to the room | The model: towers where the rowhouses are; the co-op's community garden replaced by "PLAZA". A folder on the table, "SEO, J.", with photographs: Jin carrying a radiator at the Courts; Jin on the Starlite snow bank; Jin at Sunny's. Carrow's handwriting in the margins. | Recessed light over the table only; the windows bright with the city | Doors |
+
+Consideration days use existing locations: `stagnes_lobby`, `iron_pulse`, the **Hollow Tap** (a bar on Kessler, `hollow_tap`, 640 × 360: a long bar, a TV, a jukebox; Teddy's stool), `courts_yard`, `courts_workshop`, `rook_office`, `okafor_3a`, `cemetery_s14`, `cellar`, `kwik_copy`, `sunnys`, `river_path`, the rest point.
+
+## NPCs present
+| id | Where / idle | Key lines | Barks | Reacts to |
+|---|---|---|---|---|
+| `voigt` | **Greta Voigt**, 48, director of security: gray suit, earpiece, a radio; on 30F | (radio) "All posts, he's in the freight car. Hold him on twenty-two." / when reached: "I'm salaried. I'm not going to get hurt for salary. They're expecting you anyway." | "Posts, report." | — |
+| `owen` | **Owen Tully** (cast), 22F, at his cubicle, tie loosened, printing | See S9.3 | — | `ch9_owen` |
+| `mrs_paik` | Night cleaner, 30F | (in Korean, then English) "Late. Everybody's late tonight." | — | Ending One: she's cleaning the lobby during the press conference |
+| `celeste` | Seated at the end of the boardroom table | See S9.5 | — | Flags (only the ones that happened) |
+| `penner` | Standing by the model, clicking a fountain pen | See S9.5 | — | Flags |
+| `coat` | At the boardroom window, hands clasped behind his back | "I did tell you to take the money." | — | — |
+| consideration cast | See S9.6 | — | — | Relationships and flags |
+
+## Interactables
+| id | Label | Examine (actual text) | Unlocks |
+|---|---|---|---|
+| `o_worker_statue` | Statue | "'In honor of the men and women who built Calder.' They bought a statue of Mara's father." | — |
+| `o_ledger_rack` | Newspaper rack | "'Ashgrove to bring Alder Commons to Southbank.' Four hundred units. Retail." | — |
+| `o_monitors` | Monitor wall | "Every floor. Twenty-two has a light on. Thirty has a man in a long coat." | — |
+| `o_whiteboard_alder` | Whiteboard (22F) | The plan, as above. Thought: "'Ambassador — Castell out — alt.' The alternative." | Journal note |
+| `o_owen_drawing` | Child's drawing | "'Daddy's office is in the sky.'" | — |
+| `o_fax` | Fax machine | "A fax from Harlan Freight: 'Crew confirmed 12 men + 2 vans, 5:30 a.m. pickup Kessler & 5th.'" | Journal note (the van) |
+| `o_model` | Alder Commons model | "Towers where the houses are. The garden is a plaza now. Somebody made tiny trees." | — |
+| `o_folder_seo` | Folder "SEO, J." | Photo viewer: Carrow's surveillance shots, with his notes ("Courts — carries for the Polish woman — no visitors — Sunny's most nights"). Thought: "They've been watching me since March." | — |
+| `o_offer` | The offer | Document: `ev_offer_terms` ★ | `ev_offer_terms` ★ |
+
+## Quests
+| id | Kind | HUD objective | Completion | Reward / consequence |
+|---|---|---|---|---|
+| `q9_main` | main | "Ashgrove Tower. Thirtieth floor." → "Get past the lobby." → "Twenty-two." → [persuaded: "The stairs. Eight floors."] / [threatened: "Owen's card. The elevator."] → "The boardroom." → (offer; HUD hidden) → "You have until Friday morning." → (consideration: no objective text other than this one line, which never changes or counts down) → "Sleep when you're ready." | Tower cleared; offer received; the player chooses to sleep on Thursday night | `ev_offer_terms` ★; the van at 5:30 |
+| `q9_visits` | side (non-binding) | Not shown as a list. Each person Jin could visit has the `…` marker over them on the world map | Any visit | `ch9_night_visits` |
+
+## Scripted scenes, beat by beat
+**S9.1 The plaza (Tuesday, 8:10 pm).** Chapter card over Jin's notebook: "Penner. Ashgrove. 30F." Wide shot from the dry fountain looking up the tower (the camera tilts up the full height, 3 s, until the boardroom's lit windows are a strip at the top of frame). Thought: "Thirty floors. The neighborhoods are all below it."
+
+**S9.2 Lobby → security level → freight car.** See E9.1. The freight elevator is the route up (the passenger elevators need a card). The **elevator fight** happens in the moving car.
+
+**S9.3 22F: Owen Tully (Q2: threaten a frightened witness to save time?).** The car stops at 22 ("The freight car only goes to twenty-two after nine." The panel says so). Owen is at his cubicle, printing. He stands up so fast his chair rolls into the partition. He has a stapler in his hand like it's a weapon, then realises, and puts it down.
+- Owen: "I'm an analyst. I'm a junior analyst. I make spreadsheets."
+- Jin: "Alder Row. What is it?"
+- Owen (looking at the project room): "It's a co-op. Twenty-four families. It's a spreadsheet. It's — I built the relocation model. I hate it. I built it anyway."
+- **Choice `ch9_owen`:**
+  - "[Sit on the edge of his desk. Let him explain it.]" → `persuaded`. Owen explains the model while it prints (`ev_relocation_model`: "Alder Row Cooperative — 24 households, 61 residents. Eminent-domain route: 14–20 months, $520,000. 'Voluntary surrender' route (on-site community pressure + NCC endorsement + public ambassador): 1 day, $110,000. Ambassador: J. Seo (pending)."). A guard patrol passes the cubicles halfway through; the player presses DOWN to crouch behind the partition with Owen (a 6-second hide; failing it just means a 2-guard fight in the cubicles, E9.2b). Owen won't give his keycard: "It logs my name. They'll know. I have a kid." He points at the stairwell: "Eight floors. They'll come down to meet you. I'm sorry." Slower: the stairwell gauntlet (E9.3).
+  - "[Take his keycard. Now.]" → `threatened`. Jin closes the distance; Owen flinches into the partition (`cower`). "Take it! Take it! It's on the lanyard!" Jin takes the card; the passenger elevator goes straight to 30. Faster: the stairwell gauntlet is skipped. No relocation model. `harm_count` +1. **And Owen pays for it:** in the boardroom Penner says so (S9.5).
+- Jin's thought, either way: "'Ambassador: J. Seo, pending.' They already wrote my name in."
+
+**S9.4 30F.** The corridor of glass. Mrs. Paik vacuuming with 1490 AM on her cart's radio: the Korean program Umma listened to on Sunday mornings (Ch0's cast bible). Jin stops for one beat (the camera does too). Mrs. Paik nods and keeps vacuuming. Greta Voigt at her post with two guards (E9.4). When they're down, Voigt holds up her hands: "I'm salaried. I'm not going to get hurt for salary." She touches her earpiece: "He's here, Ms. Ashgrove." A pause. "...They're expecting you anyway." She opens the boardroom doors for him.
+
+**S9.5 The boardroom: the offer.** Letterbox on. The HUD hides. The camera starts wide (0.8): the table's length between Jin at the door and Celeste at the far end, the city behind her, the man in the camel coat at the window with his back to the room. Penner by the model.
+- Celeste: "Mr. Seo. Sit wherever you like. Nobody in this room has ever hit anyone. That's rather the point."
+- Penner (clicking his pen, cheerful): "Lyle Penner. We spoke once, in a manner of speaking. I said one word on a telephone in August of '94. I'm told you heard the result."
+- **They have followed his progress.** Penner opens the folder "SEO, J." and reads from it, choosing only lines that happened (each is conditional; a player with none of them hears the restraint line instead):
+  - Always: "'I'm not for sale.'" / "'My mother's in section eight. Tell your people to watch.'" / "'Move. I've got a fight.'" (`ch0_refusal_line`, word for word.) "You said that on a stairwell. We liked you for it."
+  - `ch1_fare_source == activities_jar`: "Six dollars and forty cents from a bingo jar. Even the bingo money. We're not so different."
+  - `ch3_deshawn_dive == accepted`: "You let a man lose to you for money. You've taken a gift before."
+  - `cellar_dives_taken > 0`: "You went down in a bowling-alley basement for Mo Feeney. [Once / Twice.] For a hundred and fifty dollars a time. We're offering a little more."
+  - `ch4_took_profit`: Celeste: "You took six hundred dollars of ours, Mr. Seo. Consider it an advance."
+  - `ch4_envelope == taken` and outcome not `confessed`/`returned_anon`: "Eighteen hundred and forty dollars of other people's wages. You understood the deal before we offered it."
+  - `ch5_took_unit_4d` and not `ch6_gave_back_4d`: "And an apartment promised to a woman with three children. You slept fine, I hope."
+  - `ch6_asher_method == threatened`: "You frightened an old man in a laundromat. Efficient."
+  - `ch9_owen == threatened`: "Mr. Tully's card opened our elevator at nine-fourteen. He'll be clearing his desk in the morning. That was you, not us. You see how quickly it becomes nobody's fault?"
+  - `ch8_ray_after`: stopped: "You stopped, with Castell. Interesting." / continued: "You didn't stop, with Castell. Good. Neither do we."
+  - Money over $1,000: "You've been careful with money. Careful men take good offers."
+  - **If the player took nothing and hurt nobody who didn't swing first** (`take_count == 0` and `harm_count == 0`): Penner closes the folder. "You've been remarkably careful not to take anything that wasn't yours. I admire it. It's expensive."
+- **The offer.** Penner slides a bound document down the table; it stops in front of Jin. The document viewer opens (`ev_offer_terms` ★) and stays open until the player closes it:
+  > **Treatment:** the full 18-month neuro-rehabilitation program, Boston, all costs.
+  > **Housing:** furnished two-bedroom apartment, Riverside.
+  > **Income:** $4,000 per month for 36 months.
+  > **Identity:** public restoration as Jin Seo; press conference arranged.
+  > **Career:** managed return; six bouts; title opportunity guaranteed.
+  > **Condition:** participation in the Alder Row delivery, Friday May 9, and public support of Alder Commons.
+- Thought (always): "Eighty-four thousand. Whitlow's number. It's the first line." (The price stated in Chapter 1, the one ordinary money could never reach, is the first thing they offer.)
+- **Questions (a menu; ask any or all, in any order; each is answered honestly; none is a trap).** This is the "time to consider" inside the room.
+  - "Is the treatment real?" Penner: "The Beacon Street Institute's program in Boston. The same one Dr. Whitlow trained in, as it happens. You won't be what you were. You'll be a great deal more than you are." (True. Hana confirms it on Wednesday.)
+  - "What happens to the people on Alder Row?" Penner: "Twenty-four households. A hundred and ten thousand in relocation assistance, split among them. Some go to family. Some find something. A few will have a hard year." Celeste: "People move every day in this city, Mr. Seo. Usually nobody gives them anything."
+  - "Why me?" Penner: "Castell was going to be our face. He's withdrawn. A comeback is a better story than a defense. The man who was wronged, standing with the future. People believe a scar."
+  - "What do you need me to do on Friday?" Penner: "Stand in front. Walk in first. Open the gate if they've locked it, and they will have. Sign nothing; just be seen. Channel 8 is at nine."
+  - "What if I say no?" Celeste: "Then you leave, and we close later, slower, through the courts. It costs us four hundred thousand dollars and a year. And you'll be exactly where you are. We don't threaten people, Mr. Seo. We've never needed to."
+  - "What happened to the rest of my money? The two million." Celeste: "Distributed. Some of it built a parking structure. Some of it is in this table. Some of it bought a roof in Northside." (Not fraud: the Courts' roof is real; she says so as a fact.)
+  - "I've got copies. People are holding them." Penner names them, from the folder: "Ms. Lim at St. Agnes. [Ms. Kowalski at the Courts.] [A Mr. Marsh.] [Mr. Voss, God help us.] [Mr. Pryor.] [Mrs. Kaminski in Millport.] [Mr. Asher.] [A Ms. Pham at a copy shop.]" Celeste: "Exposure is possible. I won't insult you by saying it isn't. It's slow. It's expensive. It needs a lot of people to keep being brave for a long time, and you'd have to be one of them, and you'd be poor while you did it. Expose us, and in three years a judge fines a holding company. Accept, and in three years you're champion of the world. Both are true. Choose which one you'd like to live in." (The PDF: exposure is possible but requires rejecting the deal and cooperating with others; one more fight won't solve the system.)
+- **The man in the camel coat** turns from the window only once, when Jin stands to leave. He adjusts a cuff. "I did tell you to take the money." He turns back to the window.
+- **The terms of the decision.** Penner: "No answer tonight. We're not animals. Friday, five-thirty in the morning, Kessler and Fifth. There'll be a van. If you're on the curb, you're with us. If you're not, you're not, and we'll never speak again." He smiles. "Kessler and Fifth. You know the corner."
+- Voigt walks him to the elevator. On the way down (the passenger car, no fight), the guards he beat are standing in the lobby with ice packs. They step aside. Letterbox off. The HUD returns with one line that never changes: **"You have until Friday morning."**
+
+**S9.6 Consideration (Wednesday and Thursday; free roam; no timer).** The world map opens. Every person below has a `…` marker on the map; the player can visit any, all, or none; each visit is a perspective, not an argument the game wants won. Nothing in this section changes which ending is available. `ch9_night_visits` records who was visited (for the completion screen and a few epilogue props only).
+- **Hana** (St. Agnes, the staff door at the end of her shift, Wednesday 7 pm): "I called Boston today. On my lunch. The program's real, Jin. Whitlow trained there. It works. Not all the way. But it works." A beat. "I won't tell you what to do. Everyone's been deciding for you. I'm not going to be one more." (`ch6_hana_repaid`: "You paid me back. Nobody pays me back." / `ch8_ray_after == continued`: "I keep thinking about the phone call. You said 'I didn't stop.' I believed you.")
+- **Teddy** (the Hollow Tap, Thursday afternoon; Jin can buy him a round for $3): "I sent you out once for a title. Don't let me tell you anything about titles." Then, after a long time looking at the TV: "I'd take it. I'm a coward and I'd take it. Don't listen to me."
+- **Mara** (the workshop, Wednesday): she keeps working while she talks. "Twenty-four families. That's one of my buildings. One stairwell." / (if `ch5_left_repair`): "You went in Nell's office while I was on my knees in front of a boiler. I remember. I also remember you came back." / "I'm not going to tell you. I'd hate you a bit either way."
+- **Rook** (Council HQ, his office, lights off; he speaks only if Jin knocks): "They asked me for a letter. They asked you for your face. Same price list." (`ch7_hit_rook`: "My lip's healed. I'd have let you do it twice." / else: "You didn't hit me. I've been trying to decide all month whether that was mercy or contempt.") "I didn't sign it. Dutch's people say the roof money's done. Nell's finding a bank that lends to tenants. We'll be cold for a year." Then: "I'm going to tell you not to do it, and you're going to think about who's saying it. That's fair."
+- **The Courts** (Wednesday evening). If `ch7_truth_told_by == rook`: a vigil for Umma and Min in the yard, candles in jam jars on the garden beds, Nell's idea; Ada and Gus sit with Jin if he sits. Gus quotes `ch7_rook_answer` back: "Walter told us you said [you don't know what you'd have said]. That's the most honest thing anybody's said about any of this." If `jin`: ordinary laundry on the lines, the residents divided; some nod to Jin, Darnell doesn't. Keisha, either way: "Lucho says you're going away. Are you going away?"
+- **Lucho** (the gym): warm if `ch8_lucho_commitment == kept` ("Whatever you do Friday, you were in my corner."), polite if not ("Good luck, man.").
+- **Mrs. Okafor** (3A; her light is on): if `ch6_okafor_photo`, the cake photo is framed on her TV. "Your mother would ask me what I think, and then do what she wanted. So I'll tell you what I think: I think you should eat something." She feeds him.
+- **The cemetery** (Section 14): the flowers are there if he left them, and someone else's beside them now (St. Columba's). A sit spot. Thought: "Umma would take the money. She'd take it and feel terrible and send half of it to church." Then: "Min wouldn't. Min would photograph the gate."
+- **Deshawn** (the Cellar): "Everybody down here would take it. I'd take it. That's why I'm down here."
+- **Mo Feeney** (the Cellar, cigar): "Heard you got an offer from up the hill. Kid. Finally being smart."
+- **Dot** (Kwik Copy): "Min's envelope's still in her cubby. In case you were wondering. It's not going anywhere."
+- **Alone**: the river path at night; Alder Row is visible across the water as a short row of lit windows (it is not on the map and cannot be visited: Jin's thought when the player tries the map: "Southbank. I've never been. I don't know anyone there."). Thought: "Twenty-four windows. I don't know a single name."
+- **Sleep.** At the rest point, the evidence wall shows the offer pinned in the middle of everything. The player sleeps when ready. Thought before sleep, by `jin_voice`: restrained: "Friday." / mixed: "Friday. Whatever I am by Friday." / hard: "Friday. They think they know what I'll do. They've been reading the same folder I have."
+
+## Encounters
+**E9.1 Lobby and security level** (checkpoint at the revolving door). 3 `guard` (corporate security in navy blazers, batons: the long, unslippable arc; backdash it) at the turnstiles. Clean floor, no cover. Then 2 `guard` in the monitor room. Teaches nothing new; tests spacing against batons in an open, bright room.
+
+**E9.2 The freight car** (checkpoint at the car door). A 160 × 120 box rising through the shaft with the doors opening at 12 and 17 to let a guard in each time (2 at once at most). `maxAttackers: 2`, no room to dash: uppercut, hook and slip in a phone booth. The shaft lights strobe past the car's grille.
+- **E9.2b** (only if the hide fails on 22): 2 `guard` among the cubicles.
+
+**E9.3 The stairwell gauntlet** (only if `ch9_owen == persuaded`; checkpoints at 24, 27, 30). A vertical climb, landing by landing: 2 `guard` on 24, a `guard` + `director` (a shift supervisor with a radio) on 27 (hit the supervisor first), 2 `guard` coming down from 29. Stairs are one-way platforms; air dash from flight to flight; knocking a guard down a flight takes him out of the fight.
+
+**E9.4 30F corridor** (checkpoint at the stair door): 2 `guard` + **Greta Voigt** (`director`; she never throws a punch; while her radio is live, nearby guards attack 30% faster; reaching her ends the fight: she surrenders). Glass walls; the city on the left.
+
+No combat after the boardroom. Nothing in the consideration days is hostile.
+
+## Choices made here
+| Flag | Options | Immediate | Later |
+|---|---|---|---|
+| `ch9_owen` | persuaded / threatened | `ev_relocation_model` + the stairwell / the keycard + skip | `threatened`: Penner's line about Owen's desk; `harm_count` +1; Ending Two epilogue: "Owen Tully was let go on May 7. He did not testify." / `persuaded`: Ending Two epilogue: "Owen Tully testified for two days. His daughter drew the courthouse." Ending One: the administrative report is Owen's model with the actual numbers filled in. |
+| `ch9_night_visits` | list of ids | — | Completion screen lists who Jin saw; small props in the endings (Teddy's beer mat in Ending One's apartment; Mrs. Okafor's leftovers in a container in Ending Two's room). |
+| (question menu) | — | — | None. Asking or not asking changes nothing; it only informs. |
+
+## Chapter ending and state handed on
+- **Ending beat (Friday, May 9, 5:10 am).** No card first: the alarm clock at the rest point (5:00), the player gets up. Walking out is the only thing to do; the map is closed ("Not now."). Kessler and Fifth before dawn: the **poster wall** (Ch0: fresh paste; Ch2: buried; now a new layer, "ALDER COMMONS — CALDER'S FUTURE — ASHGROVE CAPITAL", over everything), the **Route 9 bus shelter** where Umma waited with two umbrellas. Jin stands under the streetlight. If the player presses nothing, he leans on the wall, hands in his pockets, one knee bent: the game's key image, now at 5:28 in the morning.
+- 5:30: a **gray panel van** turns onto Kessler, headlights on (the Ch2 van's twin; same model, same color). Carrow at the wheel. The side door slides open: Dutch on the bench in his pea coat (with a bandaged hand if `ch4_dutch_after == kept_going`), Benny (if `let_go`, he nods; if `hit_again`, he looks away), Slim in a hoodie with his gym bag on his knees ("I needed the money, man. Two hundred for a morning."), and five more men Jin doesn't know.
+- Carrow: "Morning, champ. Get in."
+- The player presses E on the van door. (Getting in is canon: Jin arrives at Alder Row with the enforcers. The decision is at the gate, and Jin's thought says so: "I'll decide when I see it. They'll have to show me.")
+- The door slides shut. Black. Card: **"Somebody Else's Home."**
+- Completion screen: "Choices made: [You listened to Owen Tully. / You took Owen Tully's card.] You read the offer. You had until Friday morning. You saw: [names]."
+- Handed to Ch10: `ev_offer_terms`, `ev_relocation_model` (opt.); every flag; `support_at_alder` is computed now (see Ch10) but nothing is shown.
+
+---
+# Chapter 10 — Somebody Else's Home
+
+**Chapter card:** "Somebody Else's Home" · "Alder Row, Southbank · Friday, May 9, 1997"
+
+## Date, mood, palette, weather
+- Friday, May 9, 1997. The van arrives at 5:55 am; first light at 5:40, sunrise at 5:52; the co-op's emergency meeting on the steps at 6:00; Channel 8 is booked for 9:00. **There is no clock on screen and nothing happens on its own.** Carrow says so: "We go when the ambassador's ready. Mr. Penner's orders." The sun rises slowly behind the row whatever the player does; nothing else moves until the gate.
+- Mood: ordinary morning in a stranger's street, with men unloading bolt cutters at one end of it. Then either a quiet, purposeful wrongness, or the last fight in the game.
+- Palette: Southbank is older and lower than anywhere else: two-story red brick rowhouses with white-painted stoops, window boxes with geraniums, a green iron gate into the co-op's inner garden, a corner shop with a striped awning. Dawn is pink-gray over the river, then gold on the brick; the vans are the only gray things on the street. Across the river: the whole city, Ashgrove Tower catching the sun first.
+- Weather: clear, cool, still. Dew on the garden beds; breath visible until 7.
+
+## Gameplay identity
+**Meet the people it would cost, then choose where the cost falls.** A short, slow exploration of a street full of people Jin doesn't know, doing ordinary things under pressure (closing a shop, dragging a mattress, arguing on a stoop), in which the player can learn names or not. Then the gate. After it, one of two endings: a playable clearance that is uncomfortable on purpose and then the rewards over time; or the final fight beside whoever the campaign left him, and then an ordinary, poorer life.
+- Pre-choice: exploration 45% · dialogue 50% · activity 5% (carrying the mattress). About 8 minutes at a natural pace; as long as the player likes.
+- Ending One: clearance 6 min (no real combat; one restraint), epilogue 6 min with one playable round.
+- Ending Two: combat 8 min (three waves), epilogue 7 min with one playable walk.
+- Target length: 20–25 minutes either way.
+
+## Locations
+| id | Name | Size | Layout (left → right; layers) | Props and storytelling | Light / sound | Exits |
+|---|---|---|---|---|---|---|
+| `alder_street` | Alder Row | 1800 × 420, exterior (stoops as one-way platforms at y 330; a few fire escapes at y 240) | Southbank Ave corner: **the two gray vans** and the crew unloading → **Alder Market** (Mr. Haile pulling the grate; a coffee urn on a card table in front) → rowhouses 1–8 with stoops (window boxes, a kid's bike, a "SUPPORT ALDER ROW CO-OP" sign in a window) → a rented moving truck, back open, half full of other people's furniture → **the gate** (green iron, between houses 12 and 13; chained from inside) → rowhouses 13–24 → the far end: a black sedan parked under a tree, engine off (the man in the camel coat) | The co-op's hand-painted sign over the gate: "ALDER ROW COOPERATIVE · EST. 1979 · 24 HOMES · ONE ROOF AT A TIME". Flyers taped to every lamppost: "MEETING 6 AM — DO NOT SIGN ANYTHING". Moving boxes on stoops labelled in marker: "KITCHEN", "BABY", "MAMA'S DISHES — CAREFUL". | Pink dawn to gold morning; birds, a radio, a baby crying in house 7, the vans' engines idling, crew voices low | (no map: the map is closed for this chapter: "Not now.") Gate → `alder_garden` |
+| `alder_gate` | The gate (scene space) | 640 × 360 | Jin and Carrow on the street side; **Hollis Grant** and **Terrence** on the garden side; residents behind them on the garden path; the chain and padlock through the gate bars at chest height | The chain is new, bought yesterday; the price sticker is still on the padlock ("$6.99 — HANDY HARDWARE"). | The light comes through the gate bars in stripes | — |
+| `alder_garden` | The co-op garden (behind the gate) | 1200 × 420 | Gate → brick path → **raised beds** with name stakes → Mr. Fitch's folding chair and radio → laundry lines → the back doors of houses 9–16 → a mural on the back wall painted by kids: 24 houses with 24 different colored doors | Name stakes: "FITCH — BEANS — 22 YRS", "JUNE — SUNFLOWERS (DON'T STEP)", "GRANT". Compare `courts_yard`'s "KEISHA'S TOMATOES — DO NOT STEP" (the player has seen this kind of place before, with different names). | Morning sun; the radio (a morning sports call-in show) | Gate |
+
+## NPCs present
+Residents are labelled **"Resident"** until Jin speaks to them; then their name appears in their bubble and is stored in `ch10_names_learned`. They do not need backstories (PDF); each one does one human thing.
+
+| id | Where / idle | Key lines | Barks |
+|---|---|---|---|
+| `haile` | **Mr. Haile**, Alder Market, pulling the grate down two hours early, then pouring coffee from an urn on a card table for anyone who walks past, **including the crew** | "Nobody's buying milk this morning." / (handing Jin a paper cup) "Everybody's cold. Coffee doesn't pick sides." / if asked: "Twenty-two years. My wife did the books. Now I do the books badly." | "Coffee. Free. Today only." |
+| `rosa` | **Rosa Medina**, house 7, dragging a crib mattress off her stoop toward the moving truck | "Help me with this or get out of the way." / after: "Thanks. ...You're with them, though. I saw you get out of the van." | "Careful, that's the baby's." |
+| `hollis` | **Hollis Grant**, co-op chair, on the steps of house 12 with a clipboard, arguing | "If we lock the gate, they call it resisting. If we open it, they call it consent. Somebody tell me the third thing." | "Nobody signs anything!" |
+| `terrence` | **Terrence Grant**, 19, Hollis's grandson, holding a broom handle like a bat | "You're the boxer. From the TV. You're with them?" | "Let 'em try." |
+| `fitch` | **Mr. Fitch**, 80s, in a folding chair in the garden behind the gate, radio on his knee; Jin talks to him through the bars | "I was here before the co-op. I'll be here after the vans. One of those is true." | (hums) |
+| `june` | **June**, 10, circling on a bike, delivering flyers to every stoop and every crew member, very seriously | "You can have one. You're not supposed to sign anything either." | "Meeting! Six o'clock! It's six o'clock!" |
+| `carrow` | **Vince Carrow**, crew boss, by the vans, clipboard | See S10.2 | "Load the cutters in the first van. No, the first van." |
+| `dutch` | On the first van's step in his pea coat (bandaged right hand if `ch4_dutch_after == kept_going`) | walked_away: "I collect. I don't do this." / kept_going: "You did my hand. Moira cried. She doesn't cry." | — |
+| `benny` | Unloading boxes | let_go: "Morning." (He looks embarrassed to be here.) / hit_again: says nothing; his jaw clicks when he chews gum. | — |
+| `slim` | Sitting in the van's open door in a gray hoodie, gym bag on his knees | "I needed the money, man. Two hundred for a morning. I didn't know it was — I didn't ask what it was." | — |
+| `coat` | In the black sedan at the far end of the row, visible through the windshield; never gets out | — | — |
+
+## Interactables
+| id | Label | Examine (actual text) | Unlocks |
+|---|---|---|---|
+| `o_coffee_cup` | Paper cup (from Mr. Haile) | "A paper cup. Coffee. A stranger handed it to me because I looked cold." Option: "[Drink it.]" / "[Hold it.]" (no flag; Jin's thought if he drinks: "It's coffee. It's just coffee.") | — |
+| `o_flyer_june` | Flyer | "'Meeting 6 a.m. — Do not sign anything.' In a ten-year-old's handwriting, photocopied." | — |
+| `o_coop_sign` | Co-op sign | "'One roof at a time.' Since 1979." | — |
+| `o_boxes` | Moving boxes | "'Mama's dishes — careful.'" | — |
+| `o_moving_truck` | Rented truck | "Half full of somebody's living room. They rented it themselves, to get their things out before anyone else carries them." | — |
+| `o_padlock` | Padlock (gate) | "Six ninety-nine at Handy Hardware. Bought yesterday." | — |
+| `o_sedan` | Black sedan | "A man in a camel coat behind the windshield. He's reading a newspaper." | — |
+| `o_name_stakes` | Name stakes (visible through the gate) | "'June — sunflowers (don't step).'" | — |
+
+## Quests
+| id | Kind | HUD objective | Completion | Consequence |
+|---|---|---|---|---|
+| `q10_main` | main | "Alder Row." → "The gate." (shown after Carrow's briefing; nothing forces the player toward it) → [accept] "Walk in first." → "Stand where they tell you." / [refuse] "Keep them off the gate." → (epilogue; HUD hidden) | The gate choice; the ending's sequence | `ch10_choice` |
+| `q10_rosa` | side (pre-choice) | "Rosa needs a hand with the mattress." | Carry activity (no punching while carrying, stated: "Hands full.") | Rosa's name; her line |
+
+## Scripted scenes, beat by beat
+**S10.1 Arrival (5:55 am).** The van door slides open. The camera starts inside the van, looking out (zoom 1.3), then lets Jin step down into a wide shot (0.85) of the whole row at dawn: the vans, the shop, the stoops, the gate, the sedan. No music. A baby crying. June ringing her bike bell. Thought: "Twenty-four doors."
+
+**S10.2 Carrow's briefing (the consequences, stated before the choice).** Carrow, by the first van, clipboard against his chest, explains it like moving furniture:
+- Carrow: "Here's the morning. You walk up first. They'll have chained the gate; they always chain the gate. You cut it. We walk in behind you. Every unit gets a form. They sign, they get forty-five hundred and a ride. Furniture to the curb. Channel 8's here at nine; you stand in front and say 'This neighborhood deserves a future.' Then you go home to Riverside."
+- Jin: "And if they don't sign?"
+- Carrow: "Then it takes longer and it's louder, and you're still in front." A beat. "We go when you're ready. Mr. Penner's orders. Take a walk. Get a coffee. The old guy's giving it away."
+- The Journal's last claim, *What they want next*, writes itself in plain words while he talks (a badge, not a pop-up): "**Accept:** walk in first, cut the chain, help them clear Alder Row. Treatment, the apartment, the income, the comeback, my name on a poster again. **Refuse:** fight this crew. No treatment. No comeback. The envelopes go to court with the people holding them, and it takes years."
+- The objective becomes "The gate." The player is free.
+
+**S10.3 The street (free; no timer).** Everything is optional. The player can walk straight to the gate. Each resident is a short interaction; nothing is withheld if they don't:
+- **Mr. Haile** pours coffee into paper cups from an urn on a card table, for residents and crew alike. He hands one to Jin without asking who he is. "Everybody's cold. Coffee doesn't pick sides." The **cup** (`o_coffee_cup`): the game's motif closes here. In Chapter 0 a paper cup was handed to Jin to take his choice away. This one is just coffee, given by a stranger who wants nothing. Jin holds it for as long as the player wants; drinking it is a single E press and changes nothing. Thought: "It's coffee. It's just coffee."
+- **Rosa Medina** (`q10_rosa`): Jin can take one end of the crib mattress. Carry activity across the street to the moving truck (punching disabled while carrying; the HUD says "Hands full."). Rosa: "Thanks. ...You're with them, though. I saw you get out of the van." No choice; it's just true.
+- **Hollis and Terrence** arguing on the steps of house 12: Hollis: "They want us to swing first, Terrence. Then it's a riot on Channel 8 and nobody remembers why." Terrence: "So we just watch?" Rosa, passing with a box: "I've got a baby. I'm not standing in front of anything." (The PDF: residents arguing about whether resistance will make things worse.) If Jin approaches, Terrence: "You're the boxer. From the TV. You're with them?" Jin can answer "I came in their van." (no flag) or say nothing.
+- **Mr. Fitch** through the gate bars, in his folding chair among the beans: "I was here before the co-op. I'll be here after the vans. One of those is true."
+- **June** gives Jin a flyer: "You can have one. You're not supposed to sign anything either."
+- **The crew:** Slim on the van step ("I didn't ask what it was."), Benny unloading, Dutch on the step. Talking to Dutch: walked_away: "I collect. I don't do this." He doesn't say what he'll do. / kept_going: "You did my hand. Moira cried. She doesn't cry."
+- **The sedan:** the man in the camel coat reading a newspaper behind the windshield. Examine only. He doesn't look up.
+- The player can also sit (a stoop at the empty house 19, which has a "SOLD" sticker from an earlier sale: someone has already gone). Thought: "Somebody already left. Took the money. I don't blame them."
+
+**S10.4 The gate (the choice).** When Jin walks up to the gate, Carrow comes up the street with the bolt cutters (red handles) and holds them out handle-first. Letterbox on. The camera settles into a fixed two-sided frame at 1.0: Carrow and the crew on the left, the residents behind the bars on the right (Hollis in front with his clipboard, Terrence with the broom handle, Rosa at the back with the baby, Mr. Fitch's chair, June on her bike), Jin in the middle with the chain at chest height between him and them. The sun comes up behind the row, slowly; it's the only thing that moves.
+- Jin takes the cutters (he must take them; holding them is not the choice). The chain is in front of him. Thought (fixed): "Lindell's chain kept them in. This one keeps us out."
+- **Jin's last thoughts** play one per press, built only from what the player actually did (nothing invented; nothing the player didn't do is said):
+  1. `ch0_refusal_line`: "'I'm not for sale.' I said that on a stairwell." / "'My mother's in section eight.' She was." / "'Move. I've got a fight.' I did."
+  2. Taking (`take_count`): 0: "I never took anything that wasn't mine. It was always small things. It was always easy to leave them." / ≥ 1: "I took [the bingo jar / Mara's payroll / the Vasquez family's apartment / Mo's money for going down]. Small. It was always small."
+  3. Hurting (`jin_voice`): restrained: "I never hit anyone who was already down." / mixed: "I hit some people who'd already given me what I wanted." / hard: "I hurt people who were down. I had reasons. Rook had reasons."
+  4. `ch8_lucho_call` (if kept): "I threw the towel for Lucho. Nobody threw it for me." / "I sent Lucho out. He said his legs were gone. I knew." (if abandoned): "I left Lucho without a corner for a chance at Ray. It was the right chance. It still cost him."
+  5. `ch7_rook_answer`: "Rook asked what I'd have said. [You'd have had to ask me. / I don't know. / Not this.]"
+  6. `ch10_names_learned`: none: "I don't know a single name." / some: "[Mr. Haile. Rosa. June...]" (the names learned, in the order learned).
+  7. `ch0_purse_dream`: "Umma's rent." / "Umma's Saturdays." / "Min's door."
+  8. Fixed, last: **"Nobody asked me. Nobody's asking them."**
+- **Choice `ch10_choice`** (both always shown, both always enabled; no timer; no option is misleading; the player can leave the menu up as long as they want, and the residents and crew keep breathing):
+  - **"[Cut the chain. Take the deal.]"** → `accept` → Ending One.
+  - **"[Drop the cutters. Stand with Alder Row.]"** → `refuse` → Ending Two.
+
+## Ending One — The Champion
+**E1.1 Opening access.** The player **holds E** to cut (a 2-second hold, the cutter's jaws closing visibly). The chain drops onto the path. Hollis steps back from the gate without being touched. The crew walks in behind Jin. HUD: "Walk in first."
+
+**E1.2 Overcoming resistance.** Terrence comes at the crew with the broom handle. The game hands Jin one verb for this: ATTACK becomes **"Restrain"** (the prompt changes on screen; punches are disabled here and the HUD says so: "Not with your fists. Stop him."). Terrence's swings are clumsy and slow; Jin slips one and ties him up (the same clinch Ray used on Jin in Chapter 8), and holds him against the garden wall while the crew walks past. No hit-stop, no sparks, no music, no health bars, no score. Hollis: "Terrence. Terrence, stop. Let it go." Terrence goes limp. Into Jin's shoulder: "You were on TV." Jin lets go.
+- Supporting characters on the crew react, according to what the player built:
+  - Slim (`rel.slim ≥ 1`): drops the box he's carrying. "You carried me once. I'm not carrying this." He walks out of the gate and down the street with his gym bag and doesn't come back. (`≤ 0`: he carries boxes with his hood up and doesn't look at anyone.)
+  - Dutch (`walked_away`): sits on the van step for the whole clearance, smoking. "I collect. I don't do this." Carrow: "Fine. More for the rest of us." (`kept_going`: Dutch works, efficiently.)
+  - Benny (`let_go`): carries Mr. Fitch's beans in their pot to the curb very carefully, as if that helps.
+
+**E1.3 Allowing the residents to be forced out.** HUD: "Stand where they tell you." The camera stays wide (0.8) and does not zoom in on anyone's grief; the player walks to marks Carrow points at and stands there. Doors are knocked on. Forms are signed on the hoods of the vans. What the player sees, in order, without commentary:
+- Rosa's crib mattress (the one Jin may have carried) goes on the curb after all; she sits on it with the baby.
+- Two crew members carry Mr. Fitch out in his folding chair, still holding his radio; he doesn't help them and doesn't fight them.
+- June's flyers in the gutter, wet.
+- Mr. Haile's grate stays down. The coffee urn on the card table goes cold.
+- If an ally with the highest relationship ≥ 3 among Mara, Teddy, Lucho and Hana came to Alder Row (they all read the closing memo in their envelopes): at the end of the street, they arrive, see Jin in front of the vans, and leave. Mara's green Courts truck stops at the corner, idles, and turns around. Teddy gets off the bus, looks, and gets back on before the doors close. Lucho stands at the corner with his hands in his overalls and walks away. Hana's peacoat at the corner, then gone. No dialogue.
+- The black sedan at the far end starts its engine and pulls away.
+- **9:00:** the Channel 8 van. A reporter with a microphone. Jin stands in front of the gate (open, its chain on the path). The player advances the line Carrow gave him: "This neighborhood deserves a future." (He accepted; there's no option to say something else, and the game doesn't pretend there is.)
+- No rewards appear on screen at any point in this sequence. No money counter. No toasts. (PDF: "Do not turn their suffering into a celebratory loot wave.")
+
+**E1.4 The rewards, over time (time cards; mostly watched, one short playable section).** Each card is a scene of 10–20 seconds.
+1. **"July 1997 · Boston."** A bright rehab gym, three therapists, new equipment. Jin on the parallel bars again (Chapter 1's verb): the player walks him along the bars for 8 seconds and the body answers instantly. A therapist counts out loud. It isn't Hana.
+2. **"October 1997 · Riverside."** The furnished two-bedroom. By `ch0_purse_dream`: `rent`: a folder of rent receipts paid a year in advance for an apartment nobody else lives in. / `umma_saturdays`: Saturday morning, nothing to do, the 1490 AM Korean program on the radio; Jin turns it up, then off. / `new_apartment`: the second bedroom has a door. The player can open and close it; it doesn't slam. Thought: "She wanted to slam it." On the table: Teddy's beer mat from the Hollow Tap (if visited in Ch9).
+3. **"January 1998 · Ashgrove Tower lobby."** The press conference at the podium from the Ch9 lobby. Penner beside him, smiling. Banner: "ALDER COMMONS — CALDER'S FUTURE". The Calder Ledger headline in the next shot: **"SEO: 'I OVERCAME IT. ANYONE CAN.'"** (The organization presents him as a man who overcame hardship through determination.) Mrs. Paik vacuums at the edge of the lobby and doesn't look up.
+4. **"1998."** Six fights in quick cuts: Jin winning, each by clear decision or KO, his body whole. In the fourth, the opposing trainer glances toward row three before sending his fighter out.
+5. **"March 1999 · Calder Municipal Cemetery."** A granite headstone has replaced the county markers: "SEO MI-OK · 1942–1996 · SEO MIN-JI · 1972–1996 · BELOVED". Ashgrove's publicist photographs Jin beside it for the press kit; the flash goes off. St. Columba's wooden cross is gone from the grave. (In the next card, it leans in a corner of the Riverside apartment.)
+6. **"May 1999 · Calder Civic Arena."** The title fight. Full house. The same tunnel walk as Chapter 0 with the crowd restored. **One playable round** (`power 1.0`, no breath, the full toolkit on a whole body): the champion (unnamed, gold trunks) fights for a minute, then in the second minute drops his hands and walks into Jin's first clean punch. If the player looks at the red corner between exchanges, the champion's cutman says "He's fine. Send him." (Lenny's line.) Row three: a man in a camel coat. The fight ends on that punch whatever the player does. The bell: two clean strikes. The announcer: **"AND THE NEW... JIN 'EASTGATE' SEO!"** Jin's name to an arena full of people. Section 8 is full of strangers, cheering.
+7. **The administrative report.** The document viewer opens on a typed page (Owen Tully's model with the blanks filled in, if `ch9_owen == persuaded`; otherwise a template from "Acquisitions"): "ALDER COMMONS — SITE DELIVERY REPORT · Delivery date: May 9, 1997 · Households: 24 · Residents: 61 · Voluntary surrenders: 24 · Relocation assistance disbursed: $110,000 · Incidents: 1 (minor; resolved on site) · Outcomes known:" and then one line per household. **Residents whose names Jin learned are listed by name**; the rest are numbers:
+   - Haile, T. — Alder Market (closed) — not reopened. Relocated: unknown.
+   - Medina, R. — 1 adult, 2 minors — doubled up with family, Millport.
+   - Grant, H. & T. — 2 adults — address unknown.
+   - Fitch, H. — 87 — placed: St. Agnes Long-Term Care, Hillcrest.
+   - Household 17 — 1 adult, 1 minor (age 10) — address unknown. (June, if her name was learned: "Household 17 (incl. June, 10)".)
+   - Households 1–24 not named above: "relocated" / "address unknown".
+   - "Status: CLOSED."
+   (Their losses are summarized in an administrative report.)
+8. **Last image.** The Riverside apartment at night. The belt on the table. Jin at the window. Across the river, cranes over Southbank, where the row was. No thought line. Two strikes of the bell. Title: **"The Champion."**
+- Completion screen: "You took the bargain. Jin Seo received treatment, a home, an income and a championship. Alder Row's 24 households were relocated on May 9, 1997." Then the choices of the whole campaign, each in one plain sentence, in chapter order. No grade.
+
+## Ending Two — His Own Name
+**E2.1 The refusal.** Jin opens his hand. The bolt cutters fall on the path with a heavy clang (sound hold: 1 s of nothing else). Carrow looks at them, then at Jin. "...Okay." He steps back and lifts his clipboard; the crew starts forward. Jin turns his back to the gate and puts his guard up. Behind the bars, Terrence: "Wait — you're — " Hollis, pulling him back: "Terrence. Get back."
+- Carrow, from behind his men: "This doesn't stop anything, champ. It stops today." (He's right: the PDF says the fight creates an opportunity for accountability and does not replace it.)
+- HUD: "Keep them off the gate." Letterbox off.
+
+**E2.2 The fight** (arena x 300–1500 on `alder_street`; the gate at the right edge behind Jin; checkpoints before each wave; `onLoss: 'retry'` with the line "Again. You know how to do this."). One enemy per wave carries a second pair of bolt cutters and goes for the gate; he is marked like a director (hit him first). If he reaches the gate, Hollis and Terrence hold the chain from the inside and shove him back while Jin gets there; there is no fail state for the gate.
+- **Allies (`support_at_alder`)** are computed from relationships, never from `jin_voice`, and they arrive *for Alder Row*: each of them read the closing memo in their envelope. None of them was promised anything by Jin. Who comes:
+  - **Slim** (`rel.slim ≥ 1`): at the start of wave 1 he drops his hands and walks over to stand inside the gate with the residents. "You carried me once." He doesn't fight; he holds the gate with Terrence. (`≤ 0`: he fights as a reluctant `boxer` in wave 1 and leaves after his first knockdown: "I'm done. I'm done, man.")
+  - **Benny** (`ch2_collector_after == let_go`): he says it again, "You let me walk. I'm walking," and gets back in the van. (`hit_again`: he fights in wave 1 as a `collector`.)
+  - **Lucho** (`rel.lucho ≥ 2`): arrives at the end of wave 1 running down the street from the bus stop in his mechanic's overalls. "Feet! ...That's your line." Fights beside Jin in wave 2 (an AI ally `boxer` on Jin's side; draws one attacker).
+  - **Mara** (`rel.mara ≥ 2`): between waves 1 and 2, the green Courts maintenance truck pulls across the end of the row, blocking the second van; wave 3 has two fewer men. Mara leans out of the cab: "Twenty-four families. One stairwell. I said I'd hate you a bit either way. I lied."
+  - **Teddy** (`rel.teddy ≥ 2`): between waves, on the curb with a towel and a **bottle** of water (not a cup). Jin sits on the curb (the corner, 5 seconds, condition restored). Teddy: "Feet. Watch the big one's shoulders." Then, the Chapter 0 line asked as a question first: "You all right? ...Hands up. Chin down. Go."
+  - **Deshawn** (`rel.deshawn ≥ 2`): arrives at the start of wave 3 and fights beside Jin.
+  - **Hana** (`rel.hana ≥ 3`): arrives after the fight with a Calder Ledger reporter, **Ruth Abernathy**, and a photographer (see E2.3).
+  - With no allies at all, the fight is tuned to be winnable alone on Normal by a player who uses the whole toolkit; the residents hold the gate.
+- **Wave 1:** 4 Harlan Street men (`enforcer` ×2, `thug` ×2) + Benny (if `hit_again`) + Slim (if `≤ 0`). The cutter-man is a `thug`.
+- **Wave 2:** 4 `enforcer` + **Carrow** as a `director` (he never throws a punch; his men attack faster while he talks into his radio; hitting him once sends him back behind the vans for good). Lucho beside Jin if he came.
+- **Wave 3:** **Dutch Brannigan**, if `ch4_dutch_after == kept_going`: `boss_collector` with the bandaged hand, phase 1 and 3 behaviour from Ch4, and his old method aimed at the gate: he walks Jin back toward it, because a man with people behind a gate can't step aside. "I don't chase. I wait for the wall. You brought your own wall." Plus 2 `collector` (0 if Mara's truck). If `walked_away`: Dutch sits on the van's step and lights a cigarette, "I collect. I don't do this," and wave 3 is 3 `enforcer` + 2 `collector` (1 + 0 with Mara's truck). Deshawn beside Jin if he came.
+- **After the last man goes down:** the crew backs into the vans. Carrow, from the van window: "It stops today." The vans leave. At the far end of the row, the black sedan starts and pulls away; the man in the camel coat doesn't look over.
+- Jin sits on the curb in front of the gate (`sitCurb`), breathing hard (the ragged breath from Ch8; his hands shake). He can't get up for a while. The camera holds wide (0.85).
+
+**E2.3 Nine o'clock.** Behind Jin, Hollis takes the padlock off the gate from the inside (he has the key; he always had the key). Residents come out onto the street.
+- The Channel 8 van arrives anyway (Ashgrove booked it) and films a different story: the reporter puts her microphone in front of Hollis. Hollis: "Some men came to take our homes this morning. Some other people came and stood in the way. That's all I know." He doesn't point at Jin.
+- If Hana came (`rel.hana ≥ 3`): she sits down on the curb next to Jin in her peacoat. The Ledger photographer's flash goes off once, white, across the gate: the same flash as Min's Pentax from section 8 in Chapter 0. Hana gives Ruth Abernathy her envelope. Hana, to Jin: "You don't have to talk to anybody today." Jin: "I'll talk." / If Hana didn't come: Jin gets up, finds a payphone on Southbank Ave, and calls her. "It's done. Alder Row." Hana: "...I'm coming. Don't go anywhere."
+- **The residents don't have to know** (PDF). Rosa, with the baby: "Thanks. I still don't know who you are." Mr. Haile pushes his grate back up: "Milk's back on." He hands Jin a fresh paper cup of coffee. Mr. Fitch's radio is still going. June gives Jin another flyer, a new one, handwritten in the night: "MEETING TOMORROW 6 AM — STILL DON'T SIGN ANYTHING." Hollis: "Whoever you are. There's a meeting at six tomorrow. You're welcome. Don't sign anything."
+
+**E2.4 Afterward (time cards; one playable walk at the end).** Each card shows only what the player's choices made true. The PDF's shape is kept: exposure happens through evidence, witnesses, residents and people he worked with; Jin loses the treatment and the comeback; he stays poor and his recovery incomplete; his ordinary future has choices in it; he still wants what he refused.
+1. **"June 1997 · Calder County Courthouse."** The grand jury. Witnesses climb the courthouse steps one at a time (each appears only if it's true): Hana with her envelope; Dot with Min's; Mara; Teddy; Deshawn; Roz Kaminski ("If you need a dispatcher to say it out loud, I will."); Wendell Asher ("Wendell Asher told the grand jury about the key on his ring."); Lenny (`rel.lenny ≥ 1`: "Lenny Voss said it again, to a judge." / else a line card: "Lenny Voss was never found to testify."); Owen Tully (`persuaded`: "Owen Tully testified for two days. His daughter drew the courthouse." / `threatened`: "Owen Tully was let go on May 7. He did not testify."); Gerald Pike's two pages ("Exhibit 14", if `ch6_pike_statement`); Ray Castell's typed statement to the Athletic Commission (`stopped`) / "Sal Bruno's notebook was the only account from that corner." (`continued`). **Walter Rook testifies in every version:** "Walter Rook testified for the prosecution and resigned from the Northside Community Council the same week." The more copy holders there were, the faster it moves: many: "The Calder Ledger ran it for eleven days." / few: "It took a year for anyone to print it."
+2. **"1998."** Partial accountability, the way Celeste said it would go, and a little more: "Harlan Freight's Dock Road operation was indicted. Dutch Brannigan pleaded guilty. Ashgrove Capital paid a fine and replaced two officers. Lyle Penner resigned; his trial was set for 1999. Celeste Ashgrove remained chair." "Alder Commons was cancelled. The cooperative remains."
+3. **"August 1997 · Calder County Probate."** A one-page order in the document viewer: "In the Matter of Jin Seo, registered at St. Agnes Long-Term Care as Daniel Ahn: the petitioner's identity is restored." (Dr. Whitlow's affidavit, Hana's work.) Then the Athletic Commission: Jin signs for his 1994 purse, held "until the fighter signs for it" (Umma's note on the back of the Housing Court judgment, Ch6). After fees it is $9,400. The viewer shows where it went, as a short list in his handwriting: "Kessler Realty — 3B arrears, Seo — $1,140. / County — two stones, Section 14 — $1,200. / St. Columba's — $200. / Rent." The county numbers on 96-031 and 96-032 are replaced by two flat stones with their names, and St. Columba's wooden cross stays between them. What's left lasts the winter. (He remains poor.)
+4. **"Foundry Courts."** The roof money ended; Nell found a tenants' credit union; they were cold for a year. The buildings still stand (the benefits were real). Ada on her stoop; Gus fixing a radio; if `ch5_meeting_stance == roof`, Ada's ceiling is still dry.
+5. **"A rented room."** By relationships: `rel.mara ≥ 2`: the room behind the Courts' workshop, the cot replaced by a bed Mara found; otherwise Monarch Room 5. On the windowsill: the knuckles (`ch8_hands == knuckles`) or nothing (`wraps`, if he dropped them off the bridge). The evidence wall is down; one card is still pinned: Umma's napkin note.
+6. **"Difficult work."** `rel.mara ≥ 1`: Mara's crew, carrying radiators at six in the morning ("Lift with the legs, boxer."). Otherwise: nights at the rail yard with Darnell (Darnell, if `ch5_left_repair == false`: "You held the flashlight that night. I remember.").
+7. **"Saturdays."** Occasional teaching at a gym: `rel.teddy ≥ 2`: the kids' class at Iron Pulse on the old Marsh canvas, Teddy on a stool with a whistle ("Hands up, chin down, mouth shut."); and/or `rel.lucho ≥ 1`: the Courts' basement gym with Lucho, Keisha in the front row copying Jin's guard if `ch5_trained_kids`. Lucho tells the kids about the towel or about sending him out (by `ch8_lucho_call`). If neither: Jin shadowboxes alone on the river path on Saturday mornings; a kid on a bike stops to watch, then rides on.
+8. **"Relationships he kept."** Short vignettes, each only if earned: Sunday soup at Ada's; Friday pie with Hana at Sunny's, in the booth by the window (`rel.hana ≥ 3`; else a postcard from Hana on the windowsill: "Still here. — H."); Mrs. Okafor showing him the framed cake photo again (`ch6_okafor_photo`); Teddy at the Hollow Tap; Deshawn at the Cellar, no longer fighting ("I'm a bouncer now. It's the same thing with less getting hit.").
+9. **"May 1999 · Sunny's."** Augie's TV: the title fight at Calder Civic Arena that Jin will never be in. Jin watches every round from the counter. Augie refills his coffee without asking. Jin's hands move a little on the counter with every exchange (the absent-minded double jab from his cast bible). Thought: "I'd have been good." Then: "I still want it." (PDF: do not erase his disappointment.) Augie: "You want the next one on?" Jin: "Yeah."
+10. **Last scene (playable, short).** An autumn morning on Alder Row. Jin walks through on his way to work (the player walks him left to right; nothing else to do). Mr. Haile's shop is open. June is on her bike. Mr. Fitch's radio. Rosa hanging laundry on a stoop rail. Residents whose names the player learned are greeted by name in Jin's little bubble barks ("Morning, Rosa."); the others are still "Resident": he never learned them, and they never learned his history. A couple of them nod. Nobody stops him. At the shop, Mr. Haile holds out a paper cup: "Cold one this morning." Jin takes it (the player presses E or doesn't; he takes it anyway if the player walks on, Mr. Haile pressing it into his hand). He keeps walking. The camera stops following and lets him walk out of frame to the right while the street goes on with its morning. Thought, as he leaves frame: "They don't know my name. That's all right. I do."
+- Title: **"His Own Name."**
+- Completion screen: "You refused the bargain. Jin Seo did not receive the treatment program or the managed comeback. Alder Row is still occupied." Then the campaign's choices, one plain sentence each, in chapter order. No grade.
+
+## Choices made here
+| Flag | Options | Immediate | Later |
+|---|---|---|---|
+| `ch10_names_learned` | list of resident ids | Names in bubbles | Ending One: named lines in the administrative report; Ending Two: named greetings in the last walk. |
+| `ch10_choice` | accept / refuse | **The ending.** The only flag any ending reads to decide which ending plays. | — |
+
+## Chapter ending and state handed on
+- Chapter select unlocks for every chapter; replaying Chapter 10 from its start keeps all earlier flags, so a player can see the other ending without replaying the campaign (the completion screen says: "You can return to the gate from Chapter Select.").
+- The save slot records the ending and a one-line summary on the load screen: "The Champion · May 1999" or "His Own Name · Autumn 1997".
+
+---
+# Registry cross-check (final pass for Chapters 6–10)
+
+Flags added while writing Chapters 6–10, and where each is set and read. These rows extend the **Choice flags** table in the Flags & relationships registry.
+
+| Flag id | Values | Set where | Read where |
+|---|---|---|---|
+| `ch1_told_hana_boxing` | bool | Ch1, the parallel bars, second week | `hana` +1; Ch6 Sunny's line ("You told me about the fight, on the bars..."). |
+| `ch6_gave_back_4d` | bool | Ch6, Ada's front room, only if `ch5_took_unit_4d` | `courts` +1; removes 4D from `take_count`; Ch7 Rook's line; Ch9 Penner skips the 4D line; Ch10 Jin's taking thought. |
+| `ch6_okafor_photo` | bool | Ch6 side quest | Ch9 night (frame on her TV); Ending Two vignette. |
+| `ch6_flowers` | bool | Ch6 cemetery gate ($5) | Ch9 night cemetery; map note. |
+| `ch7_hit_rook` | bool | Ch7, end of the confrontation | `harm_count` +1; Ch7 meeting (bruise); Ch9 night Rook line. |
+| `ch7_lucho_promise` | yes / try | Ch7, after the meeting | Ch8 S8.2 line; S8.3 Lucho's greeting. |
+
+Updates to derived values:
+- `harm_count` also counts `ch7_hit_rook`. (Final list: `ch2_collector_after=hit_again`, `ch3_lenny_method=pressed`, `ch4_roz=threatened`, `ch4_dutch_after=kept_going`, `ch6_asher_method=threatened`, `ch7_hit_rook`, `ch8_ray_after=continued`, `ch9_owen=threatened`.)
+- `take_count` counts `ch5_took_unit_4d` only if not `ch6_gave_back_4d`.
+- `support_at_alder` = { Slim if `rel.slim ≥ 1` (holds the gate), Lucho if `rel.lucho ≥ 2`, Mara if `rel.mara ≥ 2` (truck), Teddy if `rel.teddy ≥ 2` (corner), Deshawn if `rel.deshawn ≥ 2`, Hana if `rel.hana ≥ 3` (reporter) } plus the two crew members who step aside by flag (Benny if `ch2_collector_after == let_go`, Dutch if `ch4_dutch_after == walked_away`). It changes the Ending Two fight and both endings' supporting beats. It never changes which ending is available.
+
+Every flag in the registry, checked for at least one read site:
+- Ch0: `ch0_purse_dream` (Ch2, Ch6 letter 4, Ch10 thought, both endings) · `ch0_refusal_line` (Ch8 stairwell thought, Ch9 Penner, Ch10 thought) · `ch0_told_teddy` (Ch2, Ch8 corner) · `ch0_resistance` (Ch8 Ray).
+- Ch1: `ch1_pike_stance` (Ch2 van, Ch6 Pike's file) · `ch1_records_route` (Ch6 Hana) · `ch1_fare_source` (Ch6 Hana, Ch9 Penner, Ch10 thought) · `ch1_told_hana_boxing` (Ch6).
+- Ch2: `ch2_collector_after` (Ch3, Ch6 stair, Ch9 van, Ch10) · `ch2_teddy_met` / `ch2_teddy_tone` (training, `rel.teddy` → Ch8 corner, Ch10) · `ch2_took_mailbox` (Ch6 Window 7).
+- Ch3: `ch3_slim_carried` (`rel.slim` → Ch10) · `ch3_cup` (Ch8 Teddy's cup) · `ch3_deshawn_dive` (Ch8 Deshawn, Ch9 Penner) · `ch3_deshawn_paid` (`rel.deshawn` → Ch10) · `ch3_lenny_method` (`rel.lenny` → Ch8 copies, Ending Two) · `ch3_mo_deal` / `cellar_dives_taken` (Ch8 Ray, Ch9 Penner, Ch10 thought).
+- Ch4: `ch4_roz` (Ch8 copies, Ch9 Penner list, Ending Two) · `ch4_took_profit` (Ch9 Celeste) · `ch4_envelope` (Ch5, Ch7 Darnell and Rook, Ch9 Penner, Ch10 thought) · `ch4_dutch_after` (Ch9 van, Ch10 both endings).
+- Ch5: `ch5_envelope_outcome` (Ch7 Mara/Darnell, Ch9 Penner) · `ch5_left_repair` (Ch9 Mara, Ending Two Darnell) · `ch5_meeting_stance` (Ch7 Gus/Ada, Ending Two Courts card) · `ch5_donation` (Ch7 Ada: carried from the Ch5 table; she says it at the meeting if ≥ $50) · `ch5_took_unit_4d` (Ch6, Ch7, Ch9, Ch10) · `ch5_trained_kids` (Ending Two).
+- Ch6: `ch6_asher_method` (Ch8 copies, Ch9 Penner, Ending Two) · `ch6_strippers` (Ch9 flavour) · `ch6_pike_statement` (Ch7 presentable, Ending Two) · `ch6_hana_repaid` (Ch9 Hana) · `ch6_gave_back_4d` · `ch6_okafor_photo` · `ch6_flowers`.
+- Ch7: `ch7_rook_answer` (Ch9 Gus, Ch10 thought) · `ch7_hit_rook` (Ch9 Rook) · `ch7_truth_told_by` (Ch9 Courts, Ending Two) · `ch7_lucho_promise` (Ch8).
+- Ch8: `ch8_lucho_commitment` (Ch9 Lucho, Ch10 thought, Ending Two ally) · `ch8_lucho_call` (Ch10 thought, Ending Two teaching) · `ch8_hands` (Ending Two room) · `ch8_ray_after` (Ch9 Hana/Penner, Ending Two) · `copy_holder_*` (Ch9 Penner, Ending Two).
+- Ch9: `ch9_owen` (Ch9 Penner, both endings) · `ch9_night_visits` (completion screen, ending props).
+- Ch10: `ch10_names_learned` (both endings) · `ch10_choice` (the ending).
+
+Ada's donation line ("You put money in the can. I saw.") is placed in the Ch7 meeting, before her "I can't hold both" line, when `ch5_donation ≥ 50`.

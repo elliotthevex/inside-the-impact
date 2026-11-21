@@ -1,0 +1,51 @@
+# Notes: BIBLE merge (resume file for the merge agent)
+
+Output: story/BIBLE.md. Built from part files in story/design/bible-parts/ (00-decisions.md, 01-global.md, ch00.md .. ch10.md), concatenated at the end with cat. If a part file exists, it is done (or check its last line for "<!-- end chNN -->").
+Sources read (run 1, 2026-11-21): BRIEF.md (all), ref-story.pdf (12/12), ref-movement-art.pdf (10/10), notes-cinematic, notes-systems, draft-world-notes, globals of all three drafts.
+Not read: ref-research.pdf (by instruction).
+
+## Progress
+- [x] Read globals of three drafts
+- [ ] Chapters: read 3 drafts per chapter, write bible-parts/chNN.md (tick): 
+- [ ] Write 01-global.md (cast, registries compiled from chapters), 00-decisions.md
+- [ ] Assemble BIBLE.md, cross-check ids (grep flags/evidence/locations)
+
+## Backbone decision
+Systems draft = registry/fact backbone (it agrees with cinematic on most shared facts). Graft cinematic direction grammar, bell motif, staging; graft world's lived-in places, routines, Deshawn-at-the-Courts, Teddy's headstone, Pike's redirect letter, opened+stamped letters.
+
+## Fixed facts (keep consistent)
+- Dates: Ch0 Sat Aug 20 1994. Ch1 wakes Mon Oct 7 1996 -> leaves Wed Dec 18 1996. Ch2 Thu Dec 19 1996 (first snow). Ch3 Thu Jan 9 - Sat Jan 11 1997. Ch4 Fri Jan 17 scout + Sun Jan 19 night (sleet); payroll "2 WKS ENDING 1/17/97, deliver Mon 1/20". Card "Ten days." Ch5 Mon Jan 27 - Fri Jan 31 1997. Ch6 Mon Feb 3 - Tue Feb 11 1997 (fire anniversary at the cemetery). Ch7 Thu Feb 27 1997. Card "Nine days." Ch8 Sat Mar 8 1997 (Farewell to the Civic) + dawn Sun Mar 9. Card "Five weeks." Ch9 Wed Apr 16 night (assault) + Thu Apr 17 (consideration night). Ch10 Fri Apr 18 1997 05:30-09:00; closing 10:00 at Ashgrove Tower 30F.
+- Fund: Calder Foundry Relief Fund (CFRF), administered by Gerald Pike for the Northside Community Council (letterhead never names the Council). P.O. Box 1180; office 2F, 88 Market St (above Brandt Dental). Pike paid $1,500/month.
+- Calder Foundry closed March 1992. False file: industrial accident (fall, salvage operation), Calder Foundry, 08/20/94.
+- MR# 4471-0 same on transfer form (SEO, JIN, DOB 03/14/68) and current file (AHN, DANIEL). Intake sheet whiteout shows SEO, JIN against the window light.
+- Sabotage: white plastic squeeze bottle, red tape band on the neck, handed by Lenny in Locker Room B after the bribe refusal: "You're dry, kid. Drink." Ch0 jump-cuts 4 s. R2 fragment. Ch3 completes. Ch8 Teddy cracks a sealed bottle.
+- Bribe: man in the camel coat, Locker Room B, $50,000, "Go down in the fourth." Jin refuses (3 lines, all refusals).
+- Corner: Teddy Marsh (honest, "nerves", sent him out) + Lenny Voss (knew, "He's fine, Ted. Send him."). Lenny paid $5,000 cash voucher Harlan Freight 08/22/94 approved D.B.
+- Ray Castell tell: taps his chin with the left glove, then the straight right. Threw after the bell in 1994.
+- Rook sat in Row K, flat cap, never stood; Dutch beside him ("Sit down, Walter. It's almost over.").
+- Family: Umma Seo Mi-ok b.1942 (52 in 1994); Min b.1972; Jin b. Mar 14 1968. Kessler Realty v. Seo judgment Apr 11 1995, 30-day stay; out of 3B May 1995; Lindell House Room 9 (3rd floor), Garrison St, June 1995; fire night of Feb 11 1996, origin Room 7 portable heater, rear exit chained on owner's order (Garrison Realty, Dimitri Lazarou; night manager Wendell Asher chained it). Min's battery made the 3F hall detector sound; she went back for Umma. County burial, Calder Municipal Cemetery Section 14, markers 96-031/96-032; Teddy paid a small stone, cash, Apr 1996 (cemetery office ledger).
+- Purse held: Jin's 1994 purse held by the State Athletic Commission until the fighter signs (Umma's note on the judgment).
+- Payout: Harlan Street bet "Castell KO R3-5" through out-of-state books, laundered by Ashgrove Capital. Council share $640,000 wired 9/27/94 from Harlan Freight Co. escrow ref ASH-0894; Foundry Courts (4 buildings, 212 households) bought Sept 28 1994; deed recorded Sept 30 1994 (plaque date). Auction deadline Oct 1.
+- Payroll envelope: "FOUNDRY CTS MAINT. PAYROLL · 2 WKS ENDING 1/17/97 · $1,840 · Kowalski M. 640 / Greer D. 480 / Tillery D. 320 / Lindqvist G. 240 / Baptiste O. (laundry & stairs) 160 · deliver Mon. w/ N. Faraday". Profit stacks "to A.C." $600.
+- Recovery package price: Beacon Street Institute (Boston, fictional), 18-month residential neuro-rehab, est. $84,000. Stated by Dr. Whitlow in Ch1. Max campaign income ~ $3,300.
+- Bases: St. Agnes Room 214 (Ch1) -> Calder YMCA Room 312, Front St, $8/night (Ch2-4) -> cot in Mara's workshop loft at Foundry Courts (Ch5-7; unit 4D if taken) -> Ch7 end: stay at the Courts or Calder Arms Hotel $45/wk (Ch8-9).
+- Track top: in the Ch1 property bag; collar "PROPERTY OF THE CHAMP (allegedly) — M". Jin leaves St. Agnes wearing it.
+- Diner: Sunny's Diner, Kessler Ave, waitress Rita Mancuso (since 1981). Fridge note: "AFTER: Sunny's, window booth. Umma says last bus is 12:10 so WIN FAST. — M".
+- Min worked Kwik Copy (Market St), night classes (bookkeeping) at Calder Community College. Coworker Dot Pham. Min's camera roll developed by Dot in Ch6.
+- Former neighbour: Mrs. Grace Okafor (3A). 3B tenant: Petra Novak + toddler Rosie (height marks behind the fridge).
+- Fighters: Deshawn Tillery (23, lives at Foundry Courts with grandmother Odette Baptiste; Mo's rule: fighters who use the back-room ring take every booking; bout 1; Ch5 local boxer; Ch6 corner commitment). Stan "Wojo" Wojcik (46, forklift, fights for pleasure, bout 2). Cyrus "Slim" Whitlock (34, ex-pro, told to go down in R2, bout 3, mirror of Ch0). Marisol "Mari" Ortega? (cut) — teach hook = Wojo at the bag; counter = Deshawn's tip + slip-rope.
+- Foundry Courts cast: Mara Kowalski, Deshawn Tillery, Odette Baptiste (tenants' secretary; minutes binder), Gus Lindqvist (radios; voted no in 1994), Darnell Greer (crew, rail yard nights) + Keisha Greer (8), Nell Faraday (Council site coordinator), Elena Vasquez (unit 4D promised; face only).
+- Cellar: Mo Feeney; Lenny (cutman, pinsetter loft); Doc Ferris (stitches, price list "Real rehab: $84,000. Not here.").
+- Depot: Dutch Brannigan (boss); Roz Kaminski (night dispatcher, frightened witness); Carmine "Whistle" Dalto (director foreman); Pat Gorman (old gate man, never hit).
+- Ch6: Wendell Asher (Garrison Suds; frightened witness); clerks; Hana brings Whitlow affidavit (+ call log if hana>=3). Pike at 88 Market.
+- Ch7 Council HQ = old Local 1197 union hall, Foundry Street. Harlan men (Vince Carrow + 2; Dutch present if walked_away) before the confrontation.
+- Ch8: Calder Civic Arena closing night "Farewell to the Civic"; site becomes Riverside Lofts (Ashgrove). Morty Fine timekeeper (since 1961). Ray agrees to 3 rounds after the event. Evidence: Penner note on Ashgrove notepaper (Aug 19 1994) + Alder Row ambassador agreement. Dawn: Kwik Copy with Dot; Joan Albright (Calder Ledger, Hana's college roommate) takes Ray's statement if stopped.
+- Ch9: Ashgrove Tower: plaza, lobby (Alder Commons model under glass), security, floor 22 Owen Tully (Q2), stairwell, floor 30 (security chief Garvey), boardroom. Celeste stops the fight ("Let him in."). Camel coat hangs on the stand outside Penner's office. Brass nameplate JIN SEO.
+- Ch10: Alder Row Cooperative, Southbank, 24 households. Residents: Mr. Phan (PHAN SHOE REPAIR · KEYS CUT), Rosa Medina (crib), Gloria Hale (co-op president, clipboard) + grandson Terrence (19, broom handle), Henry Odell (80s, chair, "Fifty-one years"), June (10, bike, flyers). Crew boss Vince Carrow; Dutch; Benny Szabo; Slim (rented out by Mo).
+
+## Flag naming: chN_ prefix (systems/cinematic convention)
+
+## Running registry (ids used in written chapters)
+- ch00 DONE. flags: ch0_purse_dream(rent/umma_saturdays/new_apartment), ch0_refusal_line(not_for_sale/my_family/get_out), ch0_told_teddy, ch0_resistance(0-3). mem: mem_kitchen, mem_offer, mem_bottle(3 shards: Ch0 R2, Ch3 confession, Ch8 complete?), mem_corner(shards: Ch0, Ch2 Teddy, Ch8), mem_row(shard Ch0; Ch8 Ray), mem_bell. locs: kessler_ave_1994, kessler_412_stairs_1994, apt_3b_1994, civic_backstage_1994, civic_locker_b, civic_ring_1994. NPC ids: min, umma, okafor, teddy, lenny, rita, inspector, ray_1994, camel_coat, referee, timekeeper(Morty), rook_1994. Quests q0_main, q0_look_around. Teddy's car: maroon '84 Buick wagon. Seats: Section 14 Row F. Rook Section 11 Row K. Referee Phil Ostrowski. Purse $40,000. Bribe $50,000 go down in 4th.
+- ch01 DONE. flags: ch1_told_hana_boxing, ch1_pike_stance(played_along/insisted), ch1_records_route(with_hana/alone_at_night), ch1_fare_source(hana_loan $20/activities_jar $6.40/earl_gift $5), ch1_signed_name(seo_jin/daniel_ahn). ev: ev_name_card, ev_current_file, ev_transfer_form, ev_intake_whiteout, ev_property_tag, ev_whitlow_note, ev_pike_card, ev_earl_testimony(opt). mem: mem_waistband. locs: stagnes_room214, stagnes_2west, stagnes_gym, stagnes_courtyard, stagnes_records, stagnes_lobby. NPCs: hana, pike, earl, dolores, whitlow, sister_margaret. quests q1_main, q1_crossword, q1_calls, q1_exercise_card. Items: Earl's radio, AHN name card, Hana's card (YMCA tip). Transfer order to Ridgeview State Home, Millbrook 12/19. Licence CA-1187. Purse unclaimed at Athletic Commission (Hana mentions).
+- ch02 DONE (date changed: Wed Dec 18 1996, same day as leaving St. Agnes). flags: ch2_saw_height_marks, ch2_took_mailbox, ch2_teddy_tone(blamed/asked/forgave), ch2_collector_after(let_go/hit_again), ch2_called_hana. ev: ev_fight_poster(opt), ev_missing_flyer(opt), ev_okafor_account★, ev_returned_letter(opt; Housing Authority letter Oct 4 1995), ev_pickup_order★. bel_dish. mem: mem_corner shard2, mem_roof, mem_umbrella, mem_first_wraps. locs: kessler_ave_1996, kessler_412_stairs_1996, okafor_3a, sunnys, iron_pulse, pratt_alley(+412 roof upper layer), ymca_312. NPCs: petra(+Rosie), okafor, rita, augie, teddy, receptionist, tomas, benny, carl, vic, otis. quests q2_main, q2_posters, q2_roof, q2_call_hana. Teddy's box holds the EASTGATE robe (returns Ch8). Okafor: "somebody put up a stone" (Teddy, Ch6). Annex keeps property a year "until February". Hana prepaid first YMCA week; lodging charged on completion screen, Otis runs a tab if short (never negative money).

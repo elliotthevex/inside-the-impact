@@ -6,11 +6,14 @@
    S.activities.start(name, opts) -> ActivityState. The director wraps it as A.activity and waits until
    state.done; state.result is the result object. The state is also a director Wait: state.wait() -> done.
    Activities advance once per sim step in S.activities.update(dt). That call is idempotent per step and is
-   hooked onto S.world.update automatically (the director wait or the main loop may call it too).
-   state.control === true means the player needs control of Jin while it runs (every activity here reads the
-   real keyboard, so the director must not hold control during A.activity).
+   hooked onto S.world.update automatically (the main loop may call it too; double calls are harmless).
+   state.control === true: the player steers Jin while it runs (A.activity's wait hands control over).
    S.activities.current is the innermost running activity (a work shift's current task), S.activities.root
    the one the director is waiting on.
+   AUTOPLAY: when S.director.policy is set (unless policy.activities === 'real') or opts.auto is true, an
+   activity plays itself through the same judging code with synthetic input, ACT.autoRate sub-steps per sim
+   step, so it ends well inside the director's 4 s budget. S.activities.autoComplete(st) switches a running
+   one to autoplay; S.activities.stop(st) ends it at once (under a policy: as a pass), always cleaning up.
 
    WHAT THE UI READS — timeline board: S.ui.openWindow('timeline', state), state === S.activities.current
      state.kind        'timeline'
@@ -27,7 +30,7 @@
      state.finish()    Done button / window closed after completion: ends the activity (before completion it
                        behaves like close())
      state.close()     the player closed the window early: the board waits and [interact] reopens it
-     state.done        the activity is over (the director resumes)
+     state.done        the activity is over (the director resumes); the UI closes the window when it sees this
    evidence presentation: S.ui.openWindow('present', state)
      state.kind 'present'; state.title; state.claim (the claim to support); state.speaker (id); state.speakerName
      state.options     [{ id, title, kind, date, text, owned }] — the evidence archive (an accepted item Jin
@@ -35,9 +38,12 @@
      state.pick(evidenceId) -> { ok, correct, line, complete }
      state.line        { speaker, name, text } — the rebuttal after a wrong pick, the closing line after a right one
      state.picks, state.wrong, state.complete, state.finish(), state.close(), state.done
+   optional UI helpers this file uses when present: S.ui.isOpen(name) -> bool, S.ui.closeWindow().
    drills, carry, repair, shifts: state.hud = { title, sub, prompt, chips, meter, bar, pips } (prompts carry
      keys as "[J]" built from S.input.labelFor) and state.marks() -> world markers. This file draws its own
-     overlay for them (set S.activities.overlay = false if ui.js takes over). */
+     overlay for them (set S.activities.overlay = false if ui.js takes over).
+   CHAPTERS: where a drill can be started from the journal, the LocationDef says so with
+     training: { bag: { x, coach, coachName, coachLook, when }, balance: true, ... } or points.train_<drill>. */
 (function (S) {
   'use strict';
 
@@ -60,7 +66,7 @@
   // What each drill trains. effect(L) describes training level L (0..3); applyTraining() is the only code that applies it.
   const DRILLS = {
     balance: { id: 'train_balance', name: 'Balance', what: 'Hold steady against the sway.',
-      effect: (L) => (L ? 'Landing ' + Math.round(10 * L) + '% quicker, hurt recovery ' + Math.round(20 * L / 3) + '% quicker' : 'Untrained') },
+      effect: (L) => (L ? 'Lands ' + 10 * L + '% quicker, recovers from hits ' + 5 * L + '% quicker' : 'Untrained') },
     footwork: { id: 'train_footwork', name: 'Footwork', what: 'Reach each lit floor mark in time.',
       effect: (L) => (L ? 'Dashes recharge ' + 5 * L + '% faster' : 'Untrained') },
     reaction: { id: 'train_reaction', name: 'Reaction', what: 'Slip the high pad, guard the low one, jab the open one.',
@@ -165,10 +171,13 @@
       if (sk && verb in sk) return sk[verb] !== false;
       return true;
     },
+    // Autoplay: opts.auto wins; else a director policy (unless policy.activities === 'real'); else headless
+    // runs where the director closes screens by itself (director.autoHeadless).
     auto(opts) {
       if (opts && opts.auto !== undefined) return !!opts.auto;
-      const p = S.director && S.director.policy;
-      return !!p && p.activities !== 'real';
+      const D = S.director, p = D && D.policy;
+      if (p) return p.activities !== 'real';
+      return !!(S.headless && D && D.autoHeadless);
     },
     label(a) {
       let l = a;
@@ -178,30 +187,25 @@
     },
     sound(name, o) { try { if (!S.headless && S.audio && S.audio.play) S.audio.play(name, o); } catch (_) { /* audio is optional */ } },
     toast(text, kind) { S.events.emit('toast', { text, kind: kind || 'info' }); },
-    // Ask the director to give the player control; returns a restore function or null.
-    setControl(on) {
-      const d = S.director; if (!d) return null;
-      try {
-        if (typeof d.setControl === 'function') {
-          const prev = typeof d.hasControl === 'function' ? !!d.hasControl() : !on;
-          d.setControl(on); return () => d.setControl(prev);
-        }
-        for (const k of ['control', 'playerControl']) {
-          if (typeof d[k] === 'boolean') { const prev = d[k]; d[k] = on; return () => { d[k] = prev; }; }
-        }
-      } catch (e) { S.fail(e, { source: 'activities control' }); }
-      return null;
-    },
-    // Add restrictions on top of whatever the scene already restricted; the returned function puts the old ones back.
+    // Restrict verbs on top of whatever the scene already restricted. Only verbs that were free before are
+    // added, and the returned function lifts exactly those, so a scene's own restrictions survive.
     restrict(obj) {
       const C = S.combat;
       if (!C || typeof C.restrict !== 'function') return null;
-      let prev = null;
-      for (const r of [C.restriction, C.restrictions, C.restricted, S.G && S.G.restrict]) {
-        if (r && typeof r === 'object' && !Array.isArray(r)) { prev = clone(r); break; }
-      }
-      try { C.restrict(Object.assign({}, prev || {}, obj)); } catch (e) { S.fail(e, { source: 'activities restrict' }); return null; }
-      return () => { try { if (typeof C.unrestrict === 'function') C.unrestrict(); if (prev) C.restrict(prev); } catch (e) { S.fail(e, { source: 'activities unrestrict' }); } };
+      let had = {};
+      try { const r = typeof C.restrictions === 'function' ? C.restrictions() : null; had = (r && r.verbs) || {}; } catch (_) { had = {}; }
+      const add = {}, verbs = [];
+      for (const k in obj) if (k !== 'reason' && k !== 'reasons' && obj[k] === false && had[k] !== false) { add[k] = false; verbs.push(k); }
+      if (!verbs.length) return () => {};
+      add.reason = obj.reason;
+      try { C.restrict(add); } catch (e) { S.fail(e, { source: 'activities restrict' }); return null; }
+      return () => { try { if (typeof C.unrestrict === 'function') C.unrestrict(verbs); } catch (e) { S.fail(e, { source: 'activities unrestrict' }); } };
+    },
+    // Combat's carry state (slower, no punch/dash/jump/slip, the reason shown when a blocked verb is pressed).
+    carry(kind, reason) {
+      const C = S.combat;
+      if (!C || typeof C.carry !== 'function') return false;
+      try { C.carry(kind || null, reason); return true; } catch (e) { S.fail(e, { source: 'activities carry' }); return false; }
     },
     evidence: (id) => lookup('evidence', id),
     personName(id) {
@@ -222,12 +226,17 @@
     enter(locId, x, o) { try { if (S.world && typeof S.world.enter === 'function') { S.world.enter(locId, x, o || {}); return true; } } catch (e) { S.fail(e, { source: 'activities enter' }); } return false; },
   };
 
-  // What Jin is doing, read from the combat controller or the actor (names normalized to the pose names).
+  // What Jin is doing, read from the combat controller (combat.js: ctrl.state 'attack' with ctrl.atk.name,
+  // 'flurry', 'dash' with ctrl.dash.back), then from the actor; names normalized to pose names.
+  const ctrlOf = (j) => (j && j.ctrl) || (S.combat && S.combat.jin) || null;
   function jinAct(j) {
     if (!j) return null;
-    const c = j.ctrl || (S.combat && S.combat.jin) || null;
+    const c = ctrlOf(j);
     const list = [];
     if (c) {
+      if (c.state === 'attack' && c.atk) list.push(c.atk.name === 'returnCross' ? 'cross' : c.atk.name);
+      if (c.state === 'flurry') list.push('flurry');
+      if (c.state === 'dash' && c.dash) list.push(c.dash.back ? 'backdash' : c.dash.air ? 'airdash' : 'dash');
       for (const v of [c.move, c.attack]) if (v) list.push(typeof v === 'string' ? v : v.name || v.id || v.kind);
       list.push(c.state);
     }
@@ -239,56 +248,87 @@
     }
     return null;
   }
+  // Identity of the current punch: a new attack object (or flurry) means a new throw even if the name repeats.
+  function jinAttackRef(j) {
+    const c = ctrlOf(j); if (!c) return null;
+    if (c.state === 'attack' && c.atk && typeof c.atk === 'object') return c.atk;
+    if (c.state === 'flurry' && c.fl && typeof c.fl === 'object') return c.fl;
+    return null;
+  }
   function actTime(j) {
-    const c = j && (j.ctrl || (S.combat && S.combat.jin));
-    for (const v of [c && c.moveT, c && c.stateT, c && c.t, j && j.poseT, j && j.pt]) if (typeof v === 'number' && isFinite(v)) return v;
+    const c = ctrlOf(j);
+    for (const v of [c && c.atk && c.atk.t, c && c.moveT, c && c.stateT, c && c.t, j && j.poseT, j && j.pt]) if (typeof v === 'number' && isFinite(v)) return v;
     return null;
   }
 
   /* ── 3. Training effects (the one place they are applied) ─────────── */
-  const BASE = { ref: null, v: null };
-  let trainSigLast = null;
+  // Every S.tune field training writes, with the drill that drives it and the formula (f = level / 3).
+  // A field whose current value differs from what we last wrote was changed by someone else (combat.resetTune,
+  // a dev panel, a replaced S.tune) and that value becomes the new untrained base. So training is always
+  // "base + effect", never stacked twice, and runtime tuning edits survive.
+  const TF = [];
+  const isNum = (v) => typeof v === 'number' && isFinite(v);
+  function tf(key, drill, get, set, calc) { TF.push({ key, drill, get, set, calc, base: undefined, wrote: undefined }); }
+  const field = (k) => [(T) => T[k], (T, v) => { T[k] = v; }];
+  const sub = (o, k) => [(T) => T[o] && T[o][k], (T, v) => { T[o][k] = v; }];
+  // balance: quicker landing recovery, hurt stun and getting up (combat scales hurt stun by hurtTime / 0.30).
+  tf('landRecover', 'balance', ...field('landRecover'), (b, f) => round4(b * (1 - 0.30 * f)));
+  tf('hurtTime', 'balance', ...field('hurtTime'), (b, f) => round4(b * (1 - 0.15 * f)));
+  tf('getupTime', 'balance', ...field('getupTime'), (b, f) => round4(b * (1 - 0.15 * f)));
+  // footwork: dash charges recharge up to 15% faster.
+  tf('dashRecharge', 'footwork', ...field('dashRecharge'), (b, f) => round4(b * (1 - 0.15 * f)));
+  // reaction: the slip's evade window ends up to 20 ms later.
+  tf('slipWindow[1]', 'reaction', (T) => (Array.isArray(T.slipWindow) ? T.slipWindow[1] : undefined), (T, v) => { T.slipWindow[1] = v; },
+    (b, f) => round4(b + 0.020 * f));
+  // conditioning: breath max up to +30 (combat reads it every step).
+  tf('breath.max', 'conditioning', ...sub('breath', 'max'), (b, f) => Math.round(b + 30 * f));
+  // bag: punch damage up to +10%.
+  for (const m of DMG_MOVES) tf(m + '.dmg', 'bag', ...sub(m, 'dmg'), (b, f) => round1(b * (1 + 0.10 * f)));
+  tf('flurry.dmg', 'bag', ...sub('flurry', 'dmg'), (b, f) => round1(b * (1 + 0.10 * f)));
+  tf('flurry.finisherDmg', 'bag', ...sub('flurry', 'finisherDmg'), (b, f) => round1(b * (1 + 0.10 * f)));
+  // mitts: the counter window after a real slip lasts up to 60 ms longer.
+  tf('counterWindow', 'mitts', ...field('counterWindow'), (b, f) => round4(b + 0.060 * f));
+
+  let trainSigLast = null, tuneRef = null;
   const trainLevel = (k) => clamp((S.G && S.G.train && S.G.train[k]) | 0, 0, 3);
   const trainSig = () => (S.G && S.G.train ? DRILL_KEYS.map(trainLevel).join(',') : '');
-  function snapshotTune(T) {
-    const num = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
-    const sw = Array.isArray(T.slipWindow) ? T.slipWindow : [0.02, 0.08];
-    const v = {
-      landRecover: num(T.landRecover, 0.06), dashRecharge: num(T.dashRecharge, 0.6),
-      slipWindow: [num(sw[0], 0.02), num(sw[1], 0.08)], breathMax: num(T.breath && T.breath.max, 100),
-      counterWindow: num(T.counterWindow, 0.3), dmg: {}, flurryDmg: null, flurryFin: null,
-    };
-    for (const m of DMG_MOVES) if (T[m] && typeof T[m].dmg === 'number') v.dmg[m] = T[m].dmg;
-    if (T.flurry) { v.flurryDmg = num(T.flurry.dmg, null); v.flurryFin = num(T.flurry.finisherDmg, null); }
-    BASE.ref = T; BASE.v = v;
-  }
-  // Applies G.train to S.tune. Training improves control of the body Jin has; it never touches HP or injuries.
+  // Applies G.train to S.tune. Training improves control of the body Jin has; it never touches HP,
+  // condition recovery, S.combat.body (the chapter's injuries) or anything money can reach.
   function applyTraining() {
     const T = S.tune;
     if (!T || typeof T !== 'object') return null;
-    if (BASE.ref !== T) snapshotTune(T);
-    const B = BASE.v, f = (k) => trainLevel(k) / 3;
-    T.landRecover = round4(B.landRecover * (1 - 0.30 * f('balance')));
-    T.hurtRecoverMul = round4(1 - 0.20 * f('balance'));            // combat multiplies hurt/stagger/getup recovery by this
-    T.dashRecharge = round4(B.dashRecharge * (1 - 0.15 * f('footwork')));
-    const sw1 = round4(B.slipWindow[1] + 0.020 * f('reaction'));
-    if (Array.isArray(T.slipWindow)) { T.slipWindow[0] = B.slipWindow[0]; T.slipWindow[1] = sw1; } else T.slipWindow = [B.slipWindow[0], sw1];
-    if (T.breath && typeof T.breath === 'object') T.breath.max = Math.round(B.breathMax + 30 * f('conditioning'));
-    const pm = 1 + 0.10 * f('bag');
-    for (const m in B.dmg) if (T[m]) T[m].dmg = round1(B.dmg[m] * pm);
-    if (T.flurry) {
-      if (B.flurryDmg !== null) T.flurry.dmg = round1(B.flurryDmg * pm);
-      if (B.flurryFin !== null) T.flurry.finisherDmg = round1(B.flurryFin * pm);
+    for (const F of TF) {
+      let cur;
+      try { cur = F.get(T); } catch (_) { cur = undefined; }
+      if (!isNum(cur)) continue;                          // this tune has no such field: nothing to train
+      if (F.base === undefined || cur !== F.wrote) F.base = cur;
+      const v = F.calc(F.base, trainLevel(F.drill) / 3);
+      try { F.set(T, v); F.wrote = v; } catch (e) { warnOnce('train ' + F.key, 'cannot write S.tune.' + F.key + ': ' + (e && e.message)); }
     }
-    T.counterWindow = round4(B.counterWindow + 0.060 * f('mitts'));
     const lv = {}; for (const k of DRILL_KEYS) lv[k] = trainLevel(k);
-    T.training = lv;
-    trainSigLast = trainSig();
+    T.training = lv;                                      // read-only mirror for the HUD / dev tools
+    trainSigLast = trainSig(); tuneRef = T;
     return lv;
   }
+  // The trained values, and the untrained base under each (tests, the journal's Training tab).
+  function trainingReport() {
+    const out = {};
+    for (const F of TF) if (F.wrote !== undefined) out[F.key] = { drill: F.drill, base: F.base, value: F.wrote };
+    return out;
+  }
+  function tuneDrifted(T) {
+    for (const F of TF) {
+      if (F.wrote === undefined) continue;
+      let cur; try { cur = F.get(T); } catch (_) { continue; }
+      if (isNum(cur) && cur !== F.wrote) return true;
+    }
+    return false;
+  }
+  // Cheap per-step check: re-apply when a level changed, S.tune was replaced or someone edited a trained field.
   function checkTraining() {
-    if (!S.tune) return;
-    if (trainSig() !== trainSigLast || BASE.ref !== S.tune) applyTraining();
+    const T = S.tune;
+    if (!T) return;
+    if (trainSig() !== trainSigLast || T !== tuneRef || tuneDrifted(T)) applyTraining();
   }
   function setTrainLevel(k, L) {
     if (!S.G) return;
@@ -350,13 +390,15 @@
   // Which punches Jin threw this step. Reads the controller's move; if the controller exposes no move names,
   // falls back to inferring the punch from the keys (down+punch uppercut, chained presses jab-cross-hook).
   class PunchWatch {
-    constructor() { this.last = null; this.lastT = null; this.seen = false; this.pend = null; this.chain = 0; this.chainAt = -9; this.dashAt = -9; }
+    constructor() { this.last = null; this.lastT = null; this.lastRef = null; this.seen = false; this.pend = null; this.chain = 0; this.chainAt = -9; this.dashAt = -9; }
     step(pad, j) {
       const out = [];
-      const act = jinAct(j), mv = PUNCH_SET.has(act) ? act : null, mt = actTime(j);
-      const restarted = mv && mv === this.last && mt !== null && this.lastT !== null && mt + 1e-6 < this.lastT;
-      if (mv && (mv !== this.last || restarted)) { out.push(mv); this.seen = true; this.pend = null; }
-      this.last = mv; this.lastT = mv ? mt : null;
+      const act = jinAct(j), mv = PUNCH_SET.has(act) ? act : null, mt = actTime(j), ref = mv ? jinAttackRef(j) : null;
+      // A new throw: a new attack object from the controller; without one, a new name or a restarted clock.
+      const fresh = mv && (ref ? ref !== this.lastRef
+        : mv !== this.last || (mt !== null && this.lastT !== null && mt + 1e-6 < this.lastT));
+      if (fresh) { out.push(mv); this.seen = true; this.pend = null; }
+      this.last = mv; this.lastT = mv ? mt : null; this.lastRef = ref;
       if (pad.pressed('dash')) this.dashAt = clock;
       if (!this.seen) {
         if (pad.pressed('flurry') && Ext.allowed('flurry')) this.pend = { at: clock, kind: 'flurry' };
@@ -376,7 +418,10 @@
   }
 
   /* ── 5. Activity base ─────────────────────────────────────────────── */
-  let pin = null;   // { owner, x, pose, face, lean } — Jin held in place, re-applied after every world.update
+  // Jin held in place: { owner, x, pose, face, lean, flash, prevScripted }. While pinned Jin's actor is marked
+  // `scripted` (combat.js then leaves him alone: no input, no pose writes) and applyPin() puts him back where
+  // the activity wants him after every world.update, advancing his pose clock itself.
+  let pin = null;
 
   class Activity {
     constructor(name, opts, parent) {
@@ -424,25 +469,28 @@
         try { fn(); } catch (e) { S.fail(e, { source: 'activity cleanup ' + this.name }); }
       }
     }
-    wantControl(on) {
-      this.control = !!on;
-      if (!on) return;
-      const restore = Ext.setControl(true);
-      if (restore) this.undo(restore);
+    // The player steers Jin while this runs (A.activity's wait already hands control over).
+    wantControl(on) { this.control = !!on; }
+    // Autoplay from here on (director autoComplete): synthetic input through the same judging code.
+    setAuto() {
+      if (this.done) return;
+      this.auto = true; this.pad.real = false; this.pad.clear();
+      if (this.child && !this.child.done) this.child.setAuto();
     }
+    // End now as if it had been played through (director timeout under a policy). Subclasses add effects.
+    forceFinish(reason) { return this.end({ ok: true, forced: reason || true }); }
     restrictJin(obj) { const r = Ext.restrict(obj); if (r) this.undo(r); return !!r; }
     listen(name, fn) { S.events.on(name, fn); this.undo(() => S.events.off(name, fn)); }
     holdJin(o) {
       const j = Ext.jin();
-      pin = Object.assign({ owner: this, x: j ? j.x : 0, face: j ? j.face || 1 : 1, pose: null, lean: 0 }, o || {});
+      const prev = pin && pin.owner === this ? pin.prevScripted : j ? !!j.scripted : false;
+      if (pin && pin.owner !== this) releasePin();
+      pin = Object.assign({ owner: this, x: j ? j.x : 0, face: j ? j.face || 1 : 1, pose: 'idle', lean: 0, flash: null, prevScripted: prev }, o || {});
+      if (j) { j.scripted = true; j.vx = 0; }
       if (!this._pinUndo) { this._pinUndo = true; this.undo(() => this.releaseJin()); }
       return pin;
     }
-    releaseJin() {
-      if (!pin || pin.owner !== this) return;
-      const j = Ext.jin(); if (j && pin.lean) j.lean = 0;
-      pin = null;
-    }
+    releaseJin() { if (pin && pin.owner === this) releasePin(); }
     // Floating feedback word. where: 'jin' | 'coach' | { x, y }.
     say(text, kind, where) {
       let x = 0, y = 0;
@@ -553,6 +601,14 @@
       return { ok: passed, drill: this.key, level: this.level, score: this.score, best: this.best, of: this.of, need: this.need,
         sets: this.setNo, before, after, improved };
     }
+    // Counted as passed (director timeout under a policy): awards the level like a clean set would.
+    forceFinish(reason) {
+      if (this.done) return this.result;
+      try { if (this.phase === 'run') this.stopSet(); } catch (_) { /* best effort */ }
+      this.pad.clear();
+      if (!this.outcome) { this.score = Math.max(this.score, this.need); this.best = Math.max(this.best, this.score); this.outcome = this.conclude(true); }
+      return this.end(Object.assign({}, this.outcome, { forced: reason || true }));
+    }
     findArea(half) {
       const o = this.opts, j = Ext.jin(), L = Ext.loc();
       let p = null;
@@ -572,8 +628,10 @@
       const j = Ext.jin();
       let a = id ? Ext.actor(id) : null;
       if (a) {
-        const saved = { face: a.face, pose: a.pose };
-        this.undo(() => { Ext.tint(a, null); a.face = saved.face; Ext.setPose(a, saved.pose || 'idle'); });
+        // Hold the partner where he stands (world.js skips wander/paths while poseHoldT runs) until we finish.
+        const saved = { face: a.face, pose: a.pose, x: a.x };
+        a.poseHoldT = 1e6;
+        this.undo(() => { Ext.tint(a, null); a.poseHoldT = 0; a.face = saved.face; Ext.setPose(a, saved.pose || a.basePose || 'idle'); });
         this.coach = { actor: a, name: a.name || Ext.personName(id) || defName, x: a.x, y: a.y, face: a.face || -1 };
       } else {
         const face = j ? j.face || 1 : 1, L = Ext.loc();
@@ -584,7 +642,7 @@
         const pl = { id: pid, look: o.coachLook || spot.coachLook || 'man', name: o.coachName || spot.coachName || defName,
           x, y: Ext.groundY(x, j ? j.y : null), face: -face, pose: 'guard' };
         a = Ext.spawnNpc(pl);
-        if (a) this.undo(() => Ext.remove(pid));
+        if (a) { a.poseHoldT = 1e6; this.undo(() => Ext.remove(pid)); }
         this.coach = { actor: a, name: pl.name, x, y: pl.y, face: -face };
       }
       return this.coach;
@@ -714,7 +772,7 @@
     }
     halfWidth() { return this.cfg.spread + 10; }
     basePrompt() {
-      if (this.level === 1) return 'Step onto the lit mark before it goes out.';
+      if (this.level === 1) return 'Step onto the lit mark before it goes out (' + Ext.label('left') + ' ' + Ext.label('right') + ').';
       if (this.level === 2) return 'Lit mark — get there. ' + Ext.label('dash') + ' dashes.';
       return 'Arrow marks: keep facing front — ' + Ext.label('dash') + ' + back to backdash.';
     }
@@ -913,7 +971,7 @@
       ];
     }
     halfWidth() { return this.cfg.course + 12; }
-    basePrompt() { return 'Run the cones (' + Ext.label('run') + ' run / walk). Ease off before your wind gives out.'; }
+    basePrompt() { return 'Run the cones. Ease off before your wind gives out: ' + Ext.label('run') + ' switches to a walk.'; }
     setup() {
       const a = this.area;
       const course = Math.max(40, Math.min(this.cfg.course, (a.W - 64) / 2));
@@ -955,7 +1013,7 @@
       }
       this.score = Math.floor(this.legs / 2);
       const low = this.wind < 0.3;
-      this.hud.prompt = this.winded > 0 ? 'Winded. Breathe.' : low ? 'Ease off — walk until your wind comes back.' : this.basePrompt();
+      this.hud.prompt = this.winded > 0 ? 'Winded. Breathe.' : low ? 'Ease off — walk (' + Ext.label('run') + ') until your wind comes back.' : this.basePrompt();
       this.hud.bar = { value: clamp(this.wind, 0, 1), label: 'Wind', warn: low };
       this.hud.pips = { of: c.laps, list: Array.from({ length: c.laps }, (_, i) => (i < this.score ? 'ok' : i === this.score ? 'now' : 'todo')) };
       this.hud.sub = Math.max(0, Math.ceil(c.limit - this.setT)) + ' s left';
@@ -1024,19 +1082,29 @@
     setup() {
       if (!Ext.allowed('punch')) { this.end({ ok: false, drill: this.key, level: this.level, reason: 'restricted' }); return; }
       const a = this.area, j = Ext.jin(), o = this.opts;
-      let bx = typeof o.bagX === 'number' ? o.bagX : null;
-      if (bx === null) {
-        const near = Ext.pieces('heavy_bag').filter((p) => typeof p.x === 'number').sort((p, q) => Math.abs(p.x - a.cx) - Math.abs(q.x - a.cx))[0];
-        if (near && Math.abs(near.x - a.cx) < 160) bx = near.x;
-      }
+      let bx = typeof o.bagX === 'number' ? o.bagX : null, piece = null;
+      const near = Ext.pieces('heavy_bag').filter((p) => typeof p.x === 'number').sort((p, q) => Math.abs(p.x - a.cx) - Math.abs(q.x - a.cx))[0];
+      if (bx === null && near && Math.abs(near.x - a.cx) < 160) bx = near.x;
+      if (near && bx !== null && Math.abs(near.x - bx) < 4) piece = near;
       if (bx === null) {
         const sp = trainingSpot('bag');
         const placed = typeof o.x === 'number' || (o.at && Ext.point(o.at)) || (sp && typeof sp.x === 'number');
         bx = placed ? a.cx : j ? j.x + (j.face || 1) * 40 : a.cx;   // no spot: hang it just in front of Jin
       }
       this.bagX = bx; this.bagY = Ext.groundY(bx, a.y);
-      const e = Ext.spawnEnemy({ type: 'bag', x: bx, y: this.bagY, face: -1, name: 'Heavy bag', hp: 99999, opts: { drill: true, passive: true } });
-      if (e) { this.bag = e; this.undo(() => Ext.remove(e.id)); }
+      // The punchable bag is a combat 'bag' actor (hits, sparks, sounds, sway). When the room already hangs a
+      // heavy_bag piece here, that piece stays the visible bag: the actor draws nothing and its swing drives
+      // the piece's sway, so there are never two bags on screen.
+      const e = Ext.spawnEnemy({ id: 'act_bag', type: 'bag', x: bx, y: this.bagY, face: -1, name: 'Heavy bag', opts: { drill: true, passive: true } });
+      if (e) {
+        this.bag = e; this.undo(() => Ext.remove(e.id));
+        if (piece) {
+          const sway0 = piece.sway;
+          this.piece = piece; this.pieceSway = typeof sway0 === 'number' ? sway0 : 0.6;
+          e.draw = () => {};
+          this.undo(() => { if (sway0 === undefined) delete piece.sway; else piece.sway = sway0; });
+        }
+      }
       this.listen('hit', (ev) => { if (ev && this.bag && ev.target === this.bag) this.lastHit = clock; });
       this.of = this.cfg.combos; this.need = this.cfg.need;
     }
@@ -1046,6 +1114,10 @@
       this.hud.prompt = this.basePrompt();
     }
     bagPos() { return this.bag ? { x: this.bag.x, y: this.bag.y } : { x: this.bagX, y: this.bagY }; }
+    post() {
+      const ai = this.piece && this.bag && this.bag.enemy;
+      if (ai) this.piece.sway = round1(this.pieceSway + Math.min(5, Math.abs(+ai.swing || 0) * 22));
+    }
     inRange(kind) {
       const j = Ext.jin(); if (!j || this.auto) return true;
       const dx = this.bagPos().x - j.x, reach = kind === 'dashStraight' ? 46 : 36;
@@ -1263,7 +1335,6 @@
       super(n, o, p);
       this.item = o.item || 'box';
       this.label = o.label || String(this.item).replace(/_/g, ' ');
-      this.speed = typeof o.speed === 'number' ? clamp(o.speed, 0.2, 1) : 0.6;
     }
     begin() {
       const o = this.opts;
@@ -1280,14 +1351,22 @@
       const j = Ext.jin();
       this.go(this.fromX !== null && j && Math.abs(j.x - this.fromX) > 14 ? 'fetch' : 'lift');
     }
-    go(phase) { this.phase = phase; this.pt = 0; if (phase === 'lift' || phase === 'drop') this.holdJin({ pose: 'crouch' }); }
+    go(phase) {
+      this.phase = phase; this.pt = 0;
+      if (phase === 'lift' || phase === 'drop') { const j = Ext.jin(); this.holdJin({ x: j ? j.x : 0, pose: 'crouch' }); }
+    }
+    arrived(j) {
+      const here = Ext.locId();
+      const sameLoc = this.toLoc ? here === this.toLoc : here === this.locId;
+      return { sameLoc, there: sameLoc && (this.toX === null || !j || Math.abs(j.x - this.toX) <= 14) };
+    }
     tick(dt) {
       this.pt += dt;
       const j = Ext.jin();
       switch (this.phase) {
         case 'fetch':
           this.hud.prompt = 'Walk to the ' + this.label + '.';
-          if (this.auto && j) { j.x = approach(j.x, this.fromX, walkPx() * dt); j.face = sgn(this.fromX - j.x) || j.face; }
+          if (this.auto && j) { j.x = approach(j.x, this.fromX, walkPx() * dt); j.face = sgn(this.fromX - j.x) || j.face; j.vx = 0; }
           if (!j || Math.abs(j.x - this.fromX) <= 14) this.go('lift');
           break;
         case 'lift':
@@ -1295,13 +1374,13 @@
           if (this.pt >= 0.35) { this.releaseJin(); this.pickUp(); this.go('carry'); }
           break;
         case 'carry': {
-          this.holdSpeed();
-          this.hud.prompt = 'Carry the ' + this.label + ' to ' + (this.toLoc && Ext.locId() !== this.toLoc ? this.destLabel : 'the marked spot') + '. Hands full: no punching, dashing or jumping.';
-          const here = Ext.locId();
-          const sameLoc = this.toLoc ? here === this.toLoc : here === this.locId;
+          const away = this.toLoc && Ext.locId() !== this.toLoc;
+          this.hud.prompt = 'Carry the ' + this.label + ' to ' + (away ? this.destLabel : 'the marked spot') +
+            '. Hands full: no punching, dashing or jumping.';
           if (this.toX === null && !this.toLoc) { this.go('drop'); break; }
-          if (sameLoc && (this.toX === null || (j && Math.abs(j.x - this.toX) <= 14) || !j)) { this.go('drop'); break; }
-          if (this.auto) this.autoCarry(dt, sameLoc);
+          const st = this.arrived(j);
+          if (st.there) { this.go('drop'); break; }
+          if (this.auto) this.autoCarry(dt, st.sameLoc);
           break;
         }
         case 'drop':
@@ -1314,44 +1393,47 @@
           break;
       }
     }
+    // Combat's carry state does the rest: carry speed (tune.carrySpeed), the carry pose, every combat verb
+    // blocked with our reason shown when one is pressed. Without combat, restrict the verbs directly.
     pickUp() {
+      if (this.carrying) return;
       Ext.sound('pickup', { vol: 0.6 });
       this.carrying = true;
       const reason = 'Hands full — set the ' + this.label + ' down first.';
-      this.restrictJin({ punch: false, jab: false, cross: false, hook: false, uppercut: false, dashStraight: false, counter: false,
-        flurry: false, dash: false, backdash: false, airdash: false, slip: false, jump: false, reason });
-      this.undo(() => this.putDown());
-      this.holdSpeed();
-    }
-    // Keep Jin's carry pose and slower pace applied, even if the body was replaced by the director meanwhile.
-    holdSpeed() {
-      const j = Ext.jin(); if (j) j.carry = this.item;
-      const B = S.combat && S.combat.body; if (!B || typeof B !== 'object') return;
-      if (this.bodyRef !== B || B.speedMul !== this.applied) {
-        this.bodyRef = B; this.baseSpeed = typeof B.speedMul === 'number' ? B.speedMul : 1;
-        this.applied = round4(this.baseSpeed * this.speed); B.speedMul = this.applied;
+      if (!Ext.carry(this.item, reason)) {
+        this.restrictJin({ punch: false, jab: false, cross: false, hook: false, uppercut: false, dashStraight: false, counter: false,
+          flurry: false, dash: false, backdash: false, airdash: false, slip: false, jump: false, reason });
       }
+      this.undo(() => this.putDown());
     }
     putDown() {
       if (!this.carrying) return;
       this.carrying = false;
-      const j = Ext.jin(); if (j && j.carry === this.item) j.carry = null;
-      const B = this.bodyRef;
-      if (B && B.speedMul === this.applied) B.speedMul = this.baseSpeed;
-      this.bodyRef = null;
+      Ext.carry(null);
     }
-    post() { if (this.carrying) { const j = Ext.jin(); if (j) j.carry = this.item; } }
     autoCarry(dt, sameLoc) {
       const j = Ext.jin(); if (!j) return;
-      const sp = walkPx() * this.speed * dt;
+      const sp = walkPx() * dt;
+      j.vx = 0;
       if (sameLoc) { j.x = approach(j.x, this.toX, sp); j.face = sgn(this.toX - j.x) || j.face; return; }
       const door = Ext.doorTo(this.toLoc);
       if (door && typeof door.x === 'number' && Math.abs(j.x - door.x) > 6) { j.x = approach(j.x, door.x, sp); j.face = sgn(door.x - j.x) || j.face; return; }
-      if (!this.entering) {
-        this.entering = true;
-        const tx = door && typeof door.tx === 'number' ? door.tx : this.toX !== null ? this.toX : 40;
-        if (!Ext.enter(this.toLoc, tx, { face: door && door.face, fade: false })) this.toLoc = null;
-      }
+      this.goThere(door);
+    }
+    // Into the destination location (autoplay and forceFinish); once only.
+    goThere(door) {
+      if (this.entering || !this.toLoc) return;
+      this.entering = true;
+      door = door === undefined ? Ext.doorTo(this.toLoc) : door;
+      const tx = this.toX !== null ? this.toX : door && typeof door.tx === 'number' ? door.tx : 40;
+      if (!Ext.enter(this.toLoc, tx, { face: door && door.face, fade: false })) this.toLoc = null;
+    }
+    forceFinish(reason) {
+      if (this.done) return this.result;
+      if (this.toLoc && Ext.locId() !== this.toLoc) this.goThere();
+      else if (this.toX !== null) { const j = Ext.jin(); if (j) { j.x = this.toX; j.vx = 0; } }
+      const j = Ext.jin();
+      return this.end({ ok: true, item: this.item, delivered: true, forced: reason || true, loc: Ext.locId(), x: j ? Math.round(j.x) : null, time: round1(this.t) });
     }
     marks() {
       const out = [];
@@ -1388,9 +1470,9 @@
       this.i = 0; this.prog = 0; this.count = 0; this.pause = 0;
       this.setOwns(this.steps[0]);
     }
-    // Jin's combat verbs are swallowed while he works, except the one the step asks for (a punch step lets him
-    // actually swing at the stuck part). interact is always kept from the world: the activity reads it itself.
-    setOwns(s) { this.owns = REPAIR_OWNS.filter((a) => a === 'interact' || !s || a !== s.action); }
+    // Jin is held at the work (scripted, so combat ignores his keys); the presses are swallowed too so nothing
+    // else in the world reacts to them. A punch step shows a jab at the stuck part instead of a real attack.
+    setOwns() { this.owns = REPAIR_OWNS.slice(); }
     begin() {
       this.hud.title = this.opts.title || this.label;
       this.wantControl(true);
@@ -1398,7 +1480,11 @@
       const j = Ext.jin();
       this.holdJin({ x: j ? j.x : 0, face: this.opts.face || (j ? j.face || 1 : 1), pose: this.poseFor(this.steps[0]) });
     }
-    poseFor(s) { return s.pose || this.opts.pose || (s.action === 'punch' ? null : 'work'); }
+    poseFor(s) { return s.pose || this.opts.pose || (s.action === 'punch' ? 'guard' : 'work'); }
+    forceFinish(reason) {
+      if (this.done) return this.result;
+      return this.end({ ok: true, label: this.label, steps: this.steps.length, time: round1(this.t), forced: reason || true });
+    }
     tick(dt) {
       if (this.finishing) { this.finishing -= dt; if (this.finishing <= 0) this.end({ ok: true, label: this.label, steps: this.steps.length, time: round1(this.t) }); return; }
       const s = this.steps[this.i];
@@ -1422,7 +1508,10 @@
         else this.prog = Math.max(0, this.prog - dt / (s.hold * 2.5));
         this.hud.prompt = 'Hold ' + key + ' — ' + s.prompt;
       } else {
-        if (this.pad.pressed(a)) { this.count++; Ext.sound('ui', { vol: 0.5 }); }
+        if (this.pad.pressed(a)) {
+          this.count++; Ext.sound(a === 'punch' ? 'block' : 'ui', { vol: 0.5 });
+          if (a === 'punch' && pin && pin.owner === this) pin.flash = { pose: 'jab', t: 0.2 };
+        }
         this.prog = this.count / s.count;
         this.hud.prompt = (s.count > 1 ? key + ' ×' + (s.count - this.count) + ' — ' : key + ' ') + s.prompt;
       }
@@ -1481,6 +1570,7 @@
       const G = S.G;
       if (G) {
         G.money = (+G.money || 0) + this.pay;
+        if (this.pay) S.events.emit('money', { delta: this.pay, total: G.money, source: 'work_shift' });
         G.flags = G.flags || {};
         const key = 'shift.' + (this.opts.id || String(this.label).toLowerCase().replace(/[^a-z0-9]+/g, '_'));
         G.flags[key] = (G.flags[key] | 0) + 1;
@@ -1509,6 +1599,26 @@
     }
     marks() { return this.child && !this.child.done ? this.child.marks() : null; }
     draw(ctx, layer) { if (this.child && !this.child.done) this.child.draw(ctx, layer); }
+    // Finish the current task and every remaining one as passes (a carry still arrives where it was going),
+    // then pay as usual.
+    forceFinish(reason) {
+      if (this.done) return this.result;
+      const why = reason || true;
+      if (this.child && !this.child.done) { try { this.child.forceFinish(why); } catch (e) { S.fail(e, { source: 'shift task force' }); this.child.cancel('error'); } }
+      if (this.child) { this.results.push(this.child.result); this.child = null; ACT.current = this; }
+      while (this.phase === 'work' && this.idx < this.tasks.length) {
+        const spec = this.tasks[this.idx++];
+        const ch = makeActivity(spec.name, Object.assign({}, spec.opts, { auto: true }), this);
+        if (!ch) { this.results.push({ ok: false, name: spec.name, error: 'unknown activity' }); continue; }
+        try { ch.begin(); if (!ch.done) ch.forceFinish(why); }
+        catch (e) { S.fail(e, { source: 'shift task ' + spec.name }); if (!ch.done) ch.cancel('error'); }
+        this.results.push(ch.result);
+        ACT.current = this;
+      }
+      if (this.phase === 'work') this.payOut();
+      return this.end({ ok: true, pay: this.pay, money: S.G ? S.G.money : null, tasks: this.results, shifts: this.count || 1,
+        completed: this.results.filter((r) => r && r.ok).length, forced: why });
+    }
   }
 
   /* ── 9. Timeline board and evidence presentation ──────────────────── */
@@ -1534,11 +1644,20 @@
     }
     open() {
       this.opened = Ext.uiOpen(this.kind, this);
-      if (!this.opened && !S.headless && !this.auto) {
-        warnOnce('noui ' + this.kind, 'S.ui.openWindow is missing; solving the ' + this.kind + ' automatically');
-        this.auto = true;
+      // No window to show: in the browser that is a missing ui.js (solve it rather than lock the scene);
+      // headless, tests drive place()/pick() themselves unless the director runs screens by itself.
+      if (!this.opened && !this.auto && (!S.headless || (S.director && S.director.autoHeadless))) {
+        if (!S.headless) warnOnce('noui ' + this.kind, 'S.ui.openWindow is missing; solving the ' + this.kind + ' automatically');
+        this.setAuto();
       }
-      if (this.opened) { this.away = false; this.openedAt = clock; }
+      if (this.opened) {
+        this.away = false; this.openedAt = clock;
+        // Ending for any other reason (autoplay, stop, a chapter reset) closes our window if it is still up.
+        if (!this._closeUndo) {
+          this._closeUndo = true;
+          this.undo(() => { if (Ext.uiIsOpen(this.kind) || (!Ext.uiCanTellOpen() && this.auto && !this.away)) Ext.uiClose(); });
+        }
+      }
     }
     begin() { this.wantControl(true); this.open(); }
     finish() {
@@ -1632,9 +1751,14 @@
     autoTick() {
       if (this.complete) return;
       this.autoAt = (this.autoAt || 0) + 1;
-      if (this.autoAt % 18 !== 0) return;   // one card every 0.15 s
+      if (this.autoAt % 18 !== 0) return;   // one card every 18 steps
       const i = this.slots.findIndex((v) => v === null);
       if (i >= 0) this.place(this.answer[i], i);
+    }
+    forceFinish(reason) {
+      if (this.done) return this.result;
+      for (let i = 0; i < this.slots.length && !this.complete; i++) if (this.slots[i] === null) this.place(this.answer[i], i);
+      return this.end(Object.assign({}, this.outcome || { ok: true, mistakes: this.mistakes, order: this.answer.slice() }, { forced: reason || true }));
     }
   }
 
@@ -1684,6 +1808,11 @@
       this.autoAt = (this.autoAt || 0) + 1;
       if (this.autoAt === 18) { const id = this.accept.find((a) => this.options.some((o) => o.id === a)); if (id) this.pick(id); }
     }
+    forceFinish(reason) {
+      if (this.done) return this.result;
+      if (!this.complete) { const id = this.accept.find((a) => this.options.some((o) => o.id === a)); if (id) this.pick(id); }
+      return this.end(Object.assign({}, this.outcome || { ok: true, evidence: this.accept[0] || null, tries: this.picks.length, wrong: this.wrong }, { forced: reason || true }));
+    }
   }
 
   /* ── 10. Registry and public API ──────────────────────────────────── */
@@ -1719,13 +1848,16 @@
     S.events.emit('activity', { name: st.name, phase: 'end', result: st.result });
   }
 
-  let stepStamp = null;
+  function rootOf(st) { while (st && st.parent) st = st.parent; return st; }
+
+  let stepStamp = null, stampBy = null;
   const ACT = S.activities = {
     current: null,   // innermost running ActivityState (the UI reads this)
     root: null,      // the activity the director is waiting on
     last: null,      // the last finished root activity
     log: [],         // recent results (tests)
     overlay: true,   // draw the drill overlay (set false if ui.js renders state.hud itself)
+    autoRate: 8,     // activity steps per sim step while autoplaying
     names: Object.keys(FACTORY),
     DRILLS,
 
@@ -1752,28 +1884,32 @@
       return st;
     },
 
-    // Once per sim step. Safe to call more than once per step (only the first call of a step advances).
-    update(dt) {
+    // Once per sim step. Safe to call more than once per step: every world.update (fromHook) ticks unless an
+    // outside call (the main loop) already ticked at this same sim time; outside calls tick only when the sim
+    // time moved on.
+    update(dt, fromHook) {
       if (S.paused) return;
       const now = typeof S.time === 'number' ? S.time : NaN;
-      if (now === stepStamp) return;
-      stepStamp = now;
+      if (now === stepStamp && !(fromHook && stampBy === 'hook')) return;
+      stepStamp = now; stampBy = fromHook ? 'hook' : 'ext';
       checkTraining();
       const r = ACT.root;
       if (!r || r.done) return;
       dt = dt > 0 && dt < 1 ? dt : S.DT;
       clock += dt;
-      try { r.step(dt); }
+      // Autoplay runs several activity steps per sim step (same rules, compressed time).
+      const c = ACT.current, n = r.auto || (c && c.auto) ? Math.max(1, ACT.autoRate | 0) : 1;
+      try { for (let i = 0; i < n && !r.done; i++) { if (i) clock += dt; r.step(dt); } }
       catch (e) {
         S.fail(e, { source: 'activity ' + r.name });
         try { r.end({ ok: false, error: String((e && e.message) || e) }); } catch (_) { /* already reported */ }
       }
     },
     // After world.update: hold a pinned Jin where the activity wants him.
-    post() {
+    post(dt) {
       const r = ACT.root;
       if (r && !r.done) { try { r.post(); } catch (e) { S.fail(e, { source: 'activity post' }); } }
-      applyPin();
+      applyPin(dt > 0 && dt < 1 ? dt : S.DT);
     },
     // Before world.update: actions the current activity owns are consumed so Jin and the world ignore them.
     pre() {
@@ -1782,10 +1918,36 @@
       for (const a of c.owns) S.input.consume(a);
     },
     cancel(reason) { const r = ACT.root; if (r && !r.done) return r.cancel(reason || 'cancelled'); return null; },
+    // Director hook (A.activity under a policy, after 0.2 s): play the rest automatically. Returns true if it will.
+    autoComplete(st) {
+      st = st || ACT.root;
+      if (!st || st.done || typeof st.setAuto !== 'function') return false;
+      const p = S.director && S.director.policy;
+      if (p && p.activities === 'real' && st.opts.auto === undefined) return false;
+      st.setAuto();
+      return true;
+    },
+    // Director hook (A.activity timeout) and general "end it now". Under a policy the activity ends as a pass
+    // (forceFinish: drills award their level, boards fill in, carries arrive); otherwise it is cancelled.
+    // Either way everything it changed is put back.
+    stop(st, reason) {
+      st = st || ACT.root;
+      if (!st || st.done || typeof st.end !== 'function') return st ? st.result : null;
+      const target = st.parent ? rootOf(st) : st;
+      try {
+        if (S.director && S.director.policy) target.forceFinish(reason || 'stopped');
+        else target.cancel(reason || 'stopped');
+      } catch (e) {
+        S.fail(e, { source: 'activities.stop ' + target.name });
+        try { target.end({ ok: false, error: String((e && e.message) || e) }); } catch (_) { /* reported */ }
+      }
+      return target.result;
+    },
     get running() { return !!(ACT.root && !ACT.root.done); },
 
     applyTraining,
     trainLevel,
+    trainingReport,
     drillInfo(key) {
       key = String(key || '').replace(/^train_/, '');
       const d = DRILLS[key]; if (!d) return null;
@@ -1838,15 +2000,26 @@
   };
 
   /* ── 11. Pins, hooks, events ──────────────────────────────────────── */
-  function applyPin() {
+  function applyPin(dt) {
     if (!pin) return;
-    if (!pin.owner || pin.owner.done) { pin = null; return; }
+    if (!pin.owner || pin.owner.done) { releasePin(); return; }
     const j = Ext.jin(); if (!j) return;
+    j.scripted = true;                       // re-assert: a director reset may have cleared it
     if (typeof pin.x === 'number') j.x = pin.x;
-    if ('vx' in j) j.vx = 0;
+    j.vx = 0;
     if (pin.face) j.face = pin.face;
-    if (pin.pose) Ext.setPose(j, pin.pose);
-    if (pin.lean || j.lean) j.lean = pin.lean || 0;
+    j._ladderCd = Math.max(+j._ladderCd || 0, 0.2);   // no grabbing a ladder while held at the work
+    let pose = pin.pose || 'idle';
+    if (pin.flash) { pin.flash.t -= dt; if (pin.flash.t > 0) pose = pin.flash.pose; else pin.flash = null; }
+    if (j.pose !== pose) { j.pose = pose; j.poseT = 0; } else j.poseT = (+j.poseT || 0) + dt;
+    j.lean = pin.lean || 0;
+    j.tint = null;
+  }
+  function releasePin() {
+    const p = pin; pin = null;
+    if (!p) return;
+    const j = Ext.jin();
+    if (j) { j.scripted = !!p.prevScripted; j.lean = 0; j.vx = 0; }
   }
 
   // The module ticks itself from S.world.update and draws itself after S.world.render, so nothing else has to
@@ -1860,13 +2033,20 @@
       const hooked = function (dt) {
         try { ACT.pre(); } catch (e) { S.fail(e, { source: 'activities pre' }); }
         const r = orig.apply(this, arguments);
-        try { ACT.update(dt); ACT.post(); } catch (e) { S.fail(e, { source: 'activities update' }); }
+        try { ACT.update(dt, true); ACT.post(dt); } catch (e) { S.fail(e, { source: 'activities update' }); }
         return r;
       };
       hooked.__activities = true; hooked.__orig = orig;
       W.update = hooked;
     }
-    if (!S.headless && typeof W.render === 'function' && !W.render.__activities) {
+    // Drawing: world.js draw hooks (world transform) when it has them; otherwise wrap render and draw after it.
+    if (!S.headless && typeof W.addDraw === 'function') {
+      if (!W.__activitiesDraw) {
+        W.__activitiesDraw = true;
+        try { W.addDraw('back', (ctx) => ACT.draw(ctx, 'back')); W.addDraw('front', (ctx) => ACT.draw(ctx, 'front')); }
+        catch (e) { W.__activitiesDraw = false; warnOnce('addDraw', 'world.addDraw failed: ' + (e && e.message)); }
+      }
+    } else if (!S.headless && typeof W.render === 'function' && !W.render.__activities) {
       const origR = W.render;
       const hookedR = function (ctx) {
         drawCalled = false;
@@ -1891,8 +2071,8 @@
     drawCalled = false;
   }
 
-  S.events.on('loaded', () => { ACT.cancel('save loaded'); pin = null; applyTraining(); });
-  S.events.on('chapterStart', () => { ACT.cancel('chapter start'); pin = null; applyTraining(); });
+  S.events.on('loaded', () => { ACT.cancel('save loaded'); releasePin(); applyTraining(); });
+  S.events.on('chapterStart', () => { ACT.cancel('chapter start'); releasePin(); applyTraining(); });
   installHooks();
   applyTraining();
 
@@ -2094,5 +2274,5 @@
     return true;
   }
   // True while world-space marks are being drawn on the canvas (world.render calls draw, or our render wrapper does).
-  function canvasMarks() { return !!(S.world && S.world.render && S.world.render.__activities) || drawCalled; }
+  function canvasMarks() { return !!(S.world && (S.world.__activitiesDraw || (S.world.render && S.world.render.__activities))) || drawCalled; }
 })(window.STORY);

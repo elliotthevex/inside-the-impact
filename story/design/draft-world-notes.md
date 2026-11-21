@@ -1,6 +1,6 @@
 # draft-world notes (resume file for the world/people lens agent)
 
-Status: writing `draft-world.md` in appended parts. Check which `# ` headings already exist in draft-world.md and continue from the first missing one.
+Status (run 2, resumed 2026-11-21): Global + Ch0-2 were already written by run 1 and kept. Run 2 appends Ch3 onward with Bash heredocs (cat >>). Check which `# ` headings already exist in draft-world.md and continue from the first missing one.
 
 Order of parts: Global (cast, flags, evidence, progression, world map, NPC schedule matrix) -> Ch0..Ch2 -> Ch3..Ch5 -> Ch6..Ch8 -> Ch9..Ch10 + endings -> Decisions log.
 
@@ -28,9 +28,23 @@ Order of parts: Global (cast, flags, evidence, progression, world map, NPC sched
 ## Progress
 - [x] Global (written)
 - [x] Ch0-2 (written)
-- [ ] Ch3-5
-- [ ] Ch6-8
-- [ ] Ch9-10 + endings
+- [x] Ch3, Ch4 written (run 2). [x] Ch5 written. [x] Ch6 written. [x] Ch7 written. [x] Ch8 written. [x] Ch9 written. [x] Ch10 + endings + decisions log written. [x] Global registry fixes applied. DONE except final summary.
 
-## Registry fixes to do at the end (ids introduced in chapter text but not yet in Global tables)
-- ev_funeral_card (Ch2), mem_roof_1993 (Ch2), flags asked_collector, signed_glove, saw_poster_1994 (Ch0/Ch2)
+
+## Run 2 decisions (added while writing Ch3+)
+- Ch3 nights: Tue Jan 7 (Teddy at lane 7, tryout vs Deshawn, counter-cross), Wed rest at YMCA, Thu Jan 9 (Mo's office -> ev_cellar_book, hook from Slim's bag tip, bout vs Tommy, Luis quest), Fri Jan 10 (Lenny works Jin's corner in bout 3; Slim straight/dive; Lenny scene: patience = hold the bucket for Deshawn's co-main then talk in Lenny's Cutlass; threat = Lenny flees, tape from Mo's tape drawer).
+- New Ch3 NPCs: Rhonda Szymanski (Starlite bar/shoes), Hutch (Cellar door), Sully (odds board), Doc Haskell (retired vet, penlight), Stan "Wojo" Wojcik (fights for fun), Luis Ocasio (17, rent) -> flag luis_outcome; Luis rents YMCA 312 in Ch9.
+- Ch4 ledgers made LESS explicit (PDF: Ch5 Jin only suspects): CIVIC folder has no NCC mention (ends "9/28 transfer to 'N' acct"); disbursements ledger is "N.C.C. serviced account 1995-97" with a smeared balance-forward. The explicit 1994 page ($410,000 via Riverside Holdings) is found in Ch7 at HQ (ev_ledger_1994). Global registry edited to match.
+- Hector Ruiz picks up the Courts maintenance envelope every Monday at Harlan Freight window 2 (thinks it's a fund servicing office). Marty Gold = depot bookkeeper (frightened, cooperative). Dot Reilly = legit dispatcher. Fran = Harlan Grill waitress.
+- Ch6 opens because the thaw floods St. Casimir's basement (Father Nowak: boxes must go). HQ note: Rook at Harrisburg housing hearings until Thu Mar 6 (explains Ch6->Ch7 gap).
+- Fire detail: Min's battery (11/95) made the 2F hall detector work; rooms 1-6 got out by the front stair; rear door padlocked; rooms 8-9 cut off. Ortiz (room 5) tried to reach room 9.
+- Ch7 short fight: Cal Brannigan + 2 leaning on Rook to put Council letterhead on Alder Row relocation notices; fight happens BEFORE the confrontation.
+- Ch10 Ending Two last beat: Jin brings his shoes to Phan Shoe Repair; "Name for the ticket?" "Seo. S-E-O."
+
+## Registry fixes collected during run 2 (ALL APPLIED to Global)
+- Flags to add: asked_collector, signed_glove, saw_poster_1994, luis_outcome, grill_scouted, stayed_for_soup, mentioned_dutch_to_rook, bought_kid_gloves, left_flowers, read_all_letters, visited_hana_ch6, showed_hector_print, sat_with_odette, accepted_robe, mitts_with_teddy, ch9_visits, mara_will_come, darnell_later, knuckles_ch10.
+- Evidence to add: ev_funeral_card, mem_roof_1993, ev_hana_complaint (Ch6), ev_ledger_1994 (Ch7), ev_alder_letters (Ch7).
+- Evidence to revise: ev_civic_ledger (no NCC; "8/19 DR2 access — P. O'Shea"; "9/28 transfer to 'N' acct"), ev_disbursements (N.C.C. serviced acct 1995-97, smeared balance fwd, monthly St. Agnes D. AHN line), ev_dutch_statement, ev_min_letters (opened, read, stamped, never answered), ev_fire_report (battery 11/95), ev_complaint_file (five signatures), ev_pike_ledger (margin "best available care... do not economize"), ev_rook_notebook (8/21 and 6/12/95 lines).
+- Meter tweaks: deshawn +1 holding the bucket (Ch3); hana +2 repay can happen Ch6 or Ch9; teddy +1 mitts_with_teddy.
+- Money sinks to add: Luis $40, Pier Street room $45/week, Cellar corner +$20 source, copies $6.40, carnations $4 (Garrison or Mount Hope).
+- Ch10 plan: Alder Row (South River) dawn; ride in Harlan truck (Dutch cast / Cal); camel coat at the gate; walk the street before choosing; bolt cutters at the chained main entrance = the choice; Ending One clearance (shove not punch) + epilogue over time + admin report; Ending Two fight + who arrives (mara_will_come etc.) + exposure process + ordinary future + Phan Shoe Repair "Seo. S-E-O."

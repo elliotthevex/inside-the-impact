@@ -42,3 +42,7 @@ Same run ids and scripts (design wf_b87e3322-06d, engine wf_a47653da-b10); still
 ## On hold by the user — 2026-11-21
 
 The user said: "dont resume the code until i tell u". No workflow is running and no resume job is scheduled. Do not restart either workflow until the user says so; then resume with the run ids and scripts above.
+
+## Resumed by the user ("continue") — 18:19 KST, 2026-11-21 (5-hour 7%, weekly 50%)
+
+Design task wjgu399fh, engine task wz9gs7ydg (same run ids). Per the user, no timer polling of usage; check at natural checkpoints (a workflow finishing, before the next phase). If the account limit cuts agents off, the run resumes from partial files.

@@ -656,8 +656,9 @@
 
   function bLayout(p, L) {
     const gy = gyOf(p, L), w = +p.w || 120, h = +p.h || 150, x = +p.x || 0, top = gy - h;
-    const shop = p.shop || null, shopH = shop ? clamp(Math.round(h * 0.3), 40, 52) : 0;
-    const corn = p.cornice === false ? 2 : 8, groundH = shop ? shopH : 40;
+    // ground floor tall enough for a 54 px door under a 46 px figure (upper floors stay compressed)
+    const shop = p.shop || null, shopH = shop ? clamp(Math.round(h * 0.36), 70, 78) : 0;
+    const corn = p.cornice === false ? 2 : 8, groundH = shop ? shopH : 62;
     const avail = Math.max(0, h - groundH - corn);
     const floors = Math.max(0, p.floors !== undefined ? Math.max(0, +p.floors - 1) : Math.round(avail / 44));
     const fh = floors ? avail / floors : 0;
@@ -683,13 +684,13 @@
       const fy = top + corn + f * fh, wy = fy + (fh - wh) * 0.45;
       for (let k = 0; k < cols; k++) add(x + (w / cols) * (k + 0.5) - ww / 2, wy, f, k);
     }
-    const door = Object.assign({ dx: shop ? w - 24 : Math.floor(w / 2) - 9, kind: shop ? 'glass' : 'wood', w: shop ? 18 : 18, h: shop ? 32 : 32 }, p.door || {});
+    const door = Object.assign({ dx: shop ? w - 28 : Math.floor(w / 2) - 11, kind: shop ? 'glass' : 'wood', w: 22, h: 54 }, p.door || {});
     if (!shop && floors >= 0) {
       // ground-floor windows beside the door
       for (let k = 0; k < cols; k++) {
         const wx = x + (w / cols) * (k + 0.5) - ww / 2;
         if (wx + ww > x + door.dx - 4 && wx < x + door.dx + door.w + 4) continue;
-        add(wx, gy - 34, floors, k);
+        add(wx, gy - 48, floors, k);
       }
     }
     return { gy, x, w, h, top, shop, shopH, corn, floors, fh, cols, ww, wh, wins, seed, door };
@@ -704,7 +705,7 @@
       if (p.cornice !== false) cornice(c, x, top, w, p.style === 'siding' ? PAL.siding : PAL.stone);
       else { R(c, x, top, w, 2, PAL.stone[3]); RA(c, x, top + 2, w, 2, PAL.ink, 0.3); }
       // belt course above the ground floor
-      const gTop = gy - (b.shop ? b.shopH : 40);
+      const gTop = gy - (b.shop ? b.shopH : 62);
       R(c, x, gTop - 3, w, 2, PAL.stone[3]); R(c, x, gTop - 1, w, 1, PAL.stone[1]); RA(c, x, gTop, w, 2, PAL.ink, 0.25);
       for (const o of b.wins) drawWin(c, o.x, o.y, o.w, o.h, o);
       // roof furniture
@@ -1001,8 +1002,8 @@
       const gy = gyOf(p, L), x = Math.round(+p.x || 0), st = PAL.steel;
       contact(c, x, gy, 10);
       R(c, x - 1, gy - 30, 3, 30, st[1]); R(c, x - 1, gy - 30, 1, 30, st[3]);
-      R(c, x - 8, gy - 52, 16, 3, '#2a3e58'); R(c, x - 8, gy - 52, 16, 1, '#3d5878'); txt(c, 'PHONE', x, gy - 57, { align: 'center', color: '#aab8c4' });
-      R(c, x - 8, gy - 57, 16, 6, '#22344c'); txt(c, 'PHONE', x, gy - 56, { align: 'center', color: '#b9c6d0' });
+      R(c, x - 8, gy - 51, 16, 3, '#2a3e58'); R(c, x - 8, gy - 51, 16, 1, '#3d5878');
+      R(c, x - 11, gy - 58, 22, 7, '#22344c'); R(c, x - 11, gy - 58, 22, 1, '#3d5878'); txt(c, 'PHONE', x, gy - 57, { align: 'center', color: '#b9c6d0' });
       box(c, x - 6, gy - 48, 12, 18, st);
       R(c, x - 4, gy - 45, 8, 4, PAL.glass[2]); R(c, x - 4, gy - 45, 8, 1, PAL.glass[4]);
       for (let i = 0; i < 3; i++) for (let k = 0; k < 3; k++) Px(c, x - 2 + k * 2, gy - 39 + i * 2, st[4]);
@@ -1090,42 +1091,44 @@
     van: { len: 72, prof: [[0, 9], [0.03, 14], [0.12, 16], [0.24, 29], [0.98, 30], [1, 10]], win: [0.2, 0.33], pillar: [] },
     pickup: { len: 74, prof: [[0, 9], [0.03, 13], [0.27, 15], [0.36, 23], [0.55, 23], [0.56, 16], [0.99, 16], [1, 10]], win: [0.34, 0.54], pillar: [] },
   };
+  // Cars were authored small; CAR_SCALE brings a sedan's roof to about chest height on a 46 px figure.
+  const CAR_SCALE = 1.5;
   const profAt = (prof, t) => { for (let i = 1; i < prof.length; i++) if (t <= prof[i][0]) { const a = prof[i - 1], b = prof[i]; return lerp(a[1], b[1], (t - a[0]) / Math.max(0.0001, b[0] - a[0])); } return prof[prof.length - 1][1]; };
   def('car', {
     draw(c, p, L) {
       const gy = gyOf(p, L), x = Math.round(+p.x || 0), kind = CAR[p.kind] ? p.kind : 'sedan', spec = CAR[kind], f = p.face === -1 ? -1 : 1, s = seedOf(p, 18);
       const col = p.color || (kind === 'cab' ? '#a08a3c' : kind === 'van' ? '#5a5e62' : ['#4a5a6a', '#6a3a32', '#4f5a48', '#6a6050', '#3a3e4a'][Math.floor(hash(s) * 5)]);
-      const r = colorRamp(col), len = spec.len, x0 = x - Math.floor(len / 2);
+      const K = CAR_SCALE, r = colorRamp(col), len = Math.round(spec.len * K), x0 = x - Math.floor(len / 2);
       const X = (i) => (f > 0 ? x0 + len - 1 - i : x0 + i); // i counted from the front bumper
       contact(c, x, gy, len + 4); RA(c, x0 + 2, gy - 3, len - 4, 3, PAL.ink, 0.35);
-      const belt = 14 - (kind === 'van' ? -2 : 0);
+      const belt = Math.round((kind === 'van' ? 16 : 14) * K);
       for (let i = 0; i < len; i++) {
-        const t = i / (len - 1), top = Math.round(profAt(spec.prof, t)), xx = X(i);
+        const t = i / (len - 1), top = Math.round(profAt(spec.prof, t) * K), xx = X(i);
         const inWin = t > spec.win[0] && t < spec.win[1] && top > belt + 2 && !spec.pillar.some((pp) => Math.abs(t - pp) < 0.025);
         for (let k = 3; k <= top; k++) {
           const yy = gy - k;
-          let col2 = k === top ? r[4] : k > belt ? r[3] : k === belt ? r[4] : k < 6 ? r[1] : r[2];
+          let col2 = k === top ? r[4] : k > belt ? r[3] : k === belt ? r[4] : k < 8 ? r[1] : r[2];
           if (inWin && k > belt && k < top) col2 = k > top - 2 ? PAL.glass[3] : (i + k) % 7 === 0 ? PAL.glass[3] : PAL.glass[1];
           Px(c, xx, yy, col2);
         }
       }
-      if (kind === 'pickup') for (let i = Math.round(len * 0.58); i < len - 2; i++) Px(c, X(i), gy - 16, r[0]);
-      if (kind === 'van') { R(c, Math.min(X(Math.round(len * 0.4)), X(Math.round(len * 0.92))), gy - 26, Math.round(len * 0.52), 1, r[1]); if (p.text) txt(c, p.text, x - f * 6, gy - 22, { align: 'center', color: r[0] }); }
-      if (kind === 'cab') { R(c, X(Math.round(len * 0.55)) - 4, gy - 25, 9, 3, '#c8b070'); for (let i = 0; i < len; i += 4) Px(c, X(i), gy - 11, '#2a2a2a'); }
+      if (kind === 'pickup') for (let i = Math.round(len * 0.58); i < len - 2; i++) Px(c, X(i), gy - Math.round(16 * K), r[0]);
+      if (kind === 'van') { R(c, Math.min(X(Math.round(len * 0.4)), X(Math.round(len * 0.92))), gy - Math.round(26 * K), Math.round(len * 0.52), 1, r[1]); if (p.text) txt(c, p.text, x - f * 8, gy - Math.round(22 * K), { align: 'center', color: r[0] }); }
+      if (kind === 'cab') { R(c, X(Math.round(len * 0.55)) - 5, gy - Math.round(25 * K) + 1, 11, 4, '#c8b070'); for (let i = 0; i < len; i += 4) Px(c, X(i), gy - Math.round(11 * K), '#2a2a2a'); }
       // wheels with arches
       for (const wt of [0.18, 0.8]) {
         const wx = X(Math.round(len * wt));
-        ellipse(c, wx, gy - 6, 6, 6, PAL.ink); ellipse(c, wx, gy - 5, 5, 5, '#16171b'); ellipse(c, wx, gy - 5, 2, 2, PAL.steel[3]); Px(c, wx - 1, gy - 6, PAL.steel[4]);
+        ellipse(c, wx, gy - 8, 9, 8, PAL.ink); ellipse(c, wx, gy - 7, 7, 7, '#16171b'); ellipse(c, wx, gy - 7, 3, 3, PAL.steel[2]); Px(c, wx - 1, gy - 8, PAL.steel[4]); Px(c, wx, gy - 7, PAL.steel[0]);
       }
-      R(c, Math.min(X(0), X(2)), gy - 9, 3, 3, PAL.steel[3]); R(c, Math.min(X(len - 1), X(len - 3)), gy - 9, 3, 3, PAL.steel[3]);
-      Px(c, X(1), gy - 11, p.on ? '#fff2c0' : '#c8c0a0'); Px(c, X(len - 2), gy - 11, '#8a2a22'); Px(c, X(len - 2), gy - 12, '#8a2a22');
+      R(c, Math.min(X(0), X(2)), gy - 12, 3, 4, PAL.steel[3]); R(c, Math.min(X(len - 1), X(len - 3)), gy - 12, 3, 4, PAL.steel[3]);
+      R(c, Math.min(X(1), X(2)), gy - 16, 2, 2, p.on ? '#fff2c0' : '#c8c0a0'); R(c, Math.min(X(len - 2), X(len - 3)), gy - 17, 2, 3, '#8a2a22');
       R(c, Math.min(X(Math.round(len * 0.3)), X(Math.round(len * 0.7))), gy - belt + 2, Math.round(len * 0.4), 1, r[1]);
       speckle(c, x0, gy - belt, len, belt - 4, PAL.rust[1], p.rusty === false ? 0 : 10, s + 2, true);
     },
     lights(p, L) {
       if (!p.on) return [];
-      const gy = gyOf(p, L), x = +p.x || 0, f = p.face === -1 ? -1 : 1, len = (CAR[p.kind] || CAR.sedan).len;
-      return [{ x: x + f * (len / 2 + 2), y: gy - 11, r: 90, color: '#f4e2b0', k: 0.8, cone: { dir: f > 0 ? 'right' : 'left', width: 30 }, reflect: true }];
+      const gy = gyOf(p, L), x = +p.x || 0, f = p.face === -1 ? -1 : 1, len = Math.round((CAR[p.kind] || CAR.sedan).len * CAR_SCALE);
+      return [{ x: x + f * (len / 2 + 2), y: gy - 15, r: 110, color: '#f4e2b0', k: 0.8, cone: { dir: f > 0 ? 'right' : 'left', width: 30 }, reflect: true }];
     },
   });
 
@@ -1352,10 +1355,10 @@
     },
   });
 
-  const DOOR_W = { wood: 18, metal: 18, glass: 18, roll: 40, double: 30 };
+  const DOOR_W = { wood: 22, metal: 22, glass: 22, roll: 44, double: 36 };
   def('door', {
     draw(c, p, L) {
-      const kind = DOOR_W[p.kind] ? p.kind : 'wood', w = +p.w || DOOR_W[kind], h = +p.h || (kind === 'roll' ? 36 : 32);
+      const kind = DOOR_W[p.kind] ? p.kind : 'wood', w = +p.w || DOOR_W[kind], h = +p.h || (kind === 'roll' ? 56 : 54);
       drawDoor(c, Math.round((+p.x || 0) - w / 2), gyOf(p, L), w, h, { kind, color: p.color, open: p.open, label: p.label, seed: seedOf(p, 29), lit: p.lit, fresh: p.fresh, sign: p.sign });
     },
     lights(p, L) {
@@ -2332,7 +2335,7 @@
     drawAnimated(c, p, L, t) {
       const gy = gyOf(p, L), x = Math.round(+p.x || 0), w = +p.w || 200, rows = p.rows || 3, dens = p.density === undefined ? 0.8 : +p.density, mood = p.mood || 'idle', s = seedOf(p, 67);
       for (let k = rows - 1; k >= 0; k--) {
-        const by = gy - k * 9, dim = 0.18 + k * 0.17, ph = 17 + (rows - k) * 2;
+        const by = gy - k * 9, dim = (p.dim !== undefined ? +p.dim : 0.32) + k * 0.15, ph = 17 + (rows - k) * 2;
         for (let xx = x + 3 + (k % 2) * 4; xx < x + w - 3; xx += 8) {
           const id = s + xx * 0.27 + k * 13.1;
           if (hash(id) > dens) continue;
@@ -2490,7 +2493,7 @@
 
   def('roll_door', {
     draw(c, p, L) {
-      const gy = gyOf(p, L), x = Math.round(+p.x || 0), w = +p.w || 50, h = p.h || 44, open = p.open === true ? 0.7 : +p.open || 0, st = PAL.steel;
+      const gy = gyOf(p, L), x = Math.round(+p.x || 0), w = +p.w || 56, h = p.h || 60, open = p.open === true ? 0.7 : +p.open || 0, st = PAL.steel;
       R(c, x - 3, gy - h - 6, w + 6, 6, st[1]); R(c, x - 3, gy - h - 6, w + 6, 1, st[3]);
       R(c, x - 3, gy - h, 3, h, st[2]); R(c, x + w, gy - h, 3, h, st[1]);
       const shut = Math.round(h * (1 - open));
@@ -2629,14 +2632,14 @@
 
   def('elevator', {
     draw(c, p, L) {
-      const gy = gyOf(p, L), x = Math.round(+p.x || 0), st = PAL.steel, w = 28, h = 40, x0 = x - w / 2;
+      const gy = gyOf(p, L), x = Math.round(+p.x || 0), st = PAL.steel, w = 32, h = 58, x0 = x - w / 2;
       R(c, x0 - 3, gy - h - 3, w + 6, h + 3, BRASS[2]); R(c, x0 - 3, gy - h - 3, w + 6, 1, BRASS[4]);
       if (p.open) { vbands(c, x0, gy - h, w, h, PAL.amber[3], PAL.amber[1], 4); R(c, x0, gy - h, 4, h, st[3]); R(c, x0 + w - 4, gy - h, 4, h, st[3]); }
       else { R(c, x0, gy - h, w, h, st[3]); R(c, x0 + w / 2, gy - h, 1, h, st[1]); for (let yy = gy - h; yy < gy; yy += 3) RA(c, x0, yy, w, 1, '#ffffff', 0.05); R(c, x0, gy - h, w, 1, st[4]); }
-      R(c, x0 + 6, gy - h - 11, 16, 6, PAL.ink); txt(c, p.floor || '42', x, gy - h - 10, { align: 'center', color: PAL.amber[3] });
-      R(c, x0 + w + 6, gy - 26, 3, 7, st[2]); Px(c, x0 + w + 7, gy - 24, PAL.amber[3]); Px(c, x0 + w + 7, gy - 21, st[4]);
+      R(c, x - 8, gy - h - 11, 16, 6, PAL.ink); txt(c, p.floor || '42', x, gy - h - 10, { align: 'center', color: PAL.amber[3] });
+      R(c, x0 + w + 6, gy - 32, 3, 7, st[2]); Px(c, x0 + w + 7, gy - 30, PAL.amber[3]); Px(c, x0 + w + 7, gy - 27, st[4]);
     },
-    lights(p, L) { return p.open ? [{ x: +p.x || 0, y: gyOf(p, L) - 22, r: 50, color: PAL.lampWarm, k: 0.75 }] : [{ x: +p.x || 0, y: gyOf(p, L) - 48, r: 14, color: PAL.amber[3], k: 0.5 }]; },
+    lights(p, L) { return p.open ? [{ x: +p.x || 0, y: gyOf(p, L) - 30, r: 60, color: PAL.lampWarm, k: 0.75 }] : [{ x: +p.x || 0, y: gyOf(p, L) - 66, r: 14, color: PAL.amber[3], k: 0.5 }]; },
   });
 
   def('glass_wall', {
@@ -2698,14 +2701,24 @@
         for (let i = 0; i < w / 3; i++) R(c, x + Math.floor(hash(s + i) * w), y + h * 0.62 + Math.floor(hash(s + i * 2) * h * 0.35), 3, 1, '#6a5060');
         R(c, x, y + h * 0.5, w, 1, '#2a2632'); for (let xx = 0; xx < w; xx += 12) { line(c, x + xx, y + h * 0.5, x + xx + 6, y + h * 0.42, '#2a2632'); line(c, x + xx + 6, y + h * 0.42, x + xx + 12, y + h * 0.5, '#2a2632'); }
       } else {
-        vbands(c, x, y, w, h, view === 'skyline' ? '#141a28' : '#0e121c', '#2a2a3a', 5);
-        if (view === 'night') for (let i = 0; i < 8; i++) Px(c, x + Math.floor(hash(s + i) * w), y + Math.floor(hash(s + i * 2) * h * 0.4), '#8a90a0');
-        let bx = x;
-        while (bx < x + w) {
-          const bw = 6 + Math.floor(hash(s + bx) * 12), bh = Math.floor(h * (view === 'skyline' ? 0.35 + 0.5 * hash(s + bx * 2) : 0.2 + 0.25 * hash(s + bx * 2)));
-          R(c, bx, y + h - bh, bw, bh, view === 'skyline' ? '#1a2030' : '#141822');
-          for (let yy = y + h - bh + 2; yy < y + h - 1; yy += 3) for (let xx = bx + 1; xx < bx + bw - 1; xx += 2) if (hash(s + xx * 1.3 + yy * 0.7) < 0.22) Px(c, xx, yy, hash(s + xx + yy) < 0.7 ? '#c89a5a' : '#8aa0b8');
-          bx += bw + 1;
+        // 'night' | 'skyline' (city at night, taller) | 'dusk' | 'day': a hazy far row, a darker near row
+        const SKYV = { day: ['#6c7f93', '#a3adb0', '#7d8a98', '#5f6c7a'], dusk: ['#262840', '#9a6a5a', '#4a3a48', '#2e2834'], skyline: ['#111726', '#3a3446', '#242a3c', '#171b28'], night: ['#0c1019', '#26283a', '#1a1e2c', '#121520'] };
+        const sv = SKYV[view] || SKYV.night, lit = view === 'day' ? 0 : view === 'dusk' ? 0.5 : 1;
+        vbands(c, x, y, w, h, sv[0], sv[1], 6);
+        if (view === 'night' || view === 'skyline') for (let i = 0; i < Math.floor(w / 12); i++) Px(c, x + Math.floor(hash(s + i) * w), y + Math.floor(hash(s + i * 2) * h * 0.35), '#5c6276');
+        for (let row = 0; row < 2; row++) {
+          let bx = x - Math.floor(hash(s + row) * 6);
+          while (bx < x + w) {
+            const hv = hash(s + bx * 0.71 + row * 9.3), bw = 7 + Math.floor(hv * 12);
+            const bh = Math.floor(h * (row ? 0.16 + 0.3 * hash(s + bx * 2 + 1) : (view === 'skyline' ? 0.4 : 0.28) + 0.42 * hash(s + bx * 2)));
+            R(c, bx, y + h - bh, bw, bh, row ? sv[3] : sv[2]);
+            if (row === 0 && hv < 0.3) R(c, bx + (bw >> 1), y + h - bh - 4, 1, 4, sv[2]);
+            const p0 = (hv < 0.5 ? 0.05 : 0.15) * lit * (row ? 1.2 : 0.7);
+            if (p0 > 0) for (let yy = y + h - bh + 2; yy < y + h - 1; yy += 3) for (let xx = bx + 1; xx < bx + bw - 1; xx += 2) {
+              if (hash(s + xx * 1.3 + yy * 0.7) < p0) Px(c, xx, yy, mix(hash(s + xx + yy) < 0.7 ? '#d8a860' : '#9ab0c4', row ? sv[3] : sv[2], row ? 0.15 : 0.45));
+            }
+            bx += bw + (row ? 2 : 1);
+          }
         }
       }
       c.restore();
@@ -2716,7 +2729,7 @@
     },
     lights(p, L) {
       const w = +p.w || 80, h = +p.h || 60, y = p.y !== undefined ? +p.y : gyOf({}, L) - 100;
-      return [{ x: (+p.x || 0) + w / 2, y: y + h / 2, r: Math.max(w, h), color: p.view === 'river' ? '#c08a7a' : '#7a90b8', k: 0.45 }];
+      return [{ x: (+p.x || 0) + w / 2, y: y + h / 2, r: Math.max(w, h) * (p.view === 'day' ? 1.4 : 1), color: p.view === 'river' || p.view === 'dusk' ? '#c08a7a' : p.view === 'day' ? '#c4ccd0' : '#7a90b8', k: p.view === 'day' ? 0.7 : 0.45 }];
     },
   });
 
@@ -2882,7 +2895,7 @@
       R(c, x, y, w, 1, ir[3]); R(c, x, y + 6, w, 1, ir[3]);
       for (let xx = x; xx < x + w; xx += 6) line(c, xx, y, xx + 3, y + 6, ir[2]);
       for (let xx = x; xx < x + w; xx += 60) R(c, xx, y - 40, 1, 40, ir[1]);
-      const n = p.n || Math.max(2, Math.floor(w / 40));
+      const n = p.n || Math.max(2, Math.floor(w / 60));
       for (let i = 0; i < n; i++) {
         const lx = Math.round(x + (w * (i + 0.5)) / n);
         R(c, lx - 1, y + 7, 3, 2, ir[2]); R(c, lx - 3, y + 9, 7, 7, ir[2]); R(c, lx - 3, y + 9, 1, 7, ir[3]); R(c, lx - 2, y + 16, 5, 1, p.on === false ? ir[1] : '#fff0c8');
@@ -2890,12 +2903,1116 @@
     },
     lights(p, L) {
       if (p.on === false) return [];
-      const x = +p.x || 0, w = +p.w || 200, y = p.y !== undefined ? +p.y : ceilOf(L) + 6, n = p.n || Math.max(2, Math.floor(w / 40));
+      const x = +p.x || 0, w = +p.w || 200, y = p.y !== undefined ? +p.y : ceilOf(L) + 6, n = p.n || Math.max(2, Math.floor(w / 60));
       const out = [];
-      for (let i = 0; i < n; i++) out.push({ x: x + (w * (i + 0.5)) / n, y: y + 16, r: p.r || 220, color: p.color || '#fff0cc', k: 0.95, cone: { dir: 'down', width: p.width || 30 }, flicker: +p.flicker || 0 });
+      for (let i = 0; i < n; i++) out.push({ x: x + (w * (i + 0.5)) / n, y: y + 16, r: p.r || 220, color: p.color || '#fff0cc', k: p.k || 0.8, cone: { dir: 'down', width: p.width || 26 }, flicker: +p.flicker || 0, glow: 0.5, shaft: 0.6 });
       return out;
     },
   });
 
-  /* @@END@@ */
+  /* ── 9. Backdrops: sky presets and far parallax ──────────────────── */
+  // Offscreen canvases; never created headless.
+  function makeCanvas(w, h) {
+    if (S.headless || typeof document === 'undefined' || !document.createElement) return null;
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.ceil(w)); cv.height = Math.max(1, Math.ceil(h));
+    return cv;
+  }
+  function ctx2d(cv) { const c = cv.getContext('2d'); c.imageSmoothingEnabled = false; return c; }
+  // Mulberry32 for cosmetic particles only, so visuals never consume the gameplay S.rand() stream.
+  function prng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6d2b79f5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const frac = (v) => v - Math.floor(v);
+  const LAYER_PAR = { far: 0.25, mid: 0.6, back: 1, main: 1, front: 1, fore: 1.25 };
+  const flashSetting = () => (S.settings && S.settings.flash !== undefined ? clamp(+S.settings.flash, 0, 1) : 1);
+  // Cameras arrive as {x, y, zoom} or as two numbers (backdrop.draw's signature).
+  function camOf(cam, camY) {
+    if (cam && typeof cam === 'object') return { x: +cam.x || 0, y: +cam.y || 0, zoom: +cam.zoom || 1 };
+    return { x: +cam || 0, y: +camY || 0, zoom: (S.cam && +S.cam.zoom) || 1 };
+  }
+  // A point on a layer with parallax `par` -> screen pixels. cam.x/y is the view's top-left at zoom 1;
+  // zoom scales about the view centre (same convention as world.js).
+  function toScreen(wx, wy, cam, par, parY) {
+    const px = par === undefined || par === null ? 1 : +par, py = parY === undefined || parY === null ? px : +parY, z = cam.zoom || 1;
+    return [(wx - cam.x * px - W / 2) * z + W / 2, (wy - cam.y * py - H / 2) * z + H / 2];
+  }
+  const groundOf = (L) => (L && L.ground !== undefined && L.ground !== null ? +L.ground : 300);
+
+  // Sky presets: colour stops top -> horizon, a horizon glow (city light / low sun), clouds, stars,
+  // `lit` = share of distant windows lit, `sil` = the colour near silhouettes lean toward.
+  const SKY = {
+    night:    { stops: ['#0b0e18', '#111626', '#182034', '#20273d', '#2b3046', '#3b394b'], glow: '#5e4642', glowA: 0.36, stars: 0.7, clouds: 0.45, cloud: '#141824', cloudLit: '#2d2a34', litBelow: true, lit: 1, sil: '#07080d' },
+    dusk:     { stops: ['#141829', '#22253b', '#383249', '#574357', '#7a5458', '#97665a'], glow: '#b47a58', glowA: 0.3, stars: 0.12, clouds: 0.7, cloud: '#352c42', cloudLit: '#8c5d56', litBelow: true, lit: 0.6, sil: '#120f18' },
+    dawn:     { stops: ['#1a2233', '#2c3549', '#454c61', '#6a6773', '#917f77', '#ad9178'], glow: '#c79f7c', glowA: 0.26, stars: 0.05, clouds: 0.6, cloud: '#4b4e60', cloudLit: '#a5887b', litBelow: true, lit: 0.35, sil: '#181a24' },
+    day:      { stops: ['#4b5f76', '#5a6d83', '#6b7d90', '#7e8e9c', '#909da6', '#a2abae'], glow: '#b3b5b0', glowA: 0.2, stars: 0, clouds: 0.6, cloud: '#8995a0', cloudLit: '#aeb6ba', litBelow: false, lit: 0, sil: '#353d4a' },
+    overcast: { stops: ['#323943', '#3b424c', '#454c56', '#50565e', '#5b6067', '#666a6e'], glow: '#72746f', glowA: 0.18, stars: 0, clouds: 1, cloud: '#3c424c', cloudLit: '#585d65', litBelow: false, lit: 0.25, sil: '#1f232a' },
+    storm:    { stops: ['#0b0d13', '#11141b', '#171b24', '#1e222c', '#262a34', '#2f313a'], glow: '#3c3940', glowA: 0.25, stars: 0, clouds: 1, cloud: '#12151c', cloudLit: '#272a34', litBelow: true, lit: 0.8, sil: '#06070b', lightning: true },
+  };
+  // L.sky: preset name | '#hex' (flat colour) | { preset, stops, glow, clouds, stars, moon, moonX, moonY, seed }.
+  function skyOf(L) {
+    let s = L ? L.sky : undefined, o = {};
+    if (s && typeof s === 'object') { o = s; s = s.preset || s.kind; }
+    if (s === undefined || s === null || s === '') s = L && L.kind === 'interior' ? 'none' : 'night';
+    s = String(s);
+    if (s[0] === '#') return { name: 'solid', d: null, o, solid: s };
+    return { name: SKY[s] ? s : 'none', d: SKY[s] || null, o };
+  }
+
+  const SKY_PAD = 40, CLOUD_W = 1280, CLOUD_H = 150;
+  const skyCache = new Map(), cloudCache = new Map();
+  // The sky gradient, pre-rendered as crisp bands with a checker dither on each seam.
+  function skyCanvas(sk) {
+    const o = sk.o, d = sk.d, stops = Array.isArray(o.stops) && o.stops.length > 1 ? o.stops : d.stops, glow = o.glow || d.glow;
+    const key = sk.name + '|' + stops.join() + '|' + glow;
+    let e = skyCache.get(key);
+    if (e) return e;
+    const cv = makeCanvas(W, H + SKY_PAD);
+    if (!cv) return null;
+    const c = ctx2d(cv), hz = Math.round(H * 0.68), n = 26, bh = hz / n;
+    const at = (t) => { const f = t * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(f)); return mix(stops[i], stops[i + 1], f - i); };
+    let prev = null;
+    for (let i = 0; i < n; i++) {
+      const y0 = Math.round(i * bh), y1 = Math.round((i + 1) * bh), col = at(i / (n - 1));
+      R(c, 0, y0, W, y1 - y0, col);
+      if (prev) {
+        c.fillStyle = prev;
+        for (let x = 0; x < W; x += 2) c.fillRect(x, y0, 1, 1);
+        for (let x = 1; x < W; x += 4) c.fillRect(x, y0 + 1, 1, 1);
+      }
+      prev = col;
+    }
+    R(c, 0, hz, W, H + SKY_PAD - hz, stops[stops.length - 1]);
+    // Light pollution (night) or the low sun (dusk/dawn) pooling on the horizon.
+    if (glow) for (let y = hz - 130; y < H + SKY_PAD; y += 2) { const t = clamp(1 - (hz - y) / 130, 0, 1); RA(c, 0, y, W, 2, glow, (y < hz ? t * t : 1) * (d.glowA || 0.3)); }
+    e = { cv, hz };
+    if (skyCache.size > 12) skyCache.delete(skyCache.keys().next().value);
+    skyCache.set(key, e);
+    return e;
+  }
+  // A wrapping 1280-wide strip of flat-based pixel clouds, lit from below at night (city glow).
+  function cloudCanvas(sk) {
+    const o = sk.o, d = sk.d, dens = clamp(o.clouds !== undefined ? +o.clouds : d.clouds, 0, 1);
+    if (!(dens > 0)) return null;
+    const key = sk.name + '|' + dens + '|' + (+o.seed || 0);
+    let e = cloudCache.get(key);
+    if (e) return e;
+    const cv = makeCanvas(CLOUD_W, CLOUD_H);
+    if (!cv) return null;
+    const c = ctx2d(cv), seed = 5.3 + (+o.seed || 0) * 1.7, n = Math.round(5 + dens * 26), hzc = d.stops[d.stops.length - 1];
+    for (let i = 0; i < n; i++) {
+      const depth = Math.pow(hash(seed + i * 4.11), 0.75);   // 0 = high in the sky, 1 = low on the horizon
+      const cw = 50 + hash(seed + i * 1.31) * (90 + dens * 170) * (1 - depth * 0.3), ch = 4 + Math.round(hash(seed + i * 2.17) * (6 + dens * 10) * (1 - depth * 0.4));
+      const cx = hash(seed + i * 3.07) * CLOUD_W, cy = 2 + depth * (CLOUD_H - 26);
+      const haze = 0.12 + depth * 0.45, body = mix(d.cloud, hzc, haze), lit = mix(d.cloudLit, hzc, haze * 0.6);
+      for (const off of [-CLOUD_W, 0, CLOUD_W]) if (cx + off + cw > 0 && cx + off - cw < CLOUD_W) cloudShape(c, cx + off, cy, cw, ch, body, lit, d.litBelow, seed + i);
+    }
+    e = { cv, y: 6, speed: 1.2 + dens * 2 };
+    if (cloudCache.size > 12) cloudCache.delete(cloudCache.keys().next().value);
+    cloudCache.set(key, e);
+    return e;
+  }
+  function cloudShape(c, cx, cy, cw, ch, body, lit, litBelow, seed) {
+    const lumps = 2 + Math.floor(hash(seed * 1.3 + 0.2) * 3), base = cy + ch;
+    for (let k = 0; k < lumps; k++) {
+      const lw = cw * (0.35 + 0.5 * hash(seed + k * 0.77)), lh = Math.max(2, Math.round(ch * (0.45 + 0.55 * hash(seed + k * 1.91))));
+      const lx = cx - cw / 2 + hash(seed + k * 2.33) * (cw - lw);
+      const litRows = Math.max(1, Math.round(lh * (litBelow ? 0.3 : 0.35)));
+      for (let r = 0; r < lh; r++) {
+        const t = (r + 1) / lh, rw = lw * Math.sqrt(1 - (1 - t) * (1 - t)) + (hash(seed + k + r * 0.71) - 0.5) * 4;
+        if (rw < 2) continue;
+        const isLit = litBelow ? r >= lh - litRows : r < litRows;
+        R(c, lx + (lw - rw) / 2, base - lh + r, rw, 1, isLit ? lit : body);
+      }
+    }
+    // ragged wisps trailing off the flat base
+    for (let i = 0; i < 3; i++) { const wx = cx - cw * 0.6 + hash(seed + i * 5.1) * cw * 1.2, ww = 6 + hash(seed + i * 6.3) * cw * 0.4; R(c, wx, base + (i % 2), ww, 1, body); }
+  }
+  function drawStars(ctx, sk, off, time) {
+    const n = Math.round(90 * clamp(sk.o.stars !== undefined ? +sk.o.stars : sk.d.stars, 0, 2));
+    for (let i = 0; i < n; i++) {
+      const x = Math.floor(hash(i * 1.913 + 0.31) * W), y = Math.floor(Math.pow(hash(i * 2.377 + 0.77), 1.6) * H * 0.55) - off;
+      const b = hash(i * 3.11 + 0.13);
+      if (b > 0.8 && hash(i * 0.7 + Math.floor(time * 1.3 + i * 0.37)) < 0.2) continue;   // a few twinkle
+      Px(ctx, x, y, b > 0.93 ? '#aeb3c4' : b > 0.6 ? '#6c7389' : '#454c61');
+      if (b > 0.988) { const dim = '#3d4459'; Px(ctx, x - 1, y, dim); Px(ctx, x + 1, y, dim); Px(ctx, x, y - 1, dim); Px(ctx, x, y + 1, dim); }
+    }
+  }
+  function drawMoon(ctx, sk, off) {
+    const o = sk.o;
+    if (!o.moon) return;
+    const mx = Math.round(o.moonX !== undefined ? +o.moonX : W * 0.76), my = Math.round((o.moonY !== undefined ? +o.moonY : 52) - off);
+    for (let r = 24; r > 8; r -= 4) ellipse(ctx, mx, my, r, r, rgba('#8d93a6', 0.03));
+    ellipse(ctx, mx, my, 6, 6, '#a9aba4'); ellipse(ctx, mx - 1, my - 1, 5, 5, '#c4c4b8');
+    Px(ctx, mx + 1, my + 1, '#a2a49c'); R(ctx, mx - 3, my, 2, 1, '#aeb0a8'); Px(ctx, mx + 2, my - 3, '#b4b5ac');
+    if (o.moon === 'crescent') ellipse(ctx, mx + 3, my - 2, 5, 5, sk.d.stops[1]);
+  }
+  // A jagged lightning bolt, drawn on the flash's brightest frames.
+  function drawBolt(ctx, x, yEnd, seed, a) {
+    let px = x, py = 0;
+    const col = rgba('#dfe4f2', a), dim = rgba('#9aa6c4', a * 0.6);
+    for (let i = 0; py < yEnd && i < 60; i++) {
+      const nx = px + (hash(seed + i * 1.7) - 0.5) * 14, ny = py + 5 + hash(seed + i * 2.9) * 8;
+      line(ctx, px, py, nx, ny, col);
+      if (hash(seed + i * 3.3) < 0.16) { let bx = nx, by = ny; for (let k = 0; k < 4; k++) { const ex = bx + (hash(seed + i + k * 0.9) - 0.3) * 12, ey = by + 4 + hash(seed + k + i * 1.3) * 6; line(ctx, bx, by, ex, ey, dim); bx = ex; by = ey; } }
+      px = nx; py = ny;
+    }
+  }
+
+  /* Far parallax: each preset is a few bands, far -> near. A band is pre-rendered once per
+     (location width, sky) into a canvas as wide as its parallax travel, then blitted every frame
+     with a few live details (aviation lights, windows switching, chimney smoke, water glints).
+     depth `d`: 0 = faint and hazy, 1 = dark and crisp (reduce contrast and detail with distance). */
+  const BACKDROPS = {
+    skyline: [
+      { gen: 'towers', par: 0.04, lift: 74, d: 0.12, h: 240, winP: 0.06, o: { minW: 10, maxW: 26, minH: 50, maxH: 180, gap: 4 } },
+      { gen: 'midrise', par: 0.09, lift: 38, d: 0.5, h: 160, winP: 0.09, o: { minW: 16, maxW: 44, minH: 30, maxH: 104 } },
+      { gen: 'midrise', par: 0.15, lift: 12, d: 0.82, h: 110, winP: 0.07, o: { minW: 26, maxW: 66, minH: 14, maxH: 48, pitchX: 6, pitchY: 7, ww: 2, wh: 3 } },
+    ],
+    foundry: [
+      { gen: 'ridge', par: 0.03, lift: 44, d: 0.1, h: 110 },
+      { gen: 'foundry', par: 0.08, lift: 20, d: 0.55, h: 170, winP: 1 },
+      { gen: 'yard', par: 0.14, lift: 6, d: 0.85, h: 70, winP: 0.5 },
+    ],
+    river: [
+      { gen: 'midrise', par: 0.04, lift: 52, d: 0.32, h: 110, winP: 0.14, o: { minW: 10, maxW: 30, minH: 8, maxH: 50, pitchX: 3, pitchY: 4, ww: 1, wh: 1 } },
+      { gen: 'river', par: 0.1, lift: 0, d: 0.65, h: 150, winP: 1 },
+    ],
+    towers: [
+      { gen: 'towers', par: 0.03, lift: 90, d: 0.08, h: 230, winP: 0.05, o: { minW: 12, maxW: 30, minH: 50, maxH: 160, gap: 12 } },
+      { gen: 'towers', par: 0.07, lift: 44, d: 0.45, h: 250, winP: 0.12, o: { minW: 22, maxW: 46, minH: 50, maxH: 196, gap: 22 } },
+      { gen: 'midrise', par: 0.13, lift: 12, d: 0.82, h: 120, winP: 0.06, o: { minW: 24, maxW: 60, minH: 20, maxH: 60 } },
+    ],
+    rowhouses: [
+      { gen: 'midrise', par: 0.04, lift: 46, d: 0.15, h: 110, winP: 0.06, o: { minW: 10, maxW: 30, minH: 14, maxH: 60, pitchX: 3, pitchY: 4, ww: 1, wh: 1 } },
+      { gen: 'rows', par: 0.09, lift: 20, d: 0.5, h: 80, winP: 0.14, o: { minH: 18, maxH: 30 } },
+      { gen: 'rows', par: 0.15, lift: 4, d: 0.82, h: 90, winP: 0.12, o: { minH: 22, maxH: 34, trees: true, poles: true } },
+    ],
+  };
+  // L.backdrop: preset | 'river+skyline' | [presets] | { preset(s), seed, lit (0..1 window scale) }
+  function backdropOf(L) {
+    let b = L ? L.backdrop : undefined, o = {};
+    if (b && typeof b === 'object' && !Array.isArray(b)) { o = b; b = b.preset || b.presets || b.kind; }
+    const names = (Array.isArray(b) ? b : typeof b === 'string' ? b.split(/[\s+,]+/) : []).filter((n) => BACKDROPS[n]);
+    return { names, o };
+  }
+  function bandColours(sk, d, seed) {
+    // silhouettes take the sky colour at mid height (not the horizon), so tall far towers never
+    // come out lighter than the sky behind them; the haze pass warms their bases toward the horizon
+    const sd = sk.d, st = sd.stops, hz = st[st.length - 1], f = 0.55 * (st.length - 1), i0 = Math.floor(f);
+    const mid = mix(st[i0], st[Math.min(st.length - 1, i0 + 1)], f - i0), col = mix(mix(mid, hz, 0.35), sd.sil, 0.22 + 0.62 * d);
+    const dim = 0.22 + 0.4 * (1 - d);   // haze over far windows
+    return {
+      hz, col, d, seed, lit: sd.lit,
+      rim: d > 0.3 ? mix(col, hz, 0.18 + 0.14 * (1 - d)) : null,
+      win: mix('#f4c271', col, dim), winCool: mix('#cdd8d2', col, dim + 0.08), winTv: mix('#8aaad2', col, dim), furnace: mix('#e8893e', col, dim * 0.7),
+      water: mix(hz, '#080b12', 0.62), winP: 0, meta: { blink: [], smoke: [], lamps: [], glow: [], water: null },
+    };
+  }
+  // Rooftop and window details shared by the band generators (all in the band's flat colour).
+  function silTank(c, x, top, g, big) {
+    const w = big ? 7 : 5;
+    R(c, x, top - 3, 1, 3, g.col); R(c, x + w - 1, top - 3, 1, 3, g.col);
+    R(c, x, top - 9, w, 6, g.col); R(c, x + 1, top - 10, w - 2, 1, g.col); Px(c, x + (w >> 1), top - 11, g.col);
+    if (g.rim) R(c, x, top - 9, 1, 6, g.rim);
+  }
+  function silAntenna(c, x, top, h, g) { R(c, x, top - h, 1, h, g.col); R(c, x - 3, top - h + 2, 7, 1, g.col); R(c, x - 2, top - h + 5, 5, 1, g.col); }
+  function silWindows(c, x, top, w, h, g, seed, px, py, ww, wh, office) {
+    if (!(g.winP > 0)) return;
+    for (let yy = top + 3, row = 0; yy + wh <= top + h - 2; yy += py, row++) {
+      const rowLit = !office || hash(seed + row * 7.31) < g.winP * 1.6;
+      for (let xx = x + 2; xx + ww <= x + w - 1; xx += px) {
+        const hv = hash(seed + xx * 0.191 + yy * 0.737), p = office ? (rowLit ? 0.6 : g.winP * 0.12) : g.winP;
+        if (hv >= p) continue;
+        const col = office ? (hash(seed + row + xx * 0.31) < 0.55 ? g.winCool : g.win) : hv < p * 0.12 ? g.winTv : g.win;
+        R(c, xx, yy, ww, wh, col);
+        if (g.meta.blink.length < 28 && hash(seed + xx * 1.3 + yy * 0.1) < 0.05) g.meta.blink.push({ x: xx, y: yy, w: ww, h: wh, col, kind: 'win', ph: hash(seed + xx + yy * 3) });
+      }
+    }
+  }
+  const GEN = {
+    towers(c, bw, bh, g, o) {
+      let x = -Math.round(hash(g.seed) * 14), i = 0;
+      while (x < bw) {
+        const hv = (k) => hash(g.seed + i * 3.17 + k * 0.53);
+        const w = Math.round(o.minW + hv(1) * (o.maxW - o.minW)), h = Math.round(o.minH + Math.pow(hv(2), 1.3) * (o.maxH - o.minH)), top = bh - h, mid = x + (w >> 1);
+        R(c, x, top, w, h, g.col);
+        const k = hv(3);
+        if (k < 0.2) { // setback crown with a mast
+          const sw = Math.max(3, Math.round(w * 0.55)), sh = 4 + Math.round(h * 0.08);
+          R(c, x + ((w - sw) >> 1), top - sh, sw, sh, g.col);
+          if (hv(4) < 0.7) { const mh = 8 + Math.round(hv(5) * 16); R(c, mid, top - sh - mh, 1, mh, g.col); g.meta.blink.push({ x: mid, y: top - sh - mh, kind: 'red', ph: hv(6) }); }
+        } else if (k < 0.36) { // stepped deco top and a spire
+          for (let s = 1; s <= 3; s++) if (w - s * 4 > 1) R(c, x + s * 2, top - s * 4, w - s * 4, 4, g.col);
+          const sp = 6 + Math.round(hv(7) * 10); R(c, mid, top - 12 - sp, 1, sp, g.col);
+        } else if (k < 0.52) { // flat roof, plant room, antenna with a warning light
+          R(c, x + 2, top - 4, Math.min(8, w - 4), 4, g.col);
+          const ah = 10 + Math.round(hv(8) * 18); R(c, x + w - 4, top - ah, 1, ah, g.col);
+          g.meta.blink.push({ x: x + w - 4, y: top - ah, kind: 'red', ph: hv(9) });
+        } else if (k < 0.62 && w > 14) { // slanted roof
+          for (let j = 0; j < w; j++) { const th = Math.round((j / w) * 10); if (th) R(c, x + j, top - th, 1, th, g.col); }
+        }
+        if (g.rim && h > 20) R(c, x, top, 1, h, g.rim);
+        silWindows(c, x, top, w, h, g, g.seed + i * 11.3, o.pitchX || 3, o.pitchY || 3, 1, 1, o.office !== false);
+        x += w + Math.round(hv(10) * (o.gap || 0)) - (hv(11) < 0.3 ? Math.round(w * 0.35) : 0);
+        i++;
+      }
+    },
+    midrise(c, bw, bh, g, o) {
+      const minW = o.minW || 16, maxW = o.maxW || 46, minH = o.minH || 22, maxH = o.maxH || 80;
+      let x = -Math.round(hash(g.seed + 1) * 10), i = 0;
+      while (x < bw) {
+        const hv = (k) => hash(g.seed + i * 2.71 + k * 0.61);
+        const w = Math.round(minW + hv(1) * (maxW - minW)), h = Math.round(minH + hv(2) * (maxH - minH)), top = bh - h;
+        R(c, x, top, w, h, g.col);
+        R(c, x, top, w, 1, g.rim || g.col);   // parapet catching the sky
+        const k = hv(3);
+        if (k < 0.3) silTank(c, x + 3 + Math.round(hv(4) * Math.max(1, w - 10)), top, g, hv(5) < 0.5);
+        else if (k < 0.5) silAntenna(c, x + 3 + Math.round(hv(6) * Math.max(1, w - 6)), top, 8 + Math.round(hv(7) * 8), g);
+        else if (k < 0.62) { R(c, x + 3, top - 5, 4, 5, g.col); R(c, x + 2, top - 6, 6, 1, g.col); }   // stair bulkhead
+        else if (k < 0.7 && w > 20) { // a billboard on the roof
+          const bww = Math.min(22, w - 4);
+          R(c, x + 4, top - 6, 1, 6, g.col); R(c, x + bww - 1, top - 6, 1, 6, g.col); R(c, x + 2, top - 16, bww, 10, g.col);
+          if (g.winP > 0 && hv(8) < 0.5) R(c, x + 3, top - 15, bww - 2, 1, g.win);
+        }
+        if (k > 0.86 && hv(12) < 0.5) { // a church steeple now and then
+          const sx = x + (w >> 1);
+          R(c, sx - 2, top - 26, 5, 26, g.col);
+          for (let j = 0; j < 10; j++) R(c, sx - 2 + Math.floor(j / 4), top - 27 - j, 5 - Math.floor(j / 4) * 2, 1, g.col);
+          R(c, sx, top - 41, 1, 5, g.col); R(c, sx - 1, top - 39, 3, 1, g.col);
+        }
+        if (g.rim) R(c, x, top, 1, h, g.rim);
+        silWindows(c, x, top, w, h, g, g.seed + i * 5.9, o.pitchX || 4, o.pitchY || 5, o.ww || 2, o.wh || 2, false);
+        x += w + (hv(9) < 0.3 ? 1 + Math.round(hv(10) * 4) : 0);
+        i++;
+      }
+    },
+    rows(c, bw, bh, g, o) {
+      const minH = o.minH || 18, maxH = o.maxH || 30;
+      let x = -Math.round(hash(g.seed + 2) * 8), i = 0;
+      while (x < bw) {
+        const hv = (k) => hash(g.seed + i * 1.93 + k * 0.47);
+        const w = 12 + Math.round(hv(1) * 12), h = minH + Math.round(hv(2) * (maxH - minH)), top = bh - h, k = hv(3);
+        R(c, x, top, w, h, g.col);
+        if (k < 0.3) { const gh = Math.round(w / 2.4); for (let j = 0; j < gh; j++) R(c, x + Math.round(j * 1.2), top - j - 1, w - Math.round(j * 2.4), 1, g.col); }   // gable
+        else if (k < 0.45) { R(c, x + 1, top - 4, w - 2, 4, g.col); R(c, x + 2, top - 5, w - 4, 1, g.col); }   // mansard
+        else R(c, x - 1, top, w + 2, 1, g.rim || g.col);   // flat roof, cornice line
+        if (hv(4) < 0.55) {
+          const cx = x + 2 + Math.round(hv(5) * (w - 5)), ct = top - 6 - (k < 0.3 ? 2 : 0);
+          R(c, cx, ct, 2, 6 + (k < 0.3 ? 2 : 0), g.col); R(c, cx - 1, ct, 4, 1, g.col);
+          if (hv(6) < 0.3) g.meta.smoke.push({ x: cx + 1, y: ct - 1, s: 0.35 });
+        }
+        if (hv(7) < 0.25) silAntenna(c, x + 3 + Math.round(hv(8) * (w - 6)), top - (k < 0.3 ? 3 : 0), 7 + Math.round(hv(9) * 6), g);
+        if (g.rim) R(c, x, top, 1, h, g.rim);
+        silWindows(c, x, top, w, h, g, g.seed + i * 4.3, 5, 7, 2, 3, false);
+        x += w;
+        i++;
+      }
+      if (o.trees) {
+        const tc = mix(g.col, '#14201a', 0.35);
+        for (let tx = 6; tx < bw; tx += 22) {
+          if (hash(g.seed + tx * 0.13) > 0.4) continue;
+          const r = 6 + Math.round(hash(g.seed + tx * 0.7) * 6);
+          R(c, tx, bh - 8, 1, 8, tc); ellipse(c, tx, bh - 8 - r * 0.7, r, Math.round(r * 0.75), tc);
+          if (g.rim) for (let j = -r + 2; j < 0; j += 2) Px(c, tx + j, bh - 8 - r * 0.7 - Math.round(Math.sqrt(Math.max(0, r * r - j * j)) * 0.75), mix(tc, g.hz, 0.25));
+        }
+      }
+      if (o.poles) {
+        let prev = null;
+        for (let px = 20; px < bw; px += 64 + Math.round(hash(g.seed + px) * 24)) {
+          R(c, px, bh - 46, 1, 46, g.col); R(c, px - 5, bh - 43, 11, 1, g.col); Px(c, px - 4, bh - 44, g.col); Px(c, px + 4, bh - 44, g.col);
+          if (prev !== null) { cable(c, prev, bh - 44, px, bh - 44, 5, g.col); cable(c, prev - 4, bh - 43, px - 4, bh - 43, 6, g.col); }
+          prev = px;
+        }
+      }
+    },
+    ridge(c, bw, bh, g) {
+      for (let x = 0; x < bw; x++) {
+        const h = 12 + Math.round(8 * Math.sin(x * 0.011 + g.seed) + 5 * Math.sin(x * 0.037 + g.seed * 2) + 2 * hash(Math.floor(x / 6) + g.seed));
+        R(c, x, bh - h, 1, h, g.col);
+      }
+      for (let i = 0; i < bw / 110; i++) {
+        const sx = Math.round(hash(g.seed + i * 3.3) * bw), sh = 30 + Math.round(hash(g.seed + i * 4.4) * 36);
+        R(c, sx, bh - sh, 2, sh, g.col); g.meta.smoke.push({ x: sx + 1, y: bh - sh - 1, s: 0.55 });
+      }
+    },
+    foundry(c, bw, bh, g) {
+      let x = -Math.round(hash(g.seed + 3) * 20), i = 0;
+      while (x < bw) {
+        const hv = (k) => hash(g.seed + i * 4.07 + k * 0.39), kind = hv(1);
+        if (kind < 0.5) { // shed with a sawtooth roof; the glazed teeth glow from the furnaces inside
+          const w = 50 + Math.round(hv(2) * 90), h = 22 + Math.round(hv(3) * 20), top = bh - h;
+          R(c, x, top, w, h, g.col);
+          for (let tx = x; tx < x + w - 8; tx += 9) {
+            for (let j = 0; j < 8; j++) { const th = Math.round((j / 8) * 7); if (th) R(c, tx + j, top - th, 1, th, g.col); }
+            R(c, tx + 8, top - 7, 1, 7, g.winP > 0 && hash(g.seed + tx * 0.7) < 0.65 ? g.furnace : g.col);
+          }
+          for (let wx = x + 3; wx < x + w - 4; wx += 5) if (hash(g.seed + wx * 0.31) < (g.winP > 0 ? 0.5 : 0.08)) R(c, wx, top + 6, 2, 3, hash(wx + g.seed) < 0.3 ? g.win : g.furnace);
+          if (g.rim) R(c, x, top - 6, 1, h + 6, g.rim);
+          x += w + 2;
+        } else if (kind < 0.78) { // smokestacks with their base house
+          const n = 1 + Math.floor(hv(4) * 3);
+          for (let s = 0; s < n; s++) {
+            const sx = x + 6 + s * 14, sh = 70 + Math.round(hash(g.seed + i + s * 1.7) * 70);
+            for (let yy = 0; yy < sh; yy++) { const ww = Math.round(lerp(8, 5, yy / sh)); R(c, sx - (ww >> 1), bh - yy - 1, ww, 1, g.col); }
+            R(c, sx - 3, bh - sh - 2, 7, 2, g.col);
+            for (const bk of [0.93, 0.62]) R(c, sx - 3, bh - Math.round(sh * bk), 7, 1, g.rim || g.col);
+            if (g.rim) R(c, sx - 3, bh - Math.round(sh * 0.9), 1, Math.round(sh * 0.9), g.rim);
+            g.meta.smoke.push({ x: sx, y: bh - sh - 3, s: 1 });
+            g.meta.blink.push({ x: sx, y: bh - sh - 4, kind: 'red', ph: hash(g.seed + s + i) });
+          }
+          const w = 12 + n * 14;
+          R(c, x, bh - 18, w, 18, g.col);
+          if (g.winP > 0) for (let wx = x + 3; wx < x + w - 3; wx += 6) if (hash(g.seed + wx) < 0.4) R(c, wx, bh - 13, 2, 2, g.win);
+          x += w + 2;
+        } else if (kind < 0.9) { // blast furnace, hot-blast stoves, downcomer pipe and skip hoist
+          const fx = x + 24, fh = 64 + Math.round(hv(5) * 16);
+          R(c, fx - 7, bh - fh, 14, fh, g.col); R(c, fx - 5, bh - fh - 6, 10, 6, g.col); R(c, fx - 1, bh - fh - 18, 2, 12, g.col);
+          for (let s = 0; s < 3; s++) { const sx2 = fx + 12 + s * 10; R(c, sx2, bh - 50, 8, 50, g.col); R(c, sx2 + 1, bh - 53, 6, 3, g.col); }
+          line(c, fx + 1, bh - fh - 12, fx + 18, bh - 54, g.col); line(c, fx + 2, bh - fh - 12, fx + 19, bh - 54, g.col);
+          line(c, fx - 6, bh - fh + 10, fx - 24, bh - 2, g.col); line(c, fx - 6, bh - fh + 12, fx - 22, bh - 2, g.col);
+          if (g.rim) R(c, fx - 7, bh - fh, 1, fh, g.rim);
+          if (g.winP > 0) { R(c, fx - 3, bh - 14, 6, 4, g.furnace); g.meta.glow.push({ x: fx, y: bh - 12, r: 22 }); }
+          g.meta.smoke.push({ x: fx, y: bh - fh - 19, s: 0.7 });
+          x += 62;
+        } else { // gantry crane
+          const cw = 40 + Math.round(hv(6) * 20), ch = 36 + Math.round(hv(7) * 14);
+          R(c, x + 2, bh - ch, 2, ch, g.col); R(c, x + cw - 4, bh - ch, 2, ch, g.col); R(c, x - 4, bh - ch - 3, cw + 12, 3, g.col);
+          line(c, x + 3, bh - ch, x + cw - 3, bh - 6, g.col);
+          R(c, x + Math.round(cw * 0.55), bh - ch, 3, 4, g.col); R(c, x + Math.round(cw * 0.55) + 1, bh - ch + 4, 1, 10, g.col);
+          x += cw + 8;
+        }
+        i++;
+      }
+    },
+    yard(c, bw, bh, g) {
+      let x = 6, i = 0;
+      while (x < bw) {
+        const hv = (k) => hash(g.seed + i * 2.29 + k * 0.83), k = hv(1);
+        if (k < 0.45) { // a string of boxcars on a siding
+          const n = 1 + Math.floor(hv(2) * 3);
+          for (let j = 0; j < n; j++) {
+            const cx = x + j * 33;
+            R(c, cx, bh - 17, 31, 12, g.col); R(c, cx - 1, bh - 18, 33, 1, g.rim || g.col);
+            R(c, cx + 3, bh - 5, 6, 2, g.col); R(c, cx + 22, bh - 5, 6, 2, g.col);
+            if (g.rim) R(c, cx + 12, bh - 15, 6, 9, mix(g.col, g.hz, 0.1));
+          }
+          x += n * 33 + 10;
+        } else if (k < 0.75) { // low shed
+          const w = 20 + Math.round(hv(3) * 22), h = 10 + Math.round(hv(4) * 8);
+          R(c, x, bh - h, w, h, g.col);
+          for (let j = 0; j < 4; j++) R(c, x + j, bh - h - 4 + j, w - j * 2, 1, g.col);
+          if (g.winP > 0 && hv(5) < 0.6) R(c, x + 4, bh - h + 3, 3, 2, g.win);
+          x += w + 6;
+        } else { // floodlight mast
+          R(c, x + 1, bh - 44, 1, 44, g.col); R(c, x - 2, bh - 46, 7, 2, g.col);
+          if (g.winP > 0) { R(c, x - 1, bh - 44, 5, 1, g.winCool); g.meta.glow.push({ x: x + 1, y: bh - 42, r: 10, cool: true }); }
+          x += 18;
+        }
+        i++;
+      }
+      R(c, 0, bh - 12, bw, 1, g.col);   // chain-link fence line
+      for (let fx = 0; fx < bw; fx += 14) R(c, fx, bh - 13, 1, 13, g.col);
+      for (let fx = 0; fx < bw; fx += 3) Px(c, fx, bh - 11 + ((fx / 3) % 2), g.col);
+      R(c, 0, bh - 3, bw, 3, g.col);
+    },
+    river(c, bw, bh, g) {
+      const wy = bh - 46, deck = wy - 34, span = 26;
+      // water reflects the sky, darker toward the near bank, with sparse broken ripples
+      vbands(c, 0, wy, bw, bh - wy, mix(g.hz, g.water, 0.5), g.water, 6);
+      R(c, 0, wy, bw, 1, mix(g.hz, g.water, 0.2));
+      for (let i = 0; i < bw / 5; i++) {
+        const xx = Math.floor(hash(g.seed + i * 1.37) * bw), yy = wy + 3 + Math.floor(Math.pow(hash(g.seed + i * 2.11), 1.5) * (bh - wy - 6));
+        R(c, xx, yy, 3 + Math.floor(hash(i + g.seed) * 7), 1, mix(g.hz, g.water, 0.68));
+      }
+      // a long steel truss bridge on stone piers, its deck lamps strung along it
+      R(c, 0, deck, bw, 3, g.col); R(c, 0, deck + 3, bw, 1, mix(g.col, '#000000', 0.2));
+      R(c, 0, deck - 14, bw, 1, g.col);
+      for (let x = 0; x < bw; x += span) {
+        line(c, x, deck, x + span / 2, deck - 14, g.col); line(c, x + span / 2, deck - 14, x + span, deck, g.col);
+        R(c, x + span / 2, deck - 14, 1, 14, g.col);
+      }
+      if (g.rim) R(c, 0, deck - 15, bw, 1, g.rim);
+      for (let x = 60; x < bw; x += 156) { R(c, x - 4, deck + 3, 8, wy - deck - 1, g.col); R(c, x - 6, wy - 2, 12, 3, g.col); }
+      for (let x = 7; x < bw; x += 22) {
+        R(c, x, deck - 4, 1, 4, g.col);
+        if (g.winP > 0) { R(c, x - 1, deck - 5, 3, 1, g.win); g.meta.lamps.push({ x, y: deck - 5 }); }
+      }
+      g.meta.water = { y: wy, deck };
+    },
+  };
+
+  const BAND_PAD = 24, bandCache = new Map();
+  function getBand(name, idx, spec, sk, L, o) {
+    const lw = Math.max(W, +(L && L.w) || 2400);
+    const bw = Math.ceil(W + Math.max(0, lw - W) * spec.par) + BAND_PAD * 2;
+    const seed = (o.seed !== undefined ? +o.seed : 7) + idx * 13.7 + name.length * 3.1;
+    const litScale = o.lit !== undefined ? clamp(+o.lit, 0, 3) : 1;
+    const key = name + '#' + idx + '|' + sk.name + '|' + bw + '|' + seed + '|' + litScale;
+    let b = bandCache.get(key);
+    if (b) return b;
+    const cv = makeCanvas(bw, spec.h);
+    if (!cv) return null;
+    const c = ctx2d(cv), g = bandColours(sk, spec.d, seed);
+    g.winP = (spec.winP || 0) * g.lit * litScale;
+    GEN[spec.gen](c, bw, spec.h, g, spec.o || {});
+    // atmospheric haze thickening toward each band's base (source-atop keeps it on the silhouettes)
+    c.globalCompositeOperation = 'source-atop';
+    const h0 = Math.max(0, spec.h - 70);
+    for (let y = h0; y < spec.h; y += 2) RA(c, 0, y, bw, 2, g.hz, ((y - h0) / (spec.h - h0)) * (0.08 + 0.32 * (1 - spec.d)));
+    c.globalCompositeOperation = 'source-over';
+    b = { cv, w: bw, h: spec.h, par: spec.par, lift: spec.lift, fill: spec.gen === 'river' ? g.water : g.col, g, meta: g.meta };
+    if (bandCache.size > 30) bandCache.delete(bandCache.keys().next().value);
+    bandCache.set(key, b);
+    return b;
+  }
+  function drawBand(ctx, b, L, cam, time) {
+    const z = cam.zoom || 1, s = 1 + (z - 1) * Math.min(1, b.par * 2);   // far bands barely react to zoom
+    const x0 = -BAND_PAD - cam.x * b.par, base = groundOf(L) - cam.y * b.par - b.lift, y0 = base - b.h;
+    const dx = Math.round(W / 2 + (x0 - W / 2) * s), dy = Math.round(H / 2 + (y0 - H / 2) * s), dw = Math.round(b.w * s), dh = Math.round(b.h * s);
+    if (dx > W || dx + dw < 0) return;
+    ctx.drawImage(b.cv, dx, dy, dw, dh);
+    if (dy + dh < H) R(ctx, 0, dy + dh, W, H - dy - dh, b.fill);
+    const g = b.g, m = b.meta, X = (bx) => dx + bx * s, Y = (by) => dy + by * s, onScreen = (sx) => sx > -40 && sx < W + 40;
+    // aviation lights blink; a few distant windows switch on and off over time
+    for (const e of m.blink) {
+      const sx = X(e.x);
+      if (!onScreen(sx)) continue;
+      if (e.kind === 'red') {
+        if (frac(time / 1.7 + e.ph) < 0.42) { Px(ctx, sx, Y(e.y), '#d4553f'); RA(ctx, sx - 1, Y(e.y) - 1, 3, 3, '#d4553f', 0.22); }
+      } else if (hash(e.ph * 13.7 + Math.floor((time + e.ph * 20) / (5 + e.ph * 9))) > 0.62) R(ctx, sx, Y(e.y), e.w * s, e.h * s, g.col);
+    }
+    // stack and chimney smoke leaning downwind
+    const smokeCol = mix(g.hz, '#6b6a70', 0.35);
+    for (let k = 0; k < m.smoke.length; k++) {
+      const e = m.smoke[k], sx = X(e.x);
+      if (sx < -80 || sx > W + 20) continue;
+      const n = e.s >= 0.9 ? 7 : 4, sp = 0.05 + 0.03 * hash(k * 1.7 + g.seed);
+      for (let j = 0; j < n; j++) {
+        const age = frac(time * sp + j / n), px = sx + (age * 44 + Math.sin(time * 0.6 + j + k) * 2) * e.s * s, py = Y(e.y) - age * 32 * e.s * s;
+        const rr = Math.max(1, (1.4 + age * 9) * e.s * s);
+        ellipse(ctx, px, py, rr, Math.max(1, Math.round(rr * 0.62)), rgba(smokeCol, (0.42 - 0.1 * (1 - g.d)) * (1 - age)));
+      }
+    }
+    // furnace and floodlight glow breathing
+    for (const e of m.glow) {
+      const sx = X(e.x);
+      if (!onScreen(sx)) continue;
+      const a = (e.cool ? 0.07 : 0.1) + 0.04 * Math.sin(time * 1.3 + e.x * 0.1);
+      ellipse(ctx, sx, Y(e.y), e.r * s, Math.round(e.r * 0.55 * s), rgba(e.cool ? '#b8c8cc' : '#e07a3a', a));
+    }
+    // river: lamp reflections broken into horizontal dashes, drifting glints, cars on the bridge
+    if (m.water) {
+      const wy = Y(m.water.y), step = Math.floor(time * 5), deep = Math.min(44, H - wy);
+      // each lamp leaves a column of broken dashes that spreads and fades with depth
+      for (let k = 0; k < m.lamps.length; k++) {
+        const sx = X(m.lamps[k].x);
+        if (!onScreen(sx) || hash(k * 7.7 + g.seed) < 0.3) continue;
+        const reach = deep * (0.5 + 0.5 * hash(k * 1.9 + g.seed));
+        for (let yy = 2; yy < reach; yy += 2) {
+          const f = yy / reach, hv = hash(k * 3.1 + yy * 0.77 + step * 0.13);
+          if (hv < 0.3 + f * 0.35) continue;
+          const len = 1 + Math.floor(hv * (2 + f * 5));
+          RA(ctx, sx - (len >> 1) + Math.round((hash(k + yy * 1.3 + step * 0.7) - 0.5) * (2 + f * 8)), wy + yy, len, 1, g.win, 0.5 * (1 - f));
+        }
+      }
+      if (m.moonX !== undefined) for (let yy = 3; yy < deep; yy += 2) {   // the moon's path on the water
+        const f = yy / deep, hv = hash(yy * 0.71 + step * 0.37);
+        if (hv < 0.25) continue;
+        const len = 2 + Math.floor(hv * (3 + f * 9));
+        RA(ctx, m.moonX - (len >> 1) + Math.round((hash(yy + step * 0.19) - 0.5) * (3 + f * 10)), wy + yy, len, 1, '#b8bab0', 0.32 * (1 - f));
+      }
+      const n = Math.floor(W / 16);
+      for (let i = 0; i < n; i++) {
+        const xx = frac(hash(i * 3.7 + 1) + time * 0.006 * (0.5 + hash(i))) * W, yy = wy + 4 + Math.floor(hash(i * 5.1 + 2) * 36);
+        if (hash(i * 0.9 + Math.floor(time * 2 + i) * 0.13) < 0.5) R(ctx, xx, yy, 2 + Math.floor(hash(i) * 5), 1, mix(g.hz, g.water, 0.35));
+      }
+      const deckY = Y(m.water.deck) - 2;
+      for (let k = 0; k < 3; k++) {
+        const dir = k % 2 ? -1 : 1, cx = dx + frac(hash(k * 7.3) + dir * time * (0.012 + k * 0.004)) * dw;
+        Px(ctx, cx, deckY, dir > 0 ? '#efe2b8' : '#c8503c'); Px(ctx, cx + 3 * dir, deckY, dir > 0 ? '#c8503c' : '#efe2b8');
+      }
+    }
+  }
+
+  function drawBackdrop(ctx, L, cam, time) {
+    const sk = skyOf(L), bd = backdropOf(L);
+    if (sk.solid) R(ctx, 0, 0, W, H, sk.solid);
+    else if (!sk.d) {
+      if (L.kind === 'interior' && !bd.names.length) return;   // the room shell covers the frame
+      R(ctx, 0, 0, W, H, PAL.night);
+    } else {
+      const sc = skyCanvas(sk);
+      if (!sc) return;
+      const off = Math.round(clamp(cam.y * 0.05, 0, SKY_PAD));
+      ctx.drawImage(sc.cv, 0, -off);
+      drawStars(ctx, sk, off, time);
+      drawMoon(ctx, sk, off);
+      const fl = sk.d.lightning ? wxFlash(L) : 0;
+      if (fl > 0.02) {
+        RA(ctx, 0, 0, W, sc.hz - off, '#8e98b0', fl * 0.45 * flashSetting());
+        if (fl > 0.55 && flashSetting() > 0.3) drawBolt(ctx, wxBolt(L) * W, sc.hz - off - 50, Math.floor(wxBolt(L) * 977), fl);
+      }
+      const cl = cloudCanvas(sk);
+      if (cl) {
+        const v = time * cl.speed + cam.x * 0.02, ox = -Math.round(((v % CLOUD_W) + CLOUD_W) % CLOUD_W);
+        ctx.drawImage(cl.cv, ox, cl.y - off); ctx.drawImage(cl.cv, ox + CLOUD_W, cl.y - off);
+      }
+    }
+    if (!bd.names.length) return;
+    const skc = sk.d ? sk : { name: 'night', d: SKY.night, o: {} };
+    const bands = [];
+    // Combined presets ('river+skyline'): the first is nearest; each later one is pushed back
+    // behind it (higher on the horizon, slower parallax, hazier).
+    bd.names.forEach((name, rank) => BACKDROPS[name].forEach((spec0, i) => {
+      const o0 = spec0.o || {}, o = Object.assign({}, o0, { minH: (o0.minH || 22) * 0.65, maxH: (o0.maxH || 80) * 0.65 });
+      const spec = rank ? Object.assign({}, spec0, { par: spec0.par * 0.6, lift: spec0.lift + (bd.names[0] === 'river' ? 46 : 26) * rank, d: spec0.d * 0.75, o }) : spec0;
+      const b = getBand(rank ? name + '@' + rank : name, i, spec, skc, L, bd.o);
+      if (b) bands.push(b);
+    }));
+    bands.sort((a, b) => a.par - b.par);
+    const moonX = sk.d && sk.o.moon ? Math.round(sk.o.moonX !== undefined ? +sk.o.moonX : W * 0.76) : undefined;
+    for (const b of bands) { b.meta.moonX = moonX; drawBand(ctx, b, L, cam, time); }
+  }
+
+  let backdropFailed = false;
+  S.backdrop = {
+    skies: Object.keys(SKY),
+    presets: Object.keys(BACKDROPS),
+    sky: skyOf,
+    // Identity-transformed 640x360 ctx; camX/camY = the view's top-left in world pixels (or pass S.cam as camX).
+    draw(ctx, L, camX, camY, time) {
+      if (S.headless || !ctx) return;
+      try {
+        ctx.save();
+        ctx.imageSmoothingEnabled = false;
+        drawBackdrop(ctx, L || {}, camOf(camX, camY), time === undefined || time === null ? S.time || 0 : +time);
+      } catch (e) {
+        if (!backdropFailed) { backdropFailed = true; fail(e, 'backdrop'); }
+      } finally { ctx.restore(); }
+    },
+    clearCache() { skyCache.clear(); cloudCache.clear(); bandCache.clear(); },
+    // Haze for parallax piece layers: world.js tints the baked far/mid canvases toward this colour
+    // (source-atop, alpha k) so depth reads as distance. Interiors use the ambient tint.
+    hazeFor(L, layer) {
+      const sk = skyOf(L || {}), k = layer === 'far' ? 0.5 : layer === 'mid' ? 0.26 : 0;
+      const fog = clamp(+((L && L.ambient && L.ambient.fog) || 0), 0, 1);
+      const color = sk.d ? mix(sk.d.stops[sk.d.stops.length - 1], sk.d.stops[2], 0.25) : sk.solid || (L && L.ambient && L.ambient.tint) || '#1a1c24';
+      return { color, k: k ? clamp(k + fog * 0.2, 0, 0.85) : 0 };
+    },
+  };
+
+  /* ── 10. Weather ─────────────────────────────────────────────────── */
+  /* Screen-space particles with a fake depth z (0.55 far .. 1.45 near): nearer ones are bigger,
+     brighter, faster and slide more when the camera moves. State is kept per LocationDef object,
+     so two views (the dev page) never fight over it. Cosmetic only: a private PRNG, no S.rand(). */
+  const WX_COUNT = { rain: 240, drizzle: 120, snow: 150, dust: 60, smoke: 12, embers: 46, leaves: 22 };
+  const WX_WIND = { rain: -0.3, drizzle: -0.2, snow: 0.2, dust: 0.1, smoke: 0.35, embers: 0.25, leaves: 0.6 };
+  // L.weather: 'rain' | 'rain+smoke' | ['rain', 'smoke'] | { kind, k|amount, wind } | [{...}, ...].
+  // L.weatherAmount and L.wind are shorthands for the whole list.
+  function weatherSpec(L) {
+    const w = L && L.weather, out = [];
+    if (!w) return out;
+    const add = (v, k, wind) => {
+      if (!v) return;
+      if (typeof v === 'string') {
+        for (const n of v.split(/[\s+,]+/)) if (WX_COUNT[n]) out.push({ kind: n, k: k === undefined || k === null ? 1 : clamp(+k || 0, 0, 2), wind: wind === undefined || wind === null ? WX_WIND[n] : +wind || 0 });
+      } else if (Array.isArray(v)) for (const x of v) add(x, k, wind);
+      else if (typeof v === 'object') add(v.kind || v.kinds || v.type, v.k !== undefined ? v.k : v.amount !== undefined ? v.amount : k, v.wind !== undefined ? v.wind : wind);
+    };
+    add(w, L.weatherAmount, L.wind);
+    return out;
+  }
+  const wxKindCache = new Map();
+  // Kind names only (also used by the puddle piece to decide whether rain rings show).
+  function weatherKinds(L) {
+    const w = L && L.weather;
+    if (!w) return [];
+    if (typeof w === 'string') {
+      let v = wxKindCache.get(w);
+      if (!v) { v = weatherSpec({ weather: w }).map((s) => s.kind); if (wxKindCache.size > 64) wxKindCache.clear(); wxKindCache.set(w, v); }
+      return v;
+    }
+    return weatherSpec(L).map((s) => s.kind);
+  }
+
+  const wxStates = new WeakMap();
+  function wxState(L) {
+    if (!L || typeof L !== 'object') return null;
+    const spec = weatherSpec(L), sig = spec.map((s) => s.kind + ':' + s.k + ':' + s.wind).join('|');
+    let st = wxStates.get(L);
+    if (st && st.sig === sig) return st;
+    st = { sig, sys: [], cam: null, gy: groundOf(L), rnd: prng(0x1994 + sig.length * 131), t: 0, flash: 0, bolt: 0.5, reflash: 0, storm: false };
+    for (const s of spec) {
+      const sys = { kind: s.kind, k: s.k, wind: s.wind, parts: [], splash: [] }, n = Math.round(WX_COUNT[s.kind] * s.k);
+      for (let i = 0; i < n; i++) { const p = {}; wxSpawn(st, sys, p, true); sys.parts.push(p); }
+      st.sys.push(sys);
+    }
+    const sk = skyOf(L);
+    st.storm = !!(sk.d && sk.d.lightning) && spec.some((s) => s.kind === 'rain');
+    wxStates.set(L, st);
+    return st;
+  }
+  function wxFlash(L) { const st = L && typeof L === 'object' ? wxStates.get(L) : null; return st ? st.flash : 0; }
+  function wxBolt(L) { const st = L && typeof L === 'object' ? wxStates.get(L) : null; return st ? st.bolt : 0.5; }
+
+  // (Re)place a particle. `initial` scatters it over the whole view instead of the entry edge.
+  function wxSpawn(st, s, p, initial) {
+    const r = st.rnd;
+    p.z = 0.55 + r() * 0.9; p.age = 0; p.ph = r() * 6.283;
+    switch (s.kind) {
+      case 'rain': case 'drizzle': case 'snow': case 'leaves':
+        p.x = r() * (W + 80) - 40; p.y = initial ? r() * H : -r() * 50 - 8;
+        if (!initial && s.kind === 'leaves' && r() < 0.5) { p.x = s.wind >= 0 ? -10 : W + 10; p.y = r() * H * 0.7; }
+        break;
+      case 'embers':
+        p.x = r() * W; p.y = initial ? r() * H : H - r() * 60; p.life = 1.6 + r() * 2.6; p.age = initial ? r() * p.life : 0;
+        break;
+      case 'smoke':
+        p.r = 26 + r() * 50; p.y = H * (0.3 + r() * 0.65);
+        p.x = initial ? r() * (W + 240) - 120 : s.wind >= 0 ? -p.r - r() * 40 : W + p.r + r() * 40;
+        break;
+      default: // dust
+        p.x = r() * W; p.y = r() * H;
+    }
+  }
+  function wxUpdate(dt, L) {
+    if (S.headless) return;
+    const st = wxState(L);
+    if (!st || !st.sys.length) return;
+    dt = clamp(+dt || 0, 0, 0.1);
+    if (!dt) return;
+    st.t += dt;
+    const t = st.t, gy = st.gy;
+    for (const s of st.sys) {
+      const wind = s.wind;
+      for (const p of s.parts) {
+        p.age += dt;
+        switch (s.kind) {
+          case 'rain': case 'drizzle': {
+            const vy = s.kind === 'rain' ? 430 + 170 * p.z : 190 + 90 * p.z;
+            p.x += vy * wind * 0.3 * dt; p.y += vy * dt;
+            // nearer drops land lower on the street: a cheap read of depth
+            const land = gy + (p.z - 1) * 26;
+            if (land > 0 && land < H + 30 && p.y >= land) {
+              if ((s.kind === 'rain' ? p.z > 0.75 : p.z > 1.2) && s.splash.length < 90) s.splash.push({ x: p.x, y: land, age: 0 });
+              wxSpawn(st, s, p);
+            } else if (p.y > H + 24) wxSpawn(st, s, p);
+            break;
+          }
+          case 'snow':
+            p.x += (wind * 28 + Math.sin(t * 1.1 + p.ph) * 10) * p.z * dt; p.y += (14 + 20 * p.z) * dt;
+            if (p.y > H + 6) wxSpawn(st, s, p);
+            break;
+          case 'leaves':
+            p.x += (wind * 50 * p.z + Math.cos(t * 1.3 + p.ph) * 16) * dt; p.y += (20 + 18 * p.z + Math.sin(t * 2 + p.ph) * 12) * dt;
+            if (p.y > H + 6 || p.x < -30 || p.x > W + 30) wxSpawn(st, s, p);
+            break;
+          case 'embers':
+            p.x += (Math.sin(t * 2.2 + p.ph) * 14 + wind * 14) * dt; p.y -= (24 + 30 * p.z) * dt;
+            if (p.age > p.life || p.y < -6) wxSpawn(st, s, p);
+            break;
+          case 'smoke':
+            p.x += (5 + 11 * Math.abs(wind)) * (wind < 0 ? -1 : 1) * p.z * dt; p.y += Math.sin(t * 0.2 + p.ph) * 2 * dt;
+            if (wind >= 0 ? p.x - p.r > W + 40 : p.x + p.r < -40) wxSpawn(st, s, p);
+            break;
+          default: // dust motes hang and wander
+            p.x += (wind * 5 + Math.sin(t * 0.35 + p.ph) * 3.5) * dt; p.y += (Math.cos(t * 0.27 + p.ph * 1.7) * 2.5 - 0.6) * dt;
+        }
+        if (s.kind !== 'smoke') { if (p.x < -40) p.x += W + 80; else if (p.x > W + 40) p.x -= W + 80; }
+        if (s.kind === 'dust') { if (p.y < -4) p.y += H + 8; else if (p.y > H + 4) p.y -= H + 8; }
+      }
+      for (let i = s.splash.length - 1; i >= 0; i--) { s.splash[i].age += dt; if (s.splash[i].age > 0.22) s.splash.splice(i, 1); }
+    }
+    // storm lightning: a flash, sometimes a second strike right after
+    if (st.storm) {
+      if (st.reflash > 0) { st.reflash -= dt; if (st.reflash <= 0) st.flash = 0.8; }
+      else if (st.rnd() < dt * 0.07) { st.flash = 1; st.bolt = 0.1 + st.rnd() * 0.8; if (st.rnd() < 0.45) st.reflash = 0.14; }
+      st.flash = Math.max(0, st.flash - dt * 3.2);
+    }
+  }
+
+  // Emissive bits (embers, the lightning wash) drawn after the darkness pass by S.light.composite.
+  const EMIT = [];
+  const emit = (e) => { if (EMIT.length < 600) EMIT.push(e); };
+  let puffSprite = null;
+  function puff() {
+    if (puffSprite) return puffSprite;
+    const cv = makeCanvas(64, 64);
+    if (!cv) return null;
+    const c = cv.getContext('2d'), g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(118,124,136,0.9)'); g.addColorStop(0.5, 'rgba(108,114,126,0.45)'); g.addColorStop(1, 'rgba(98,104,116,0)');
+    c.fillStyle = g; c.fillRect(0, 0, 64, 64);
+    puffSprite = cv;
+    return cv;
+  }
+  const RAIN_COL = ['rgba(125,140,160,0.2)', 'rgba(147,163,182,0.3)', 'rgba(180,194,210,0.42)'];
+  const DRIZZLE_COL = ['rgba(130,146,166,0.14)', 'rgba(150,164,182,0.22)', 'rgba(170,184,200,0.3)'];
+  const LEAF_COL = ['#6e5430', '#7a4428', '#5e5e34', '#8a6a34'];
+  function drawRain(c, s) {
+    const drizzle = s.kind === 'drizzle', slope = s.wind * 0.3, cols = drizzle ? DRIZZLE_COL : RAIN_COL;
+    // three depth buckets, one path each; a streak is a few 1-px vertical runs following the slant
+    for (let b = 0; b < 3; b++) {
+      c.beginPath();
+      for (const p of s.parts) {
+        if ((p.z < 0.85 ? 0 : p.z < 1.15 ? 1 : 2) !== b) continue;
+        const len = Math.round(drizzle ? 2 + 3 * p.z : 5 + 9 * p.z), y1 = Math.round(p.y), ya = y1 - len;
+        if (y1 < 0 || ya > H) continue;
+        let sx = Math.round(p.x - slope * len), sy = ya;
+        for (let y = ya + 1; y <= y1; y++) {
+          const xx = Math.round(p.x - slope * (y1 - y));
+          if (xx !== sx) { c.rect(sx, sy, 1, y - sy); sx = xx; sy = y; }
+        }
+        c.rect(sx, sy, 1, y1 + 1 - sy);
+      }
+      c.fillStyle = cols[b]; c.fill();
+    }
+    for (const q of s.splash) {
+      const k = q.age / 0.22, a = (1 - k) * (drizzle ? 0.35 : 0.6), sp = 1 + Math.round(q.age * 16), up = Math.round(Math.sin(k * Math.PI) * 3);
+      RA(c, q.x - sp, q.y - up, 1, 1, '#b8c6d6', a); RA(c, q.x + sp, q.y - up, 1, 1, '#b8c6d6', a);
+      if (q.age < 0.06) RA(c, q.x - 1, q.y, 3, 1, '#9aa8ba', 0.4);
+    }
+  }
+  function wxDraw(ctx, L, cam) {
+    if (S.headless || !ctx) return;
+    const st = wxState(L);
+    if (!st || !st.sys.length) return;
+    cam = camOf(cam);
+    st.gy = toScreen(0, groundOf(L), cam)[1];
+    // keep particles anchored to the world while the camera moves (far ones drift less)
+    if (st.cam) {
+      const z = cam.zoom || 1, dx = (cam.x - st.cam.x) * z, dy = (cam.y - st.cam.y) * z;
+      if (Math.abs(dx) > 240 || Math.abs(dy) > 240) { for (const s of st.sys) { for (const p of s.parts) wxSpawn(st, s, p, true); s.splash.length = 0; } }
+      else if (dx || dy) for (const s of st.sys) {
+        for (const p of s.parts) { p.x -= dx * p.z; p.y -= dy * p.z; if (s.kind !== 'smoke') { if (p.x < -40) p.x += W + 80; else if (p.x > W + 40) p.x -= W + 80; } }
+        for (const q of s.splash) { q.x -= dx; q.y -= dy; }
+      }
+    }
+    st.cam = { x: cam.x, y: cam.y };
+    const t = st.t;
+    ctx.save();
+    for (const s of st.sys) {
+      switch (s.kind) {
+        case 'rain': case 'drizzle':
+          drawRain(ctx, s);
+          // spray hanging low over the street
+          if (st.gy > 0 && st.gy < H) for (let i = 0; i < 4; i++) RA(ctx, 0, st.gy - 18 + i * 6, W, 6, '#8a98ac', (s.kind === 'rain' ? 0.03 : 0.02) * s.k * (i < 2 ? 0.6 : 1));
+          break;
+        case 'snow':
+          for (const p of s.parts) {
+            const a = 0.4 + 0.45 * clamp((p.z - 0.55) / 0.9, 0, 1), x = Math.round(p.x), y = Math.round(p.y);
+            if (p.z > 1.25) { RA(ctx, x, y - 1, 1, 3, '#d6dae2', a); RA(ctx, x - 1, y, 3, 1, '#d6dae2', a); } else RA(ctx, x, y, 1, 1, '#cfd4dc', a);
+          }
+          break;
+        case 'dust':
+          for (const p of s.parts) RA(ctx, Math.round(p.x), Math.round(p.y), p.z > 1.25 ? 2 : 1, 1, '#c8b896', 0.08 + 0.2 * (0.5 + 0.5 * Math.sin(t * 1.3 + p.ph)));
+          break;
+        case 'smoke': {
+          const spr = puff();
+          if (!spr) break;
+          ctx.imageSmoothingEnabled = true;
+          for (const p of s.parts) { ctx.globalAlpha = clamp(0.075 * s.k * p.z, 0, 0.25); ctx.drawImage(spr, p.x - p.r, p.y - p.r * 0.55, p.r * 2, p.r * 1.1); }
+          ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = false;
+          break;
+        }
+        case 'embers':
+          for (const p of s.parts) {
+            const k = p.age / p.life;
+            if (hash(p.ph + Math.floor(t * 14) * 0.31) < 0.12) continue;
+            const col = k < 0.35 ? '#f6c66a' : k < 0.7 ? '#e47e3a' : '#a8441c';
+            const x = Math.round(p.x), y = Math.round(p.y), a = Math.min(1, 1.2 - k) * (0.55 + 0.45 * p.z);
+            RA(ctx, x, y, 1, 1, col, a);
+            emit({ x, y, w: p.z > 1.2 ? 2 : 1, h: 1, col, a: a * 0.85 });
+          }
+          break;
+        case 'leaves':
+          for (const p of s.parts) {
+            const x = Math.round(p.x), y = Math.round(p.y), f = Math.floor(t * 5 + p.ph * 3) % 4, col = LEAF_COL[Math.floor(p.ph * 0.63) % 4];
+            if (f === 0) R(ctx, x, y, 2, 1, col);
+            else if (f === 1) { Px(ctx, x, y, col); Px(ctx, x + 1, y + 1, col); }
+            else if (f === 2) R(ctx, x, y, 1, 2, col);
+            else { Px(ctx, x + 1, y, col); Px(ctx, x, y + 1, col); }
+          }
+          break;
+      }
+    }
+    ctx.restore();
+    if (st.flash > 0.02) emit({ full: true, col: '#aeb8d0', a: st.flash * 0.22 * flashSetting() });
+  }
+  function wxIsWet(L) {
+    if (L && L.wet !== undefined && L.wet !== null) return L.wet === true ? 0.7 : clamp(+L.wet || 0, 0, 1);
+    const k = weatherKinds(L);
+    return k.indexOf('rain') >= 0 ? 1 : k.indexOf('drizzle') >= 0 ? 0.75 : 0;
+  }
+
+  let weatherFailed = false;
+  S.weather = {
+    kinds: weatherKinds,
+    spec: weatherSpec,
+    wet: wxIsWet,   // 0..1: how strongly lights reflect on the ground (rain 1, drizzle .75, L.wet overrides)
+    flash: wxFlash,
+    update(dt, L) { try { wxUpdate(dt, L); } catch (e) { if (!weatherFailed) { weatherFailed = true; fail(e, 'weather.update'); } } },
+    draw(ctx, L, cam) {
+      try { wxDraw(ctx, L, cam || S.cam); } catch (e) { if (!weatherFailed) { weatherFailed = true; fail(e, 'weather.draw'); } }
+      if (ctx) resetCtx(ctx);
+    },
+    reset(L) { if (L && typeof L === 'object') wxStates.delete(L); },
+  };
+
+  /* ── 11. Lighting composite ──────────────────────────────────────── */
+  /* Order inside composite():
+       1. darkness: L.ambient.dark fills an offscreen buffer in a dusty blue-charcoal (or the
+          ambient tint), lights cut soft holes in it (destination-out), cones cut a beam plus a
+          pool where the beam meets the floor; the buffer is drawn over the frame.
+       2. glow: additive ('lighter') warm halos, a hot core at each lamp, faint beams.
+       3. wet ground: lights flagged `reflect` (and lit windows, weaker) leave broken horizontal
+          reflections below the floor line when it rains or L.wet is set; puddle pieces always do.
+       4. fog (L.ambient.fog), then emissive weather bits (embers, lightning wash).
+     Light: { x, y, r, color, k, flicker, cone: { dir: 'down'|'up'|'left'|'right'|deg, width: deg },
+              reflect, win, glow (halo scale), shaft (beam scale), par/parY (layer parallax), layer, seed } */
+  const DARK_DEF = '#0f1322';
+  const LB = { cv: null, c: null, w: 0, h: 0 };
+  function lightBuf(w, h) {
+    if (!LB.cv || LB.w !== w || LB.h !== h) {
+      const cv = makeCanvas(w, h);
+      if (!cv) return null;
+      LB.cv = cv; LB.c = cv.getContext('2d'); LB.w = w; LB.h = h;
+    }
+    return LB;
+  }
+  // Flicker 0..1 -> brightness multiplier. Below .5 it breathes and shimmers (fire, a TV);
+  // from .5 up it also drops out now and then (a dying tube, a bad streetlight).
+  function flickerK(l, time) {
+    const f = clamp(+l.flicker || 0, 0, 1);
+    if (!f) return 1;
+    const sd = l.seed !== undefined ? +l.seed : (+l.x || 0) * 0.37 + (+l.y || 0) * 0.11;
+    const slow = 0.5 + 0.5 * Math.sin(time * 2.3 + sd * 5.1) * Math.sin(time * 0.71 + sd);
+    const fast = hash(sd + Math.floor(time * 20) * 0.731);
+    let k = 1 - f * (0.25 * slow + 0.25 * fast);
+    if (f >= 0.5 && hash(sd * 1.31 + Math.floor(time * 7 + sd * 3) * 0.917) < (f - 0.4) * 0.35) k *= 0.08 + 0.25 * hash(sd + Math.floor(time * 40) * 0.37);
+    return clamp(k, 0, 1);
+  }
+  // Every piece light of a location (with its layer parallax) plus L.lights; cached per layer list.
+  const gatherCache = new WeakMap();
+  function gatherLights(L) {
+    if (!L || typeof L !== 'object') return [];
+    const layers = L.layers || {};
+    let sig = '';
+    for (const n in layers) sig += n + (Array.isArray(layers[n]) ? layers[n].length : 0) + ',';
+    const e = gatherCache.get(L);
+    if (e && e.layers === layers && e.extra === L.lights && e.sig === sig) return e.list;
+    const list = [];
+    for (const n in layers) {
+      if (!Array.isArray(layers[n])) continue;
+      const par = LAYER_PAR[n] !== undefined ? LAYER_PAR[n] : 1;
+      for (const p of layers[n]) for (const l of pieces.lights(p, L)) list.push(Object.assign({ par, layer: n }, l));
+    }
+    if (Array.isArray(L.lights)) for (const l of L.lights) if (l) list.push(l);
+    gatherCache.set(L, { layers, extra: L.lights, sig, list });
+    return list;
+  }
+  // Puddle pieces on the main layers, as world x ranges (reflections brighten over them).
+  const puddleCache = new WeakMap();
+  function puddlesOf(L) {
+    if (!L || typeof L !== 'object' || !L.layers) return [];
+    const e = puddleCache.get(L);
+    if (e && e.layers === L.layers) return e.list;
+    const list = [];
+    for (const n of ['back', 'main', 'front']) for (const p of L.layers[n] || []) if (p && p.t === 'puddle' && pieces.active(p)) list.push({ x0: +p.x || 0, x1: (+p.x || 0) + (+p.w || 40), y: gyOf(p, L) });
+    puddleCache.set(L, { layers: L.layers, list });
+    return list;
+  }
+  function floorBelow(L, l, par) {
+    if (par === 1 && S.world && S.world.loc === L && typeof S.world.groundAt === 'function') {
+      try { const g = S.world.groundAt(+l.x || 0, (+l.y || 0) + 2); if (isFinite(g)) return g; } catch (_) { /* fall back to the location ground */ }
+    }
+    return groundOf(L);
+  }
+  const CONE_DIR = { down: Math.PI / 2, up: -Math.PI / 2, left: Math.PI, right: 0 };
+  function coneOf(a, L, cam) {
+    const cone = a.l.cone, d = cone.dir;
+    const ang = typeof d === 'number' ? (d * Math.PI) / 180 : CONE_DIR[d] !== undefined ? CONE_DIR[d] : Math.PI / 2;
+    const half = (clamp(+cone.width || 60, 4, 170) * Math.PI) / 360;
+    let len = a.r * 1.3, pool = null;
+    if (Math.sin(ang) > 0.3) { // aimed downward: the beam stops at the floor and leaves a pool of light there
+      const gyS = toScreen(0, floorBelow(L, a.l, a.par), cam, a.par, a.l.parY)[1], dist = (gyS - a.sy) / Math.sin(ang);
+      if (dist > 4 && dist < a.r * 1.7) { len = dist; pool = { x: a.sx + Math.cos(ang) * dist, y: gyS + 2, rx: Math.tan(half) * dist + 4 * a.z }; }
+    }
+    return { ang, half, len, pool };
+  }
+  function conePath(c, a, cg, s) {
+    const dx = Math.cos(cg.ang), dy = Math.sin(cg.ang), px = -dy, py = dx, w0 = 2 * a.z, w1 = Math.tan(cg.half) * cg.len;
+    const ex = a.sx + dx * cg.len, ey = a.sy + dy * cg.len;
+    c.beginPath();
+    c.moveTo((a.sx + px * w0) * s, (a.sy + py * w0) * s); c.lineTo((ex + px * w1) * s, (ey + py * w1) * s);
+    c.lineTo((ex - px * w1) * s, (ey - py * w1) * s); c.lineTo((a.sx - px * w0) * s, (a.sy - py * w0) * s);
+    c.closePath();
+  }
+  // Soft disc: alpha k at the centre falling to 0 at r. Colour defaults to black (for hole punching).
+  function radial(c, x, y, r, k, col) {
+    if (!(r >= 0.5) || !(k > 0.002)) return;
+    const v = col ? rgb(col) : [0, 0, 0], pre = 'rgba(' + v[0] + ',' + v[1] + ',' + v[2] + ',';
+    const g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, pre + Math.min(1, k).toFixed(3) + ')'); g.addColorStop(0.3, pre + Math.min(1, k * 0.82).toFixed(3) + ')');
+    g.addColorStop(0.62, pre + Math.min(1, k * 0.36).toFixed(3) + ')'); g.addColorStop(1, pre + '0)');
+    c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  function ellipseGrad(c, x, y, rx, ry, k, col) {
+    if (!(rx >= 1)) return;
+    c.save(); c.translate(x, y); c.scale(1, ry / rx); radial(c, 0, 0, rx, k, col); c.restore();
+  }
+  // Cones wider than ~100 degrees (fluorescent tubes, panels) light a room diffusely: a broad
+  // soft hole with only a faint beam, instead of a hard-edged wedge.
+  const isWide = (cg) => cg.half > 0.87;
+  function punch(c, a, s) {
+    const k = Math.min(1, a.k), cg = a.cg;
+    if (!cg) { radial(c, a.sx * s, a.sy * s, a.r * s, k); return; }
+    const wide = isWide(cg);
+    radial(c, a.sx * s, (a.sy + (wide ? a.r * 0.25 : 0)) * s, a.r * (wide ? 0.95 : 0.42) * s, k * (wide ? 0.85 : 0.9));
+    // two nested wedges (a wide faint one, then the beam) give the beam a soft edge
+    const kc = wide ? k * 0.5 : k;
+    for (const [spread, kk] of wide ? [[1, kc]] : [[1.3, kc * 0.35], [1, kc * 0.75]]) {
+      const cs = spread === 1 ? cg : { ang: cg.ang, half: Math.min(1.45, cg.half * spread), len: cg.len, pool: null };
+      conePath(c, a, cs, s);
+      const g = c.createRadialGradient(a.sx * s, a.sy * s, 0, a.sx * s, a.sy * s, cg.len * 1.05 * s);
+      g.addColorStop(0, 'rgba(0,0,0,' + (kk * 0.95).toFixed(3) + ')'); g.addColorStop(0.6, 'rgba(0,0,0,' + (kk * 0.7).toFixed(3) + ')'); g.addColorStop(1, 'rgba(0,0,0,' + (kk * 0.3).toFixed(3) + ')');
+      c.fillStyle = g; c.fill();
+    }
+    if (cg.pool) ellipseGrad(c, cg.pool.x * s, cg.pool.y * s, cg.pool.rx * 1.3 * s, Math.max(4, cg.pool.rx * 0.24) * s, k * (wide ? 0.7 : 1));
+  }
+  // hazeK: how much airborne stuff (fog, rain, smoke, dust) makes beams visible.
+  function glow(c, a, dark, fog, hazeK) {
+    const cg = a.cg, wide = cg && isWide(cg), gs = a.l.glow !== undefined ? +a.l.glow : 1;
+    const base = a.k * (0.14 + 0.26 * dark + 0.12 * fog) * (a.l.win ? 0.55 : 1) * gs;
+    // a beam lamp gets a tight lens glare; the beam itself carries the light
+    const hr = cg ? (wide ? a.r * 0.45 : Math.min(a.r * 0.22, 46 * a.z)) : a.r * 0.85;
+    radial(c, a.sx, a.sy + (wide ? hr * 0.55 * Math.sin(cg.ang) : 0), hr * (1 + fog * 0.35), base * (cg && !wide ? 0.8 : 1), a.col);
+    if (!a.l.win) radial(c, a.sx, a.sy, Math.max(3, 7 * a.z), Math.min(1, a.k * 0.5 * Math.min(1, gs + 0.3)), mix(a.col, '#ffffff', 0.35));
+    if (!cg) return;
+    const sh = a.k * (0.035 + 0.035 * dark + 0.12 * fog + 0.09 * hazeK) * (a.l.shaft !== undefined ? +a.l.shaft : 1) * (wide ? 0.3 : 1);
+    if (sh > 0.003) for (const [spread, m] of wide ? [[1, 1]] : [[1.3, 0.35], [1, 0.75]]) {
+      conePath(c, a, spread === 1 ? cg : { ang: cg.ang, half: Math.min(1.45, cg.half * spread), len: cg.len }, 1);
+      const g = c.createRadialGradient(a.sx, a.sy, 0, a.sx, a.sy, cg.len * 1.05);
+      g.addColorStop(0, rgba(a.col, sh * m)); g.addColorStop(0.7, rgba(a.col, sh * m * 0.45)); g.addColorStop(1, rgba(a.col, sh * m * 0.1));
+      c.fillStyle = g; c.fill();
+    }
+    if (cg.pool) ellipseGrad(c, cg.pool.x, cg.pool.y, cg.pool.rx * 1.2, Math.max(4, cg.pool.rx * 0.2), a.k * (0.16 + 0.12 * dark), a.col);
+  }
+  // Broken horizontal reflections under lights on wet ground: dashes of 1–N px, densest at a
+  // mirrored depth, re-shuffled several times a second while it rains (slowly when only wet).
+  function reflections(c, L, act, cam, time, wetK, vh) {
+    const pud = puddlesOf(L).map((p) => { const a = toScreen(p.x0, p.y, cam), b = toScreen(p.x1, p.y, cam); return { x0: a[0], x1: b[0], y: a[1] }; });
+    if (!(wetK > 0) && !pud.length) return;
+    const step = Math.floor(time * (wetK >= 0.9 ? 9 : 3));
+    for (const a of act) {
+      if (!(a.l.reflect || a.l.win) || a.par !== 1) continue;
+      const gyS = toScreen(0, floorBelow(L, a.l, 1), cam)[1];
+      if (a.sy >= gyS - 1 || gyS >= vh - 1) continue;
+      const depth = Math.min(vh - gyS, 64 * a.z), cd = clamp((gyS - a.sy) * 0.32, 3, Math.max(3, depth - 6));
+      const halfW = a.l.win ? Math.max(2, a.r * 0.18) : clamp(a.r * 0.1, 3, 12) * (a.l.cone ? 1 : 1.3);
+      const sd = (+a.l.x || 0) * 0.37 + (+a.l.y || 0) * 0.17, base = Math.min(1, a.k) * (a.l.win ? 0.22 : 0.42);
+      const near = pud.filter((p) => p.x1 > a.sx - halfW * 3 && p.x0 < a.sx + halfW * 3);
+      if (!(wetK > 0) && !near.length) continue;
+      for (let yy = 1; yy < depth; yy += yy > 10 ? 2 : 1) {
+        const f = 1 - Math.abs(yy - cd) / (cd + 10);
+        if (f <= 0) continue;
+        const n = 1 + Math.floor(hash(sd + yy * 0.37 + step * 0.11) * 2.5);
+        for (let j = 0; j < n; j++) {
+          const hv = hash(sd + yy * 1.71 + j * 3.13 + step * 0.737);
+          if (hv < 0.28) continue;
+          const len = 1 + Math.floor(hv * halfW * 1.2);
+          const xx = Math.round(a.sx + (hash(sd + yy * 2.31 + j * 1.7 + step * 0.293) - 0.5) * halfW * 2 * (0.5 + 0.5 * f) - len / 2);
+          let k = base * f * wetK;
+          for (const p of near) if (xx + len > p.x0 && xx < p.x1 && gyS + yy >= p.y - 1 && gyS + yy <= p.y + 6) { k = Math.max(k * 1.8, base * f * 0.9); break; }
+          if (k > 0.01) RA(c, xx, gyS + yy, len, 1, a.col, Math.min(0.85, k));
+        }
+      }
+    }
+  }
+
+  function composite(ctx, L, cam, lights, time, opts) {
+    L = L || {};
+    cam = camOf(cam || S.cam);
+    time = time === undefined || time === null ? S.time || 0 : +time;
+    const vw = (opts && +opts.w) || W, vh = (opts && +opts.h) || H;
+    const amb = L.ambient || {}, dark = clamp(+amb.dark || 0, 0, 1), fog = clamp(+amb.fog || 0, 0, 1), wetK = wxIsWet(L);
+    const src = Array.isArray(lights) ? lights : gatherLights(L), act = [];
+    for (const l of src) {
+      if (!l) continue;
+      const par = l.par !== undefined && l.par !== null ? +l.par : l.layer && LAYER_PAR[l.layer] !== undefined ? LAYER_PAR[l.layer] : 1;
+      const sp = toScreen(+l.x || 0, +l.y || 0, cam, par, l.parY), z = cam.zoom || 1, r = Math.max(2, (l.r !== undefined ? +l.r : 60) * z);
+      const reach = l.cone ? r * 1.7 : r;
+      if (sp[0] < -reach || sp[0] > vw + reach || sp[1] < -reach || sp[1] > vh + reach) continue;
+      const k = clamp(l.k === undefined ? 1 : +l.k, 0, 1.5) * flickerK(l, time);
+      if (k <= 0.01) continue;
+      const a = { l, sx: sp[0], sy: sp[1], r, k, z, par, col: l.color || PAL.lamp, cg: null };
+      if (l.cone) a.cg = coneOf(a, L, cam);
+      act.push(a);
+    }
+    // 1. darkness with soft holes (half resolution, smoothed on the way up: soft edges, cheap)
+    if (dark > 0.004) {
+      const res = clamp(Math.round(+S.light.res || 1), 1, 4), bw = Math.ceil(vw / res), bh = Math.ceil(vh / res), b = lightBuf(bw, bh);
+      if (b) {
+        const c = b.c, s = 1 / res;
+        c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+        c.clearRect(0, 0, bw, bh);
+        c.fillStyle = rgba(amb.tint ? mix(amb.tint, '#05060a', 0.45) : DARK_DEF, dark * 0.9);
+        c.fillRect(0, 0, bw, bh);
+        c.globalCompositeOperation = 'destination-out';
+        for (const a of act) punch(c, a, s);
+        c.globalCompositeOperation = 'source-over';
+        ctx.save();
+        ctx.imageSmoothingEnabled = res > 1;
+        ctx.drawImage(b.cv, 0, 0, bw, bh, 0, 0, bw * res, bh * res);
+        ctx.restore();
+      }
+    }
+    // 2. warm additive glow, 3. wet reflections
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const kinds = weatherKinds(L);
+    const hazeK = clamp((kinds.indexOf('rain') >= 0 ? 0.6 : kinds.indexOf('drizzle') >= 0 ? 0.4 : 0) + (kinds.indexOf('smoke') >= 0 ? 0.8 : 0) + (kinds.indexOf('dust') >= 0 ? 0.35 : 0) + (kinds.indexOf('snow') >= 0 ? 0.4 : 0), 0, 1.2);
+    for (const a of act) glow(ctx, a, dark, fog, hazeK);
+    reflections(ctx, L, act, cam, time, wetK, vh);
+    ctx.restore();
+    // 4. ground fog, then emissive weather
+    if (fog > 0.01) { const fc = amb.fogColor || '#566078'; for (let y = 0; y < vh; y += 4) RA(ctx, 0, y, vw, 4, fc, fog * 0.22 * (0.35 + 0.65 * (y / vh))); }
+    if (EMIT.length) {
+      ctx.save();
+      for (const e of EMIT) {
+        if (e.full) { ctx.globalCompositeOperation = 'source-over'; RA(ctx, 0, 0, vw, vh, e.col, e.a); }
+        else { ctx.globalCompositeOperation = 'lighter'; RA(ctx, e.x, e.y, e.w || 1, e.h || 1, e.col, e.a); }
+      }
+      ctx.restore();
+      EMIT.length = 0;
+    }
+  }
+
+  let lightFailed = false;
+  S.light = {
+    res: 2,                 // darkness buffer downscale (1 = full resolution)
+    darkColor: DARK_DEF,
+    // Identity-transformed ctx; lights in their layer coordinates (`par` = layer parallax, default 1).
+    // `lights` omitted -> every piece light of L plus L.lights (S.light.gather). opts: { w, h } for a non-640x360 view.
+    composite(ctx, L, cam, lights, time, opts) {
+      if (S.headless || !ctx) return;
+      try { composite(ctx, L, cam, lights, time, opts); } catch (e) { if (!lightFailed) { lightFailed = true; fail(e, 'light.composite'); } }
+      resetCtx(ctx);
+    },
+    gather: gatherLights,
+    flicker: flickerK,
+    toScreen(x, y, cam, par, parY) { return toScreen(x, y, camOf(cam || S.cam), par, parY); },
+    layerPar: LAYER_PAR,
+  };
+
+  // Drawing kit for world.js room shells and chapter-specific pieces (see notes).
+  Object.assign(pieces.util, { wallFill, brickPatches, drawWin, drawDoor, drawPoster, graffitiTag, person, makeCanvas, prng, toScreen, gyOf, ceilOf });
+
 })(window.STORY);

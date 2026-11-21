@@ -34,21 +34,21 @@
     // Punches. reach in px from Jin's centre; knock in px/s; hitstop in s.
     jab: { startup: 0.05, active: 0.05, recovery: 0.12, comboFrom: 0.07, dmg: 6, reach: 22, stun: 0.18, hitstop: 0.025, knock: 60, step: 34 },
     cross: { startup: 0.08, active: 0.05, recovery: 0.16, comboFrom: 0.10, dmg: 9, reach: 26, stun: 0.24, hitstop: 0.03, knock: 95, step: 46 },
-    hook: { startup: 0.11, active: 0.06, recovery: 0.20, dmg: 11, reach: 24, arc: true, multi: true, stun: 0.30, hitstop: 0.05, knock: 115, step: 20 },
+    hook: { startup: 0.11, active: 0.06, recovery: 0.20, dmg: 11, reach: 24, arc: true, multi: true, arcReach: 34, stun: 0.30, hitstop: 0.05, knock: 115, step: 20 },
     uppercut: { startup: 0.10, active: 0.06, recovery: 0.24, dmg: 10, reach: 20, launch: 260, hitstop: 0.05, stun: 0.36, knock: 30, step: 18 },
     dashStraight: { startup: 0.04, active: 0.07, recovery: 0.22, dmg: 12, reach: 30, knockback: 180, hitstop: 0.055, stun: 0.32 },
     counter: { startup: 0.03, active: 0.05, recovery: 0.16, dmg: 16, reach: 26, hitstop: 0.065, stun: 0.42, knock: 150, step: 110 },
     flurry: { time: 0.5, hits: 6, dmg: 3, finisherDmg: 8, reach: 22, startup: 0.05, recovery: 0.16, cooldown: 0.5,
       stun: 0.16, knock: 26, finisherStun: 0.4, finisherKnock: 160, hitstop: 0.02, finisherHitstop: 0.05 },
-    returnCross: { lunge: 150 },
+    returnCross: { dist: 1.0 },          // H covered stepping back in, so the cross reaches what the backdash left
     guardReduce: 0.75, guardSpeedMul: 0.45,
     breath: { max: 100, punchCost: 7, dashCost: 10, regen: 30, regenDelay: 0.5, exhaustedRecoveryMul: 1.4, recoverAt: 0.35, flurryCostMul: 2.5 },
     hitstopCapPerFrame: true, hitstopMinGap: 0.09, maxAttackers: 2,
     hpMax: 100,
     // Condition recovery by difficulty (damage itself never changes).
-    regen: { storyDelay: 2, normalDelay: 3, rate: 0.9 },
+    regen: { storyDelay: 2, normalDelay: 3, rate: 0.9, cornerNormal: 0.45, cornerVeteran: 0.3 },
     // Enemy-wide rules.
-    enemy: { aggroRange: 200, separation: 22, backAttackDelay: 0.12, staggerBreak: 4, breakArmor: 0.6,
+    enemy: { aggroRange: 200, separation: 22, backAttackDelay: 0.12, staggerBreak: 3, coverTime: 0.3, breakArmor: 0.6, armorDmgMul: 0.35,
       openingMul: 1.25, whiffOpening: 0.3, tokenGap: 0.28, chaseGiveUp: 2.6, launchGravityMul: 0.7,
       directorRange: 160, directorBuff: 1.3, hurtFriction: 900 },
   };
@@ -76,10 +76,6 @@
   let boutDebuff = null;         // current bout debuff result, folded into the effective body
   let EB = effBody();            // effective body for this step
 
-  // Cosmetic randomness never touches the seeded sim RNG.
-  let crs = 0x5eed1994;
-  const crand = () => { crs = (Math.imul(crs, 1664525) + 1013904223) >>> 0; return crs / 4294967296; };
-
   function makeJin() {
     return {
       state: 'idle', t: 0, loopT: 0,
@@ -89,7 +85,7 @@
       airDashUsed: false, airHangUsed: false, coyoteT: 0, jumpHeld: false, landT: 0,
       atk: null, chain: 0, chainUntil: -99, fl: null, flurryCdUntil: -99,
       dash: null, returnCrossUntil: -99, invulnUntil: -99,
-      slipCdUntil: -99, slipEvaded: false, counterT: 0, counterTarget: null,
+      slipCdUntil: -99, slipAt: -99, slipEvaded: false, counterT: 0, counterTarget: null,
       buffer: null, walkMode: false, carry: null, carryReason: null,
       inCombat: false, combatT: 9, autoTurnT: 0,
       hurtT: 0, grab: null, ladder: null, auto: null, locked: false, scriptedDown: false,
@@ -166,6 +162,9 @@
       dmgMul: Number.isFinite(b.dmgMul) ? b.dmgMul : 1,
     };
   }
+  // Balance training (activities.js writes T.hurtRecoverMul) shortens hurt, down and get-up recovery.
+  const recMul = () => clamp(Number.isFinite(S.tune.hurtRecoverMul) ? S.tune.hurtRecoverMul : 1, 0.5, 1.5);
+  const getupTime = () => S.tune.getupTime * recMul();
   // Attack speed factor from the body (sabotage and injury slow the hands too).
   const handSpeed = () => clamp(EB.speedMul, 0.5, 1.3);
   function arena() {
@@ -174,8 +173,16 @@
     if (f && f.arena) return f.arena;
     return null;
   }
+  // Fight arenas and rings: world.collide clamps to actor.bounds (and reports wallL/wallR there);
+  // the manual clamp below covers the step the bounds were set and worlds without bounds support.
   function clampToArena(a, pad) {
-    const ar = arena(); if (!ar) return false;
+    const ar = arena();
+    if (!ar) {
+      if (a.bounds && a.bounds._combat) a.bounds = null;
+      a.arenaL = a.arenaR = false;
+      return false;
+    }
+    if (a.bounds !== ar) a.bounds = ar;
     pad = pad === undefined ? 6 : pad;
     if (a.x < ar.x0 + pad) { a.x = ar.x0 + pad; if (a.vx < 0) a.vx = 0; a.arenaL = true; return true; }
     if (a.x > ar.x1 - pad) { a.x = ar.x1 - pad; if (a.vx > 0) a.vx = 0; a.arenaR = true; return true; }
@@ -187,12 +194,12 @@
      Fast movers are sub-stepped so a dash never tunnels through a wall. */
   function integrate(a, dt) {
     const w = W();
+    if (w && typeof w.collide === 'function') { w.collide(a, dt); return; }   // world.collide sub-steps fast movers itself
     const n = Math.max(1, Math.min(8, Math.ceil(Math.abs(a.vx || 0) * dt / 5)));
     const sub = dt / n;
-    for (let i = 0; i < n; i++) {
-      if (w && typeof w.collide === 'function') w.collide(a, sub);
-      else fallbackCollide(a, sub);
-    }
+    let wl = false, wr = false;
+    for (let i = 0; i < n; i++) { fallbackCollide(a, sub); wl = wl || a.wallL; wr = wr || a.wallR; }
+    a.wallL = wl; a.wallR = wr;
   }
   function fallbackCollide(a, dt) {
     a.x += (a.vx || 0) * dt; a.y += (a.vy || 0) * dt;
@@ -207,8 +214,9 @@
     a.vy = Math.min((a.vy || 0) + g * dt, T.maxFall * T.H);
   }
   function onOneWay(a) {
-    if (a.onOneway || a.onOneWay) return true;
-    const w = W(), solids = w && w.loc && w.loc.solids;
+    const w = W();
+    if (w && typeof w.onOneway === 'function') return !!w.onOneway(a);
+    const solids = w && w.loc && w.loc.solids;
     if (!Array.isArray(solids)) return false;
     for (const s of solids) if (s && s.oneway && Math.abs(a.y - s.y) < 2.5 && a.x >= s.x && a.x <= s.x + s.w) return true;
     return false;
@@ -225,31 +233,51 @@
     }
     if (!C.allowed.punch) for (const v of ['jab', 'cross', 'hook', 'uppercut', 'dashStraight', 'counter', 'flurry']) C.allowed[v] = false;
     if (!C.allowed.dash) { C.allowed.backdash = false; C.allowed.airdash = false; C.allowed.dashStraight = false; }
-    if (j.carry) for (const v of ['jab', 'cross', 'hook', 'uppercut', 'dashStraight', 'counter', 'flurry', 'dash', 'backdash', 'airdash', 'slip', 'guard', 'jump', 'run', 'punch']) C.allowed[v] = false;
+    if (j.carry) for (const v of VERBS) C.allowed[v] = false;
+    exportRestriction();
+  }
+  /* restrict(o) REPLACES the standing restrictions (the director stores the same object in G.restrict and
+     re-applies it on load; activities merge the previous object in themselves). Accepted shapes:
+     flat { punch: false, dash: false, reason, reasons: { dash: '...' } } or stored { verbs: {...}, reasons: {...} }.
+     combat.js never writes G.restrict: the director owns it. */
+  function clearRestriction() {
+    for (const k in restriction.verbs) delete restriction.verbs[k];
+    for (const k in restriction.reasons) delete restriction.reasons[k];
+  }
+  function applyRestriction(o) {
+    if (!o || typeof o !== 'object') return;
+    const flat = o.verbs && typeof o.verbs === 'object' ? o.verbs : o;
+    const reasons = (o.reasons && typeof o.reasons === 'object') ? o.reasons : {};
+    for (const v of VERBS) {
+      if (flat[v] !== false) continue;
+      restriction.verbs[v] = false;
+      restriction.reasons[v] = reasons[v] || o.reason || null;
+    }
   }
   C.restrict = function (o) {
-    o = o || {};
-    const reasons = o.reasons || {};
-    for (const v of VERBS) {
-      if (!(v in o)) continue;
-      if (o[v] === false) { restriction.verbs[v] = false; restriction.reasons[v] = reasons[v] || o.reason || restriction.reasons[v] || null; }
-      else { delete restriction.verbs[v]; delete restriction.reasons[v]; }
-    }
-    persistRestriction(); recomputeAllowed();
+    clearRestriction();
+    applyRestriction(o);
+    recomputeAllowed();
     return C.allowed;
   };
   C.unrestrict = function (verbs) {
     if (Array.isArray(verbs)) for (const v of verbs) { delete restriction.verbs[v]; delete restriction.reasons[v]; }
-    else { for (const k in restriction.verbs) delete restriction.verbs[k]; for (const k in restriction.reasons) delete restriction.reasons[k]; }
-    persistRestriction(); recomputeAllowed();
+    else clearRestriction();
+    recomputeAllowed();
     return C.allowed;
   };
-  C.restrictions = () => ({ verbs: Object.assign({}, restriction.verbs), reasons: Object.assign({}, restriction.reasons) });
-  function persistRestriction() {
-    if (!S.G) return;
-    const any = Object.keys(restriction.verbs).length > 0;
-    S.G.restrict = any ? { verbs: Object.assign({}, restriction.verbs), reasons: Object.assign({}, restriction.reasons) } : null;
+  // Current restrictions in the flat shape restrict() takes (so callers can save and restore them).
+  C.restriction = null;
+  function exportRestriction() {
+    const keys = Object.keys(restriction.verbs);
+    if (!keys.length) { C.restriction = null; return; }
+    const o = { reasons: {} };
+    for (const k of keys) { o[k] = false; if (restriction.reasons[k]) o.reasons[k] = restriction.reasons[k]; }
+    C.restriction = o;
   }
+  C.restrictions = () => ({ verbs: Object.assign({}, restriction.verbs), reasons: Object.assign({}, restriction.reasons) });
+  // Re-derive the allowed table from G.skills (the director calls this after A.skill).
+  C.refresh = function () { recomputeAllowed(); EB = effBody(); return C.allowed; };
   // Body changes persist in G.body so a loaded save keeps the chapter's body.
   C.setBody = function (p) {
     p = p || {};
@@ -262,10 +290,8 @@
   function syncFromG() {
     if (S.G === lastG) return;
     lastG = S.G;
-    for (const k in restriction.verbs) delete restriction.verbs[k];
-    for (const k in restriction.reasons) delete restriction.reasons[k];
-    const r = S.G && S.G.restrict;
-    if (r && r.verbs) { Object.assign(restriction.verbs, r.verbs); Object.assign(restriction.reasons, r.reasons || {}); }
+    clearRestriction();
+    applyRestriction(S.G && S.G.restrict);
     const b = S.G && S.G.body;
     Object.assign(C.body, BODY_DEFAULT);
     if (b && typeof b === 'object') for (const k of ['power', 'speedMul', 'breath', 'limp', 'delay', 'knuckles', 'dmgMul']) if (b[k] !== undefined) C.body[k] = b[k];
@@ -276,10 +302,10 @@
   // Why a verb is unavailable, in plain words. Restriction reasons come from the director.
   function blockedReason(verb) {
     const j = C.jin;
-    if (j.carry) return j.carryReason || ('Hands full — Jin is carrying ' + (typeof j.carry === 'string' ? 'the ' + j.carry : 'something') + '.');
-    const umbrella = (verb === 'flurry' || verb === 'punch') ? ['flurry', 'punch'] : verb === 'dash' ? ['dash'] : [verb];
-    for (const v of umbrella) if (restriction.verbs[v] === false) return restriction.reasons[v] || defaultReason(v);
-    if (verb === 'punch' && restriction.verbs.punch === false) return restriction.reasons.punch || defaultReason('punch');
+    const umbrella = verb === 'flurry' ? ['flurry', 'punch'] : verb === 'punch' ? ['punch', 'jab'] : [verb];
+    for (const v of umbrella) if (restriction.verbs[v] === false && restriction.reasons[v]) return restriction.reasons[v];
+    if (j.carry) return j.carryReason || ('Hands full — Jin is carrying ' + (typeof j.carry === 'string' ? 'the ' + j.carry.replace(/_/g, ' ') : 'something') + '.');
+    for (const v of umbrella) if (restriction.verbs[v] === false) return defaultReason(v);
     return null;
   }
   function defaultReason(v) {
@@ -299,7 +325,7 @@
   }
   function onBlockedVerb(verb) {
     const reason = blockedReason(verb);
-    if (reason) { toast(reason, 'restrict', 'restrict:' + verb, 1.6); return; }
+    if (reason) { toast(reason, 'restrict', 'restrict:' + reason, 1.6); return; }   // one toast per reason, not per key
     // Not learned yet: only the flurry key has nothing else to do, so it says so (rarely).
     if (verb === 'flurry' && S.G && S.G.skills && !S.G.skills.flurry) toast("Jin hasn't put a flurry together yet.", 'hint', 'learn:flurry', 8);
   }
@@ -309,11 +335,14 @@
   const inQ = [];
   let delayedDown = blankMap();
   function blankMap() { const o = {}; for (const k of CACT) o[k] = false; return o; }
-  function controlEnabled(j) {
+  function controlEnabled(j, a, ignoreDown) {
     if (C.inputEnabled === false) return false;
     if (S.paused) return false;
     if (C.inputEnabled === true) return true;
-    if (j.locked || j.scriptedDown) return false;
+    if (j.locked || (j.scriptedDown && !ignoreDown)) return false;
+    // world.js decides who steers Jin each step (director hand-off, transitions) and writes actor.control.
+    a = a || jinActor();
+    if (a && typeof a.control === 'boolean') return a.control;
     const d = S.director;
     if (d) {
       if (d.dialog) return false;
@@ -393,6 +422,21 @@
     if (a.vy === undefined) a.vy = 0;
     if (!a.face) a.face = 1;
     a.isJin = true;
+    // Carrying is a fact about the actor: activities.js sets actor.carry, C.carry sets both.
+    const j = C.jin;
+    if (j.carryPending !== undefined) { a.carry = j.carryPending; delete j.carryPending; }
+    const ac = a.carry || null;
+    if (ac !== j.carry) {
+      j.carry = ac;
+      if (!ac) j.carryReason = null;
+      else dropHands(j);
+      recomputeAllowed();
+    }
+  }
+  // Starting a carry (or a scripted hold) ends anything the hands or feet were doing.
+  function dropHands(j) {
+    j.atk = null; j.dash = null; j.fl = null; j.buffer = null; j.counterT = 0;
+    if (j.state === 'attack' || j.state === 'dash' || j.state === 'flurry' || j.state === 'slip' || j.state === 'guard') setJ(j, 'idle');
   }
   function setJ(j, state) { j.state = state; j.t = 0; }
   function jinGrounded(a) { return !!a.onGround; }
@@ -423,7 +467,7 @@
   }
   function protectedNow(j) { return j.state === 'dash' && j.dash && j.dash.t < S.tune.dashProtect; }
   function invulnerable(j) {
-    return protectedNow(j) || S.time < j.invulnUntil || j.state === 'down' || j.state === 'getup' || j.state === 'scripted' || j.state === 'climb' && false;
+    return protectedNow(j) || S.time < j.invulnUntil || j.state === 'down' || j.state === 'getup' || j.state === 'scripted';
   }
   function inSlipWindow(j) {
     if (j.state !== 'slip') return false;
@@ -479,7 +523,9 @@
   function tryJump(j, a, b) {
     const T = S.tune;
     if (b.down && a.onGround && onOneWay(a)) {
-      a.dropThrough = true; a.dropUntil = S.time + 0.25; a.y += 2; a.onGround = false;
+      const w = W();
+      if (w && typeof w.drop === 'function') { if (!w.drop(a)) return false; }
+      else { a.dropT = 0.25; a.y += 2; a.onGround = false; }
       j.coyoteT = 0; setJ(j, 'air'); return true;
     }
     const grounded = a.onGround || j.coyoteT > 0;
@@ -543,6 +589,7 @@
     if (!(FREE[j.state] || j.state === 'attack')) return false;
     j.atk = null;
     j.slipCdUntil = S.time + T.slipCooldown;
+    j.slipAt = S.time;
     j.slipEvaded = false;
     a.vx *= 0.2;
     setJ(j, 'slip');
@@ -669,11 +716,16 @@
     k.t += dt;
     const actStart = k.startup, actEnd = k.startup + k.active, end = actEnd + k.recovery;
     // Footwork inside the punch: a small step in for jab/cross, lunges for counters and returning crosses.
-    if (!k.air) {
+    if (!k.air && k.name === 'returnCross') {
+      // Displacement-based step back in: the whole distance is covered by the middle of the active frames.
+      const span = k.startup + k.active * 0.5, D = T.returnCross.dist * T.H;
+      const q0 = Math.min(1, Math.max(0, k.t - dt) / span), q1 = Math.min(1, k.t / span);
+      const s = (q) => D * (1 - (1 - q) * (1 - q));
+      a.vx = q0 < 1 && dt > 0 ? a.face * (s(q1) - s(q0)) / dt : approach(a.vx, 0, 3200 * dt);
+    } else if (!k.air) {
       let target = 0;
       if (k.t < actEnd) {
         if (k.name === 'dashStraight') target = a.face * Math.max(k.fromDash * (1 - k.t / actEnd), 60);
-        else if (k.name === 'returnCross') target = a.face * T.returnCross.lunge;
         else target = a.face * (k.def.step || 0);
       }
       a.vx = approach(a.vx, target, (k.name === 'dashStraight' ? 2600 : 3200) * dt);
@@ -711,7 +763,8 @@
       hitstop: d.hitstop || 0.03, kind: k.info.kind, sound: k.info.sound, top: 0.95, bot: 0.22, back: 0, multi: !!d.multi,
       launch: n === 'uppercut' ? d.launch : 0, counter: n === 'counter', poiseMul: k.light ? 1 : 1.5, air: k.air,
     };
-    if (d.arc) { sp.back = 4; sp.top = 1.05; sp.bot = 0.15; }
+    // The hook's arc sweeps past the first man: targets after the nearest one count up to arcReach.
+    if (d.arc) { sp.back = 6; sp.top = 1.05; sp.bot = 0.15; sp.arcReach = d.arcReach || d.reach + 10; }
     if (n === 'uppercut') { sp.top = 1.35; sp.bot = 0.2; }
     if (n === 'dashStraight') sp.multi = false;
     return sp;
@@ -723,7 +776,8 @@
   // Returns the number of targets contacted (blocked counts as contact; evaded does not).
   function jinStrike(a, sp, hitSet, owner) {
     const face = a.face, Hp = S.tune.H;
-    const x0 = a.x - face * sp.back, x1 = a.x + face * sp.reach;
+    const far = sp.multi && sp.arcReach ? Math.max(sp.reach, sp.arcReach) : sp.reach;
+    const x0 = a.x - face * sp.back, x1 = a.x + face * far;
     const lo = Math.min(x0, x1), hi = Math.max(x0, x1);
     const yTop = a.y - Hp * sp.top, yBot = a.y - Hp * sp.bot;
     const cands = [];
@@ -736,6 +790,9 @@
     }
     if (!cands.length) return 0;
     cands.sort((p, q) => Math.abs(p.x - a.x) - Math.abs(q.x - a.x));
+    // The nearest target must be inside the move's own reach; the arc only extends to the others.
+    const first = cands[0], fhw = (first.w || 14) / 2;
+    if (far > sp.reach && face * (first.x - a.x) - fhw > sp.reach) return 0;
     const list = sp.multi ? cands.slice(0, 5) : [cands[0]];
     let n = 0;
     for (const e of list) {
@@ -758,9 +815,13 @@
   function dashUpdate(j, a, inp, dir, dt) {
     const d = j.dash, T = S.tune;
     if (!d) { setJ(j, 'idle'); return; }
+    // Ease-out burst s(k) = D(1-(1-k)^2); the velocity is the exact displacement for this step,
+    // so the distance is D at any step rate.
+    const k0 = Math.min(1, d.t / d.T);
     d.t += dt;
     const k = Math.min(1, d.t / d.T);
-    a.vx = d.dir * (2 * d.D / d.T) * (1 - k);     // ease-out burst covering exactly D
+    const s = (q) => d.D * (1 - (1 - q) * (1 - q));
+    a.vx = dt > 0 ? d.dir * (s(k) - s(k0)) / dt : 0;
     if (d.air) a.vy = 0;
     j.afterT -= dt;
     if (j.afterT <= 0 && j.afterN < 3 && d.t > 0.01) { j.afterN++; j.afterT = 0.045; afterimage(a); }
@@ -865,7 +926,9 @@
   }
 
   /* Ladders (LocationDef.ladders {x, y0 top, y1 bottom}): up/down to climb; jump lets go. */
-  function ladders() { const w = W(); return (w && w.loc && Array.isArray(w.loc.ladders)) ? w.loc.ladders : []; }
+  // world.js climbs ladders and stairs itself (before it hands Jin to combat); this is the fallback for worlds without it.
+  function worldOwnsLadders() { const w = W(); return !!(w && typeof w.drop === 'function'); }
+  function ladders() { const w = W(); return (!worldOwnsLadders() && w && w.loc && Array.isArray(w.loc.ladders)) ? w.loc.ladders : []; }
   function onLadderTop(a) { for (const l of ladders()) if (Math.abs(a.x - l.x) <= 8 && Math.abs(a.y - l.y0) < 3) return true; return false; }
   function tryLadder(j, a, inp) {
     if (!inp.down.up && !inp.down.down) return false;
@@ -906,17 +969,22 @@
   function downUpdate(j, a, dt) {
     const T = S.tune;
     a.vx = approach(a.vx, 0, 500 * dt);
-    if (j.scriptedDown) return;
+    if (j.scriptedDown) {
+      // A scripted knockdown holds while a scene has control (or a bout counts it); once the player
+      // steers again, Jin gets up on his own (C.standUp does it at once).
+      if (!C.state.bout && j.t > 0.8 && controlEnabled(j, a, true)) C.standUp();
+      return;
+    }
     if (j.ko) {
       // Out of any fight or bout, a knockout ends with Jin getting up slowly (the world stays playable).
       if (!C.state.fight && !C.state.bout && j.t >= 2.5) { j.ko = false; j.hp = Math.max(j.hp, j.hpMax * 0.4); setJ(j, 'getup'); }
       return;
     }
-    if (j.t >= T.downTime) setJ(j, 'getup');
+    if (j.t >= T.downTime * recMul()) setJ(j, 'getup');
   }
   function getupUpdate(j, a, dt) {
     a.vx = approach(a.vx, 0, 900 * dt);
-    if (j.t >= S.tune.getupTime) { j.invulnUntil = S.time + S.tune.wakeInvuln; setJ(j, 'idle'); }
+    if (j.t >= getupTime()) { j.invulnUntil = S.time + S.tune.wakeInvuln; setJ(j, 'idle'); }
   }
   function blockUpdate(j, a, inp, dir, dt) {
     a.vx = approach(a.vx, 0, 800 * dt);
@@ -1012,8 +1080,11 @@
     }
     atk.resolved = 'hit';
     let dmg = atk.dmg * (ai.dmgMul || 1);
+    // Mistimed slip: still inside it (outside the window) takes a little extra; one that ended just
+    // before the strike was too early. Both are reported so tips and drills can say which.
     const mistimed = j.state === 'slip';
-    if (mistimed) { dmg *= S.tune.slipBadMul; emit('slip', { ok: false }); }
+    if (mistimed) { dmg *= S.tune.slipBadMul; emit('slip', { ok: false, late: j.t > S.tune.slipWindow[1], attacker: e }); }
+    else if (S.time - j.slipAt < S.tune.slipTime + 0.25) emit('slip', { ok: false, early: true, attacker: e });
     const heavy = !!(atk.heavy || atk.knockdown || dmg >= 13);
     // Interrupt whatever Jin was doing: a canceled punch deals nothing.
     j.atk = null; j.dash = null; j.fl = null; j.counterT = 0;
@@ -1031,7 +1102,7 @@
       setJ(j, 'thrown'); j.knockdownPending = true;
     } else {
       a.vx = atk.dir * (atk.knock || 90) * 0.9;
-      j.hurtT = (atk.stun || S.tune.hurtTime) * (S.tune.hurtTime / 0.30);
+      j.hurtT = (atk.stun || S.tune.hurtTime) * (S.tune.hurtTime / 0.30) * recMul();
       setJ(j, 'hurt');
     }
   }
@@ -1076,7 +1147,7 @@
       return true;
     }
     if (j.state === 'scripted') setJ(j, 'idle');
-    const ctl = controlEnabled(j);
+    const ctl = controlEnabled(j, a);
     const inp = readInput(ctl, j, a);
     let dir = dirOf(inp);
     j.t += dt; j.loopT += dt;
@@ -1126,7 +1197,6 @@
       if (!airDash) applyGravity(a, dt);
       j.fallV = Math.max(j.fallV, a.vy);
       integrate(a, dt);
-      if (a.dropThrough && S.time > (a.dropUntil || 0)) a.dropThrough = false;
       pushBodies(a, j);
       clampToArena(a, 6);
     }
@@ -1187,13 +1257,14 @@
     a.pose = pose; a.poseT = t; a.poseK = k === undefined ? null : k; a._cPose = pose;
     o = o || {};
     a.tint = o.tint || null; a.squash = o.squash || 0; a.lean = o.lean || 0; a.alpha = o.alpha === undefined ? 1 : o.alpha;
-    a.speed = o.speed || 1; a.scaleX = o.scaleX || 1; a.carry = o.carry || null;
-    a.poseOpts = { tint: a.tint, squash: a.squash, lean: a.lean, alpha: a.alpha, speed: a.speed, scaleX: a.scaleX, carry: a.carry };
+    a.speed = o.speed || 1; a.scaleX = o.scaleX || 1;
+    // actor.carry is owned by whoever started the carry (activities.js or C.carry); poses only read it.
+    a.poseOpts = { tint: a.tint, squash: a.squash, lean: a.lean, alpha: a.alpha, speed: a.speed, scaleX: a.scaleX, carry: o.carry || a.carry || null };
   }
   function jinPose(j, a, dir) {
     const T = S.tune, Hp = T.H;
     // While a scene holds control and Jin is idle, keep any pose the director set.
-    if (!controlEnabled(j) && (j.state === 'idle') && a.pose && (a.pose !== a._cPose || a.poseHold)) return;
+    if (!controlEnabled(j, a) && (j.state === 'idle') && a.pose && (a.pose !== a._cPose || a.poseHold)) return;
     const o = { squash: j.squash || 0, alpha: S.time < j.invulnUntil ? (Math.floor(S.time * 20) % 2 ? 0.55 : 1) : 1 };
     if (j.carry) o.carry = typeof j.carry === 'string' ? j.carry : 'box';
     const runK = Math.abs(a.vx) / (T.runSpeed * Hp);
@@ -1239,7 +1310,7 @@
       case 'grabbed': pose = 'hurt'; t = j.t; break;
       case 'thrown': pose = 'knockdown'; t = j.t; break;
       case 'down': pose = j.t < 0.4 ? 'knockdown' : 'down'; t = j.t; break;
-      case 'getup': pose = 'getup'; t = j.t; k = j.t / T.getupTime; break;
+      case 'getup': pose = 'getup'; t = j.t; k = clamp(j.t / getupTime(), 0, 1); break;
       case 'climb': pose = 'reach'; t = j.loopT; break;
       default: pose = 'idle';
     }
@@ -1265,6 +1336,7 @@
           atk({ name: 'punch2', pose: 'cross', windup: 0.18, active: 0.08, recovery: 0.34, dmg: 7, reach: 26, knock: 90, lunge: 70 })], weight: 1 },
       ] },
     collector: { label: 'Collector', hp: 90, poise: 22, poiseRegen: 14, speed: 1.6, w: 18, h: 50, mass: 1.8, launch: false, juggle: 1, look: 'collector', hover: [58, 92], cooldown: [0.8, 1.6],
+      block: 0.45, tough: 0.6,
       attacks: [
         atk({ name: 'haymaker', pose: 'hook', windup: 0.6, active: 0.1, recovery: 0.5, dmg: 15, reach: 28, stun: 0.4, knock: 160, lunge: 70, heavy: true, knockdown: true, whiffOpen: 0.55, weight: 2 }),
         atk({ name: 'grab', pose: 'grab', windup: 0.5, active: 0.12, recovery: 0.5, dmg: 10, reach: 22, grab: true, slippable: false, guardable: false, whiffOpen: 0.5, weight: 1, hold: 0.9 }),
@@ -1286,19 +1358,21 @@
         atk({ name: 'overhead', pose: 'baton', windup: 0.62, active: 0.1, recovery: 0.5, dmg: 15, reach: 30, stun: 0.4, knock: 150, lunge: 50, heavy: true, knockdown: true, whiffOpen: 0.55, weight: 1 }),
         Object.assign({}, SHOVE, { weight: 1 }),
       ] },
-    director: { label: 'Director', hp: 45, poise: 4, speed: 1.6, w: 14, h: 45, mass: 1, launch: true, juggle: 3, look: 'man', hover: [140, 210], cooldown: [1.2, 2],
+    // Stays back far enough to be safe, close enough that the men fighting Jin are inside his 160 px.
+    director: { label: 'Director', hp: 45, poise: 4, speed: 1.6, w: 14, h: 45, mass: 1, launch: true, juggle: 3, look: 'man', hover: [80, 120], cooldown: [1.2, 2],
       role: 'director', attacks: [Object.assign({}, SHOVE, { weight: 1 })] },
     boss_collector: { label: 'Boss', hp: 220, poise: 45, poiseRegen: 18, speed: 1.75, w: 20, h: 54, mass: 2.6, launch: false, juggle: 1, passable: false, boss: true,
-      look: 'collector', hover: [46, 80], cooldown: [0.6, 1.2], role: 'corner', staggerImmune: 1.2,
+      look: 'collector', hover: [46, 80], cooldown: [0.6, 1.2], role: 'corner', staggerImmune: 1.2, block: 0.55, tough: 0.55,
       attacks: [
         atk({ name: 'haymaker', pose: 'hook', windup: 0.55, active: 0.1, recovery: 0.45, dmg: 18, reach: 30, stun: 0.42, knock: 170, lunge: 70, heavy: true, knockdown: true, whiffOpen: 0.55, weight: 2 }),
         { seq: [atk({ name: 'body', pose: 'jab', windup: 0.42, active: 0.07, recovery: 0.12, dmg: 8, reach: 26, stun: 0.25, knock: 60, lunge: 40, low: true }),
           atk({ name: 'body2', pose: 'cross', windup: 0.16, active: 0.07, recovery: 0.38, dmg: 9, reach: 27, stun: 0.3, knock: 110, lunge: 60, low: true, whiffOpen: 0.35 })], weight: 1.6 },
-        atk({ name: 'charge', pose: 'shove', windup: 0.6, active: 0.32, recovery: 0.6, dmg: 14, reach: 22, stun: 0.4, knock: 230, lunge: 330, heavy: true, knockdown: true, whiffOpen: 0.7, cond: 'far', weight: 1.4, phase: 1 }),
+        // A shoulder charge is a body attack, not a direct strike: a slip does not avoid it (dash or jump).
+        atk({ name: 'charge', pose: 'shove', windup: 0.6, active: 0.32, recovery: 0.6, dmg: 14, reach: 22, stun: 0.4, knock: 230, lunge: 330, heavy: true, knockdown: true, slippable: false, whiffOpen: 0.7, cond: 'far', weight: 1.4, phase: 1 }),
         atk({ name: 'grab', pose: 'grab', windup: 0.38, active: 0.12, recovery: 0.55, dmg: 16, reach: 24, grab: true, slippable: false, guardable: false, whiffOpen: 0.6, cond: 'wall', weight: 6, hold: 1.0 }),
       ] },
-    champion: { label: 'Champion', hp: 160, poise: 30, poiseRegen: 16, speed: 2.8, w: 14, h: 47, mass: 1.3, launch: false, juggle: 1, passable: false, boss: true,
-      hover: [40, 64], cooldown: [0.45, 1.0], role: 'champion', staggerImmune: 1.5, block: 0.25 },
+    champion: { label: 'Champion', hp: 200, poise: 30, poiseRegen: 16, speed: 2.8, w: 14, h: 47, mass: 1.3, launch: false, juggle: 1, passable: false, boss: true,
+      hover: [40, 64], cooldown: [0.45, 1.0], role: 'champion', staggerImmune: 1.5, block: 0.4, tough: 0.65 },
     sparring: { label: 'Sparring partner', hp: 60, poise: 6, speed: 2.4, w: 14, h: 46, mass: 1, launch: true, juggle: 2, hover: [46, 74], cooldown: [0.9, 1.6],
       block: 0.25, feint: 0, punishJabs: false, retreatAfter: 0.3, dmgMul: 0.5, windupAdd: 0.08,
       attacks: [
@@ -1306,7 +1380,7 @@
         atk({ name: 'cross', pose: 'cross', windup: 0.38, active: 0.07, recovery: 0.3, dmg: 9, reach: 28, stun: 0.26, knock: 90, lunge: 70, whiffOpen: 0.3, weight: 2 }),
         atk({ name: 'hook', pose: 'hook', windup: 0.46, active: 0.08, recovery: 0.36, dmg: 10, reach: 24, stun: 0.3, knock: 100, lunge: 40, heavy: true, whiffOpen: 0.5, weight: 1 }),
       ] },
-    enforcer: { label: 'Enforcer', hp: 70, poise: 10, speed: 2.1, w: 15, h: 49, mass: 1.3, launch: true, juggle: 2, look: 'thug', hover: [60, 96], cooldown: [0.6, 1.3], block: 0.2,
+    enforcer: { label: 'Enforcer', hp: 70, poise: 10, speed: 2.1, w: 15, h: 49, mass: 1.3, launch: true, juggle: 2, look: 'thug', hover: [60, 96], cooldown: [0.6, 1.3], block: 0.2, tough: 0.85,
       attacks: [
         { seq: [atk({ name: 'jab', pose: 'jab', windup: 0.32, active: 0.07, recovery: 0.12, dmg: 6, reach: 26, knock: 50, lunge: 50 }),
           atk({ name: 'cross', pose: 'cross', windup: 0.17, active: 0.08, recovery: 0.34, dmg: 9, reach: 27, knock: 100, lunge: 70, whiffOpen: 0.3 })], weight: 2 },
@@ -1360,7 +1434,7 @@
       hpMax: hp, poiseMeter: 0, poiseHitAt: -9, staggerChain: 0, lastStaggerAt: -9, staggerResist: 0, immuneUntil: -9,
       armorUntil: -9, breakOut: false, juggles: 0, popAt: -99, invulnUntil: -9, cdUntil: S.time + 0.4 + S.rand() * 0.5,
       plan: null, seq: null, seqIdx: 0, atk: null, tokenAt: 0, opening: false, retreatUntil: -9, evadeUntil: -9, evadeCounter: null,
-      blocks: 0, lastBlockAt: -9, nextPoint: S.time + 1 + S.rand() * 2, tintT: 0, tintCol: null, showBarUntil: -9, ko: false, fled: false,
+      blocks: 0, lastBlockAt: -9, lastCounterBlockAt: -9, coverT: 0, nextPoint: S.time + 1 + S.rand() * 2, tintT: 0, tintCol: null, showBarUntil: -9, ko: false, fled: false,
       speedMul: opts.speedMul || 1, dmgMul: (opts.dmgMul || 1) * (A.dmgMul || 1), windupMul: opts.windupMul || 1,
       needsKnuckles: !!opts.needsKnuckles, knuckleFloor: opts.knuckleFloor || 0.3, fleeAt: opts.fleeAt || 0,
       patternSet: opts.patternSet || 'ch8', phase: 0, leanAt: -9, repeats: Object.create(null), lastOpener: null,
@@ -1545,8 +1619,13 @@
         e.vx = approach(e.vx, 0, 900 * dt);
         if (ai.t >= 0.2) { ai.state = 'engage'; ai.t = 0; }
         break;
+      case 'cover': coverUpdate(e, ai, dt); break;
       case 'evade':
-        e.vx = approach(e.vx, -e.face * 50, 900 * dt);
+        if (ai.evadeHow === 'slip' && jin) {
+          // A boxer slips INSIDE the jab: he ducks and steps in to counter range.
+          const dx = jin.x - e.x, want = Math.abs(dx) - 26;
+          e.vx = approach(e.vx, want > 2 ? sign(dx) * Math.min(220, want / Math.max(0.05, ai.evadeT - ai.t)) : 0, 1600 * dt);
+        } else e.vx = approach(e.vx, -e.face * 50, 900 * dt);      // the champion leans back
         if (ai.t >= ai.evadeT) {
           ai.state = 'engage'; ai.t = 0;
           if (ai.evadeCounter) { const c = ai.evadeCounter; ai.evadeCounter = null; forceAttack(e, ai, [c]); }
@@ -1624,7 +1703,7 @@
       if (hasToken(e) && hold) { releaseToken(e); ai.plan = null; }
       let [hmin, hmax] = A.hover || [60, 100];
       // Spread waiting enemies so a swarm stays readable instead of piling up.
-      const rank = waitingRank(e);
+      const rank = A.role === 'director' ? 0 : waitingRank(e);
       hmin += rank * 14; hmax += rank * 14;
       if (S.time < ai.retreatUntil) target = -dirTo * spd * 0.9;
       else if (adx < hmin - 4) target = -dirTo * spd * 0.75;
@@ -1762,14 +1841,27 @@
   function afterStun(e, ai) {
     ai.state = 'engage'; ai.t = 0;
     if (ai.breakOut) {
-      // Too many staggers in a row: he shrugs the next punch off and fires back (no infinite stun-locks).
+      // Three staggers in a row: he covers up (blocks everything but a counter), then fires back through
+      // anything but a counter. Mashing walks into it; stopping after jab-cross, or slipping the answer, does not.
       ai.breakOut = false;
-      ai.armorUntil = S.time + S.tune.enemy.breakArmor;
       ai.staggerChain = 0;
-      const plan = chooseAttack(e, ai, 20);
-      if (plan && plan.seq.length) { forceAttack(e, ai, plan.seq); emit('enemyBreakOut', { enemy: e }); }
-      else ai.retreatUntil = S.time + 0.4;
+      ai.state = 'cover'; ai.coverT = S.tune.enemy.coverTime;
+      ai.tintT = 0.08; ai.tintCol = '#c9d3dc';
+      emit('enemyCover', { enemy: e });
     }
+  }
+  function coverUpdate(e, ai, dt) {
+    e.vx = approach(e.vx, 0, 900 * dt);
+    const jin = jinActor(); if (jin) e.face = sign(jin.x - e.x) || e.face;
+    if (ai.t < ai.coverT) return;
+    const plan = chooseAttack(e, ai, 20);
+    if (plan && plan.seq.length) {
+      const seq = plan.seq.slice();
+      seq[0] = Object.assign({}, seq[0], { windup: Math.max(0.22, seq[0].windup * 0.75) });
+      forceAttack(e, ai, seq);
+      ai.armorUntil = S.time + ai.atk.windupT + ai.atk.active + 0.02;
+      emit('enemyBreakOut', { enemy: e });
+    } else { ai.state = 'engage'; ai.t = 0; ai.retreatUntil = S.time + 0.4; }
   }
   function landFromAir(e, ai) {
     ai.juggles = 0;
@@ -1819,7 +1911,7 @@
       const ai = e.enemy, A = ai.arch;
       if (!isHostileAwake(e) || ai.state !== 'engage' || ai.script) continue;
       const dx = e.x - a.x, adx = Math.abs(dx);
-      if (adx > 60 || sign(dx) !== a.face || e.face !== -a.face) continue;
+      if (adx > (A.punishJabs ? 80 : 60) || sign(dx) !== a.face || e.face !== -a.face) continue;
       if (A.punishJabs && name === 'jab' && j.jabStreak.length >= 3) {
         j.jabStreak.length = 0;
         evadeAndCounter(e, ai, A.punish, 0.2, 'slip');
@@ -1850,6 +1942,7 @@
   // Blocking decision when Jin's punch would land (boxers, enforcers, champion).
   function enemyBlocks(e, ai, sp) {
     const A = ai.arch;
+    if (ai.state === 'cover') return !sp.counter;              // covered up: only a counter gets through
     if (!A.block || sp.counter || sp.flurry) return false;
     if (ai.state !== 'engage' && ai.state !== 'block') return false;
     if (ai.opening || S.time < ai.armorUntil) return false;
@@ -1880,7 +1973,10 @@
       return true;
     }
     if (enemyBlocks(e, ai, sp)) {
-      ai.state = 'block'; ai.t = 0; ai.lastBlockAt = S.time; ai.blocks++;
+      const covering = ai.state === 'cover';
+      if (S.time - ai.lastBlockAt > 1.2) ai.blocks = 0;
+      if (!covering) { ai.state = 'block'; ai.t = 0; }
+      ai.lastBlockAt = S.time; ai.blocks++;
       const bd = sp.dmg * EB.power * 0.25;
       e.hp = Math.max(1, e.hp - bd);
       e.vx = face * 70 / A.mass;
@@ -1888,8 +1984,8 @@
       snd('block');
       if (firstContact) { requestHitstop(0.02, false); if (owner) owner.hitstopDone = true; }
       emit('hit', { attacker: a, target: e, kind: 'light', dmg: bd, x: kx, y: ky, move: sp.name, blocked: true });
-      // Two blocks in a short time: he fires back quickly.
-      if (ai.blocks >= 2 && S.time - ai.lastCounterBlockAt > 1.5 && (A.attacks || []).length) {
+      // Two blocks in a short time: he fires back quickly (a covered-up man fires back on his own schedule).
+      if (!covering && ai.blocks >= 2 && S.time - ai.lastCounterBlockAt > 1.5 && ((A.attacks || []).length || A.role === 'champion')) {
         ai.lastCounterBlockAt = S.time; ai.blocks = 0;
         const plan = chooseAttack(e, ai, 20);
         if (plan) { const s = plan.seq.slice(); s[0] = Object.assign({}, s[0], { windup: Math.max(0.16, s[0].windup * 0.7) }); forceAttack(e, ai, s); }
@@ -1899,6 +1995,13 @@
     const opening = ai.opening && (ai.state === 'recovery');
     let dmg = sp.dmg * EB.power * EB.dmgMul * (EB.knuckles ? 1.15 : 1);
     if (opening) dmg *= T.enemy.openingMul;
+    // Firing back through a flurry of punches (break-out armor): he tanks them; only a counter cuts through.
+    const armored = S.time < ai.armorUntil && !sp.counter && !opening;
+    if (armored) dmg *= T.enemy.armorDmgMul;
+    // Heavy men shrug off punches thrown into their guard or their windup; they are hurt properly
+    // only when exposed: after a miss, while recovering or staggered, or by a counter (PDF §9: better timing).
+    const exposed = opening || sp.counter || ai.state === 'hurt' || ai.state === 'launched' || ai.state === 'recovery';
+    if (A.tough && !exposed && !armored) dmg *= A.tough;
     // Bare fists can't finish a collector who needs the knuckles: he stays on his feet (decision in notes).
     if (ai.needsKnuckles && !EB.knuckles) {
       const floor = ai.hpMax * ai.knuckleFloor;
@@ -1916,7 +2019,8 @@
     statMax('maxCombo', j.combo);
     reactToHit(e, ai, sp, face, opening);
     const heavy = sp.kind === 'heavy';
-    spark(kx, ky, heavy || sp.counter);
+    if (armored) { spark(kx, ky, false, '#cfd8e0'); ai.tintT = 0.06; ai.tintCol = '#c9d3dc'; }
+    else spark(kx, ky, heavy || sp.counter);
     snd(sp.sound, { vol: 1 });
     if (firstContact) {
       requestHitstop(sp.hitstop, !!(sp.flurry || sp.multi && index > 0));
@@ -2058,7 +2162,7 @@
         break;
       }
       case 'hurt': pose = ai.stunT > 0.3 ? 'stagger' : 'hurt'; break;
-      case 'block': pose = 'block'; break;
+      case 'block': case 'cover': pose = 'block'; break;
       case 'evade': pose = ai.evadeHow === 'lean' ? 'backstep' : 'slip'; o.lean = ai.evadeHow === 'lean' ? -0.3 : 0; k = clamp(ai.t / ai.evadeT, 0, 1); break;
       case 'launched': pose = 'hurt'; o.lean = -0.2; break;
       case 'knockdown': pose = ai.t < 0.3 ? 'knockdown' : 'down'; break;
@@ -2096,6 +2200,7 @@
     if (prev && !prev.done) finishFight(prev, false, { aborted: true });
     const jin = jinActor(), j = C.jin;
     const ar = def.arena && Number.isFinite(def.arena.x0) ? { x0: def.arena.x0, x1: def.arena.x1 } : arenaFromLoc();
+    ar._combat = true;
     const f = {
       id: def.id || 'fight', def, done: false, won: null, round: null, time: 0, wave: -1, waveT: 0, clearAt: null, lostAt: null,
       stats: newStats(), arena: ar, tokens: makePool(def.maxAttackers || S.tune.maxAttackers), tipsShown: {}, attempt: 1,
@@ -2105,7 +2210,8 @@
     C.state.fight = f;
     resetJinForFight();
     if (jin) { j.inCombat = true; }
-    if (def.checkpoint) {
+    // A.fight saves the checkpoint itself before calling this; only a direct call (no director) saves here.
+    if (def.checkpoint && !(S.director && typeof S.director.checkpoint === 'function')) {
       const label = def.checkpointLabel || 'Before the fight';
       emit('checkpoint', { label, fight: f.id });
       try { if (typeof S.save === 'function') S.save('auto', label); } catch (err) { S.fail(err, { source: 'fight checkpoint' }); }
@@ -2213,6 +2319,7 @@
     const prevF = C.state.fight;
     if (prevF && !prevF.done) finishFight(prevF, false, { aborted: true });
     const ring = def.ring && Number.isFinite(def.ring.x0) ? { x0: def.ring.x0, x1: def.ring.x1 } : arenaFromLoc();
+    ring._combat = true;
     const roundTime = def.roundTime || 60;
     const b = {
       id: def.id || 'bout', def, done: false, won: null, round: def.startRound || 1, rounds: def.rounds || 3,
@@ -2295,8 +2402,12 @@
   function startCorner(b) {
     setBoutPhase(b, 'corner');
     const j = C.jin;
-    // Between rounds both men recover some (Jin: 30% of max; the opponent: 12%).
-    j.hp = Math.min(j.hpMax, j.hp + j.hpMax * 0.3);
+    // Between rounds both men recover some. Jin's share is his condition recovery, so difficulty sets it
+    // (story: all of it; normal: 45% of max; veteran: 30%, never above half). The opponent gets 12%.
+    const diff = (S.settings && S.settings.difficulty) || 'normal', R = S.tune.regen;
+    if (diff === 'story') j.hp = j.hpMax;
+    else if (diff === 'veteran') j.hp = Math.max(j.hp, Math.min(j.hpMax * 0.5, j.hp + j.hpMax * R.cornerVeteran));
+    else j.hp = Math.min(j.hpMax, j.hp + j.hpMax * R.cornerNormal);
     j.breath = j.breathMax; j.exhausted = false; j.charges = j.chargeMax; j.rechargeT = 0;
     const e = b.opponent;
     if (e) e.hp = Math.min(e.enemy.hpMax, e.hp + e.enemy.hpMax * 0.12);
@@ -2304,21 +2415,35 @@
     let scene = def.corner;
     if (Array.isArray(scene)) scene = scene[b.round - 1] || null;
     else if (scene && typeof scene === 'object') scene = scene[b.round] || null;
-    b.corner = { round: b.round, scene, claimed: false, done: false, wait: def.cornerTime || 3.5, viaDirector: false };
+    b.corner = { round: b.round, scene, claimed: false, done: false, wait: def.cornerTime || 3.5, handle: null };
     let claimed = false;
     emit('boutCorner', { id: b.id, round: b.round, scene, bout: b, claim() { claimed = true; b.corner.claimed = true; return () => b.endCorner(); } });
     if (claimed) return;
+    // corner: a scene id (string, or per round: array / {round: id}) runs as a background scene beside the
+    // bout (A.bout itself never yields to another scene); a function(round, bout) may return seconds to
+    // wait or something with .done / .wait() to wait on.
     if (typeof scene === 'function') {
-      try { const r = scene(b.round, b); if (typeof r === 'number') b.corner.wait = r; } catch (err) { S.fail(err, { source: 'bout corner' }); }
-    } else if (typeof scene === 'string' && S.director && typeof S.director.run === 'function' && !S.director.busy) {
-      try { S.director.run(scene, { label: 'corner' }); b.corner.viaDirector = true; } catch (err) { S.fail(err, { source: 'bout corner run' }); }
+      try {
+        const r = scene(b.round, b);
+        if (typeof r === 'number') b.corner.wait = r;
+        else if (r && (typeof r.wait === 'function' || 'done' in r)) b.corner.handle = r;
+      } catch (err) { S.fail(err, { source: 'bout corner' }); }
+    } else if (typeof scene === 'string' && S.director && typeof S.director.run === 'function') {
+      try { b.corner.handle = S.director.run(scene, { label: 'corner ' + b.round, background: true }) || null; }
+      catch (err) { S.fail(err, { source: 'bout corner run' }); }
     }
   }
   function updateCorner(b) {
     const c = b.corner;
     if (!c) { nextRound(b); return; }
     if (c.claimed) return;                       // whoever claimed it calls b.endCorner()
-    if (c.viaDirector) { if (b.phaseT > 0.3 && !(S.director && S.director.busy)) nextRound(b); return; }
+    const h = c.handle;
+    if (h) {
+      let done = false;
+      try { done = 'done' in h ? !!h.done : !!h.wait(S.DT); } catch (_) { done = true; }
+      if (done && b.phaseT > 0.3) nextRound(b);
+      return;
+    }
     if (b.phaseT >= c.wait) nextRound(b);
   }
   function nextRound(b) {
@@ -2474,11 +2599,13 @@
       refreshEnemies();
       recomputeAllowed();
       EB = effBody();
-      jinTimers(dt);
-      if (C.state.fight) updateFight(C.state.fight, dt);
-      if (C.state.bout) updateBout(C.state.bout, dt);
+      // Slow motion (director fx 'slowmo') slows recharge, breath, round clocks and effects with the actors.
+      const sdt = dt * clamp(Number.isFinite(S.timeScale) ? S.timeScale : 1, 0, 4);
+      jinTimers(sdt);
+      if (C.state.fight) updateFight(C.state.fight, sdt);
+      if (C.state.bout) updateBout(C.state.bout, sdt);
       EB = effBody();
-      ageFx(dt);
+      ageFx(sdt);
     } catch (err) { S.fail(err, { source: 'combat.update' }); }
   };
   function jinTimers(dt) {
@@ -2507,6 +2634,7 @@
     const since = S.time - j.lastDamageAt;
     let ok, cap = j.hpMax;
     if (diff === 'story') ok = since >= T.regen.storyDelay;
+    else if (C.state.bout) ok = false;                 // in the ring a man recovers in his corner, not mid-round
     else {
       ok = since >= T.regen.normalDelay && !anyEnemyAttacking();
       if (diff === 'veteran') cap = j.hpMax * 0.5;
@@ -2607,10 +2735,12 @@
   };
   // Carry state: slower, no punch/dash/jump/slip; a pressed verb says why.
   C.carry = function (kind, reason) {
-    const j = C.jin;
-    j.carry = kind || null;
+    const j = C.jin, a = jinActor();
+    kind = kind || null;
+    j.carry = kind;
     j.carryReason = kind ? (reason || null) : null;
-    if (kind) { j.atk = null; j.dash = null; j.fl = null; if (j.state === 'attack' || j.state === 'dash' || j.state === 'flurry' || j.state === 'slip' || j.state === 'guard') setJ(j, 'idle'); }
+    if (a) a.carry = kind; else j.carryPending = kind;
+    if (kind) dropHands(j);
     recomputeAllowed();
     return !!j.carry;
   };
@@ -2644,8 +2774,16 @@
      RENDERING (world space; the world applies the camera transform)
      ════════════════════════════════════════════════════════════════════ */
   const artOk = (fn) => S.art && typeof S.art[fn] === 'function';
+  // Each layer draws once per rendered frame even if both the world hook and a direct call reach it.
+  const drawn = { under: null, over: null };
+  function firstDrawThisFrame(layer) {
+    const tok = (S.realTime || 0) + ':' + S.time;
+    if (drawn[layer] === tok) return false;
+    drawn[layer] = tok;
+    return true;
+  }
   C.drawUnder = function (ctx) {
-    if (S.headless || !ctx) return;
+    if (S.headless || !ctx || !firstDrawThisFrame('under')) return;
     try {
       for (const f of FX) {
         const k = f.age / f.life;
@@ -2661,7 +2799,7 @@
     } catch (err) { S.fail(err, { source: 'combat.drawUnder' }); }
   };
   C.drawOver = function (ctx) {
-    if (S.headless || !ctx) return;
+    if (S.headless || !ctx || !firstDrawThisFrame('over')) return;
     try {
       for (const f of FX) {
         const k = f.age / f.life;
@@ -2688,6 +2826,11 @@
     } catch (err) { S.fail(err, { source: 'combat.drawOver' }); }
   };
   C.render = function (ctx, layer) { if (layer === 'under') C.drawUnder(ctx); else C.drawOver(ctx); };
+  // world.js draw hooks (world transform): 'back' runs before the actors, 'effects' after them.
+  if (!S.headless && S.world && typeof S.world.addDraw === 'function') {
+    try { S.world.addDraw('back', (ctx) => C.drawUnder(ctx)); S.world.addDraw('effects', (ctx) => C.drawOver(ctx)); }
+    catch (err) { S.fail(err, { source: 'combat draw hooks' }); }
+  }
 
   // Telegraph: a tiny exclamation at the head (amber = slippable, red = grab/push: dash or jump instead).
   function drawEnemyMarks(ctx, e) {

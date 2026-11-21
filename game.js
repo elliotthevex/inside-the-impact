@@ -2964,10 +2964,124 @@ window.__openRealArena=(function(){
         { id: "duel", label: "1v1 Arena", live: true,
           sub: "Three dimensions, two fighters. Circle him, cut the ring off, and watch the angles.",
           art: 2 },
-        { id: "story", label: "Story Mode", live: false,
-          sub: "Ten seconds of tape. Continue, stop, or call the doctor.",
+        { id: "story", label: "Story Mode", live: true,
+          sub: "Calder, 1994. One fight cost Jin two years and his name. Walk his streets and find out who took them.",
           art: 3 },
       ];
+
+      /* ── STORY MODE LOADER ───────────────────────────────────────
+         Story Mode lives in story/ and loads on the first click: the
+         manifest, its stylesheet, then its scripts one by one in order.
+         Paths stay relative, so it works on the site, under a sub-path
+         and from file://. The loading line and the failure panel are a
+         #story-root placeholder, so hotkeysBlocked() covers them too;
+         STORY.open() swaps in its own root and STORY.close() hands back
+         to the lobby. A chapter file that is missing is skipped. */
+      window.__openStory = (function () {
+        let ready = false, box = null;
+        const done = new Set();          /* scripts already run: a retry never runs one twice */
+        function loadScript(src) {
+          return new Promise((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src = src; s.async = false;
+            s.onload = () => resolve();
+            s.onerror = () => { s.remove(); reject(new Error("Could not load " + src)); };
+            document.body.appendChild(s);
+          });
+        }
+        function clear() { if (box) { box.remove(); box = null; } }
+        function shell() {
+          clear();
+          box = document.createElement("div");
+          box.id = "story-root";
+          box.className = "story-loading";
+          box.tabIndex = -1;
+          Object.assign(box.style, { position: "fixed", inset: "0", zIndex: "1000", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", gap: "10px", padding: "0 8%", textAlign: "center",
+            background: "#000", color: "#efe6d2", fontFamily: '"Iowan Old Style", Georgia, serif' });
+          box.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); back(); } });
+          document.body.appendChild(box);
+          return box;
+        }
+        const kicker = '<div style="font:700 11px/1.2 \'Courier New\',monospace;letter-spacing:.22em;text-transform:uppercase;color:#e8c272">Inside the Impact</div>';
+        function showLine(text) {
+          if (!box) shell();
+          box.setAttribute("role", "status");
+          box.innerHTML = kicker + '<div style="font-size:24px;font-weight:600">Story Mode</div><div class="sl-line" style="font:13px/1.4 \'Courier New\',monospace;color:#9aa3b2"></div>';
+          box.querySelector(".sl-line").textContent = text;
+          box.focus({ preventScroll: true });
+        }
+        function setLine(text) { const l = box && box.querySelector(".sl-line"); if (l) l.textContent = text; }
+        function showFail(err) {
+          if (!box) shell();
+          box.setAttribute("role", "alertdialog");
+          box.innerHTML = kicker + '<div style="font-size:24px;font-weight:600">Story Mode could not start</div>' +
+            '<div class="sl-why" style="max-width:520px;font-size:16px;line-height:1.45;color:#cfd6e2"></div>' +
+            '<div class="sl-err" style="font:12px/1.4 \'Courier New\',monospace;color:#f0b0a4"></div><div class="sl-row" style="display:flex;gap:10px;margin-top:8px"></div>';
+          box.querySelector(".sl-why").textContent = "Part of it did not arrive. Check your connection and try again.";
+          box.querySelector(".sl-err").textContent = err && err.message ? err.message : String(err || "");
+          const row = box.querySelector(".sl-row");
+          const add = (label, gold, fn) => {
+            const b = document.createElement("button");
+            b.type = "button"; b.textContent = label;
+            Object.assign(b.style, { font: "600 13px/1 'Courier New',monospace", letterSpacing: ".08em", textTransform: "uppercase", padding: "10px 16px",
+              cursor: "pointer", color: gold ? "#171107" : "#e8c272", background: gold ? "#e8c272" : "rgba(232,194,114,.08)", border: "1px solid rgba(232,194,114,.6)" });
+            b.addEventListener("click", fn);
+            row.appendChild(b);
+            return b;
+          };
+          add("Try again", true, () => start()).focus({ preventScroll: true });
+          add("Back", false, back);
+        }
+        function back() { clear(); }
+        function loadAll() {
+          const first = window.STORY_FILES ? Promise.resolve() : loadScript("story/manifest.js");
+          return first.then(() => {
+            const files = window.STORY_FILES || [], optional = window.STORY_OPTIONAL || [];
+            if (!files.length) throw new Error("story/manifest.js lists no files");
+            if (!document.getElementById("story-css")) {
+              const l = document.createElement("link");
+              l.id = "story-css"; l.rel = "stylesheet"; l.href = window.STORY_CSS || "story/story.css";
+              document.head.appendChild(l);
+              /* style.css hides and frames every bare canvas (canvas{display:none;border:4px…});
+                 Story Mode's display canvas has to escape that rule here, on the lobby side */
+              const fix = document.createElement("style");
+              fix.id = "story-lobby-fix";
+              fix.textContent = "#story-root #story-canvas{display:block;border:0;border-radius:0;max-width:none;max-height:none;margin:0;box-shadow:none}";
+              document.head.appendChild(fix);
+            }
+            let i = 0;
+            const next = () => {
+              if (i >= files.length) return Promise.resolve();
+              const f = files[i++];
+              if (done.has(f)) return next();
+              setLine("Loading " + i + " / " + files.length);
+              return loadScript(f).then(() => { done.add(f); return next(); },
+                (e) => { if (optional.indexOf(f) >= 0) { done.add(f); return next(); } throw e; });
+            };
+            return next();
+          });
+        }
+        function onExit() {
+          clear();
+          const a = document.activeElement;
+          if (a && a !== document.body && a.blur) a.blur();
+        }
+        function launch() {
+          const S = window.STORY;
+          if (!S || typeof S.open !== "function") throw new Error("Story Mode did not start (STORY.open is missing).");
+          clear();
+          S.open({ onExit });
+        }
+        function start() {
+          if (window.STORY && window.STORY.isOpen) return;
+          if (ready) { try { launch(); } catch (e) { console.warn("[story] could not open:", e); showFail(e); } return; }
+          showLine("Loading…");
+          loadAll().then(() => { ready = true; launch(); }).catch((e) => { console.warn("[story] could not load:", e); showFail(e); });
+        }
+        /* while the loading line or the failure panel is up, its own buttons decide */
+        return function openStory() { if (!box) start(); };
+      })();
 
       /* small pixel scenes for the cards, same palette as the lobby */
       function drawModeArt(ctx, W, H, kind) {
@@ -3121,6 +3235,7 @@ window.__openRealArena=(function(){
               closeModeSelect();
               return m.id === "street" ? openStreetFight()
                    : m.id === "duel" ? window.__openRealArena(openArena3D)
+                   : m.id === "story" ? window.__openStory()
                    : openMissionSetup();
             }
             maintenance(btn.dataset.mode, m && m.label);
@@ -3892,7 +4007,7 @@ window.__openRealArena=(function(){
       }
       function hotkeysBlocked() {
         if (document.querySelector(".st-key.binding")) return true;
-        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3,.arena-x,.arena-wait,.arena-fail")) return true;
+        if (document.querySelector("#boot,#gymload,.settings,.msetup,.modesel,.market,.gearup,.sfight,.arena3,.arena-x,.arena-wait,.arena-fail,#story-root")) return true;
         return !!document.querySelector("dialog[open]");
       }
       window.addEventListener("keydown", (e) => {
