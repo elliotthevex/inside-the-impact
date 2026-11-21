@@ -55,6 +55,16 @@
 /* Zero-specificity resets so every component rule below wins over them. */
 #story-root :where(.su-ui *) { box-sizing: border-box; }
 #story-root :where(.su-ui button) { font: inherit; color: inherit; }
+/* The lobby's style.css styles bare h1/h2/b globally (boxed, uppercase Arial Black, ◆ pseudo-elements, offset
+   shadows). Those rules beat zero-specificity resets, so they are neutralised here at #story-root + tag;
+   every component rule below (#story-root .class tag) still wins over this block. */
+#story-root h1, #story-root h2, #story-root h3, #story-root h4 {
+  display: block; position: static; margin: 0; padding: 0; border: 0; background: none; box-shadow: none;
+  text-shadow: none; text-transform: none; text-align: inherit; letter-spacing: normal;
+  font-family: inherit; font-size: inherit; font-weight: 600; line-height: inherit; color: inherit;
+}
+#story-root h1::before, #story-root h1::after { content: none; display: none; }
+#story-root b { font-family: inherit; font-weight: 700; letter-spacing: inherit; text-transform: none; }
 #story-root .su-labels {
   position: absolute;
   inset: 0;
@@ -526,6 +536,9 @@
 #story-root .su-choice.dis { opacity: 0.5; cursor: not-allowed; }
 #story-root .su-choice .why { display: block; font: italic var(--fs-s) / 1.3 var(--su-serif); color: var(--su-red-soft); }
 #story-root .su-choice-help { margin-top: calc(var(--k) * 2px); text-align: right; }
+/* Three or more short answers: two columns, filled top to bottom (ui.js sets grid-template-rows). */
+#story-root .su-choices.two { display: grid; grid-auto-flow: column; grid-template-columns: 1fr 1fr; column-gap: calc(var(--k) * 2px); row-gap: calc(var(--k) * 1.5px); }
+#story-root .su-say.asks .su-say-text { min-height: 1.48em; }
 
 /* ── Title card (A.card) ──────────────────────────────────────────── */
 #story-root .su-card {
@@ -739,7 +752,9 @@
   font: var(--fs-xs) / 1.3 var(--su-mono);
   color: var(--su-mute);
 }
-#story-root .su-win-foot .su-why { flex: 1; }
+/* The reason line keeps a readable width; in narrow windows (pause menu) the key hints wrap under it. */
+#story-root .su-win-foot { flex-wrap: wrap; row-gap: 0.35em; }
+#story-root .su-win-foot .su-why { flex: 1 1 15em; }
 #story-root .su-keys { white-space: nowrap; }
 #story-root .su-menu { display: flex; flex-direction: column; gap: calc(var(--k) * 2px); }
 #story-root .su-menu .su-btn { justify-content: flex-start; width: 100%; padding: 0.65em 0.9em; font-size: var(--fs-s); }

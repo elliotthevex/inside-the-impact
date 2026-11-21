@@ -325,11 +325,24 @@
     const ar = () => { ars = (Math.imul(ars, 1664525) + 1013904223) >>> 0; return ars / 4294967296; };
     const live = () => !S.headless && !!ac && !A.muted;
 
+    // Test pages stay silent: the local test server (port 8795), ?mute=1, window.STORY_MUTE or the
+    // stored flag 'iti.story.mute' = '1' all mute Story Mode. ?sound=1 turns sound back on for a listen.
+    // The user asked for no sound while agents test (2026-11-22).
+    const startMuted = (function () {
+      try {
+        if (typeof window === 'undefined' || !window.location) return false;
+        const q = window.location.search || '';
+        if (/[?&]sound=1\b/.test(q)) return false;
+        if (window.STORY_MUTE || /[?&]mute=1\b/.test(q) || window.location.port === '8795') return true;
+        return !!(window.localStorage && window.localStorage.getItem('iti.story.mute') === '1');
+      } catch (_) { return false; }
+    })();
+
     const A = {
-      muted: false,
+      muted: startMuted,
       get ctx() { return ac; },
       init() {
-        if (S.headless || ac) return !!ac;
+        if (S.headless || ac || A.muted) return !!ac;
         const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
         if (!AC) return false;
         try { ac = new AC(); } catch (_) { ac = null; return false; }

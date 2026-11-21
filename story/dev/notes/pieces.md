@@ -44,3 +44,50 @@ Loads `core.js`, `art.js` (optional; stand-in figures when missing) and `pieces.
 - Rain lands on the single `L.ground` line (no per-platform splashes); reflections use `S.world.groundAt` when the light's location is the current one, else `L.ground`.
 - Backdrop bands ignore zoom except for a slight scale on the nearer bands.
 - Many run-1 pieces were reviewed only in the gallery at 1x; heights of a few interior props may still be compressed relative to the 46 px figure (e.g. lockers, shelves).
+
+## Fix pass (visual review, 2026-11-22, fixer art+pieces)
+- PAL now comes from S.pal (contract §3) wherever S.pal has a counterpart: brick, brick_red, metal, wood, amber
+  ramps (S.pal.brick0..4 etc.), ink (black), night (sky0), shadow (charcoal0), plum (plum1), plum2, charcoal,
+  neonRed (neon), rust (built from rust/rust2). `PAL.lamp` = S.pal.glow (the colour a lamp casts) and the new
+  `PAL.bulb` = S.pal.lamp (the filament pixels); `lampWarm` = amber3; new `PAL.tungsten` (glow mixed .22 toward
+  paper, '#fad395') for arena rigs. Local literals remain only as the fallback without art.js. No S.pal
+  counterpart, kept local: iron, steel, stone, siding, concrete, plaster, glass, poster paper, cloth, green,
+  asphalt, walk (world.js reads walk/asphalt/concrete through S.pieces.pal, unchanged).
+- Storefronts: `shop.interior: 'store'|'diner'|'laundry'|'bar'|'liquor'|'gym'|'pawn'`, else read from the sign
+  (`S.pieces.util.shopInterior(sh)`). Laundromat: two rows of machines with round dark ports, clock, soap box.
+  Diner: menu board, counter with urns and a pie case, stools, booths along the glass, a cook and customers in
+  silhouette. Bar: mirror and bottle shelves, the bar with panels and a brass rail, stools, a small BEER neon
+  instead of the OPEN card. Liquor: full bottle shelves and a till counter by the door. Gym: mirror wall, heavy
+  bags on chains, a bench and bar. Pawn: guitars, TV stack, glass case, bars over the glass. Store: shelves with
+  muted stock and a counter (clerk now and then). Booths/cases/racks go to the end away from the door.
+- Lit glass starts at amber[3] and falls to amber[1] (bars dimmer, laundromat and gym toward fluorescent), a
+  darker lower third, ceiling tube pixels, a mullion on glass wider than 60 px, one OPEN card (or CLOSED) per
+  storefront. Lit glass doors use the same falloff. The shop light: k .6 (bar .42, pawn .5, liquor .55), colour
+  per interior, `glow: .6`, and the new light field `core: false` (no hot lens core; glow() honours it).
+- Fire escapes over a shop are drawn before the storefront, so the sign and awning cover the lowest landing,
+  and the drop ladder stops 6 px above the sign; with no room (the usual case) it is drawn stowed, raised
+  through the landing (`fireEscape(..., drop < 0)`). Plain buildings keep the 18 px hanging ladder, drawn after
+  the ground floor as before.
+- Wet reflections: new `S.light.reflections(ctx, L, cam, lights, time, opts)` (screen space, like composite)
+  draws them now and makes the next composite for that L skip its own pass. Under world.js no call is needed:
+  the first composite for the current place registers a 'back' hook through the public `S.world.addDraw`, which
+  draws them in WORLD coordinates under the hook's layer transform (right after the back layer, before glints,
+  shadows, actors, front and fore), from the reflective lights of the previous composite (one frame lag for a
+  moving light). Alpha is boosted by 1/(1 - .5·dark) because the darkness pass now covers them. The gallery
+  (no world.js) still draws them inside composite, so its parked car still shows streaks there.
+  Verified in play.html?ch=99 sb_street (front-layer sedan) at zoom 1 and 1.6: car body clean, reflections
+  aligned under the streetlight and the laundromat.
+- Scale: hydrant 21 px, mailbox 32 px (pull-down chute, pickup plate), forklift guard 56 / mast 58 / body 31
+  (wheels 10–12 px, hazard hatching, beacon), container default 158 x 68 (`len`, new `h`; 36 px door section,
+  data plate). bus_stop plate sized from the text and centred on the pole.
+- newspapers: folded tabloid (headline bar, photo, columns, fold) plus `n` loose sheets (default 2) with column
+  lines, the first curling up (`lift: false` flattens it). graffiti: `throwUp()` (exported in util) bubble
+  letters (rounded blocks, outline over a drop shadow, muted fill, shine, O/S/A/E counters, drips) with the thin
+  tag beside or under it; `letters` sets the count.
+- Arena: stage_lights and spotlight default to PAL.tungsten with PAL.bulb lenses; in smoke their shaft drops to
+  .35 (stage) and .6 (spot); `p.shaft` overrides.
+- util additions: throwUp, shopWindow, shopInterior.
+- Follow-ups not done here (file not mine to edit): dev/pieces.html gallery cells for container (150x80) and
+  forklift (90x70) now clip the larger props; its Kessler scene could call S.light.reflections after its back
+  layer to show the occlusion. Piece lights are cached per layer list, so changing L.weather at runtime in the
+  gallery does not update the smoke shaft until the lights are gathered again.

@@ -752,6 +752,15 @@
     stepN(n);
     return T.state();
   };
+  // frames(seconds, fps = 60): run whole frames (sim steps + render + ui.update + clearFrame) without
+  // requestAnimationFrame. For browser checks in a hidden/background tab, where rAF is throttled to ~1 Hz;
+  // headless it is the same as step() (render and ui are no-ops there).
+  T.frames = function (seconds, fps) {
+    const dt = 1 / (+fps || 60);
+    const n = Math.max(1, Math.round((seconds === undefined ? dt : +seconds) / dt));
+    for (let i = 0; i < n && S.isOpen; i++) tick(dt);
+    return T.state();
+  };
   T.press = function (a) { if (S.input) S.input.virtualDown(a, true); return T; };
   T.release = function (a) { if (S.input) S.input.virtualDown(a, false); return T; };
   // tap(action, seconds = one step): press, step, release, step.

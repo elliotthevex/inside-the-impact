@@ -1144,7 +1144,12 @@
       }
       const j = S.world && S.world.jin;
       if (j) startPos = { x: j.x, y: j.y, face: j.face };
-      if (def.checkpoint) D.checkpoint((kind === 'fight' ? 'Fight' : 'Bout') + (def.id ? ': ' + def.id : ''), { async: true, quiet: true });
+      // The label is shown to the player (pause menu, quit dialog), so it names the place, never the encounter id.
+      if (def.checkpoint) {
+        const where = S.world && S.world.loc && S.world.loc.name;
+        const cpLabel = def.label || ((kind === 'fight' ? 'Before the fight' : 'Before the bout') + (where ? ' — ' + where : ''));
+        D.checkpoint(cpLabel, { async: true, quiet: true });
+      }
       try { begin(); } catch (err) { S.fail(err, { source: 'A.' + kind }); w.result = { won: true, error: true }; w.skip = true; }
     };
     w.wait = (dt) => {

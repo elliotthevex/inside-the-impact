@@ -24,6 +24,8 @@
     accelTime: 0.10, decelTime: 0.07, turnBoost: 1.6, airControl: 0.7, airDrag: 0.25,
     gravity: 27, fallGravityMul: 1.25, jumpVel: 8.6, jumpCut: 0.5, maxFall: 13, jumpCarryMax: 4.6,
     coyote: 0.08, landRecover: 0.06, climbSpeed: 2.2,
+    // Braking from full speed and reversing at full speed hold their own poses this long (art 'brake' / 'turn').
+    brakeTime: 0.16, turnTime: 0.08,
     // Dashes. Distances in H, times in s.
     dashDist: 1.8, dashTime: 0.16, backdashDist: 1.1, backdashTime: 0.14, dashProtect: 0.07,
     dashCharges: 2, dashRecharge: 0.6, airDashes: 1, dashStraightFrom: 0.07, dashChainFrom: 0.11,
@@ -31,14 +33,16 @@
     slipTime: 0.20, slipWindow: [0.02, 0.08], slipCooldown: 0.40, counterWindow: 0.30, slipBadMul: 1.15,
     inputBuffer: 0.10, comboGrace: 0.22, heavyCancelFrac: 0.4, returnCrossWindow: 0.16,
     hurtTime: 0.30, downTime: 0.75, getupTime: 0.45, wakeInvuln: 0.4, blockStun: 0.12, blockPush: 70,
-    // Punches. reach in px from Jin's centre; knock in px/s; hitstop in s.
+    // Punches. reach in px from Jin's centre to the target's near edge, matched to the fist art.js draws
+    // (hook fist and trail peak ~14/17.5 px, uppercut fist ~10.5 px; PDF §4 close range); knock in px/s; hitstop in s.
     jab: { startup: 0.05, active: 0.05, recovery: 0.12, comboFrom: 0.07, dmg: 6, reach: 22, stun: 0.18, hitstop: 0.025, knock: 60, step: 34 },
     cross: { startup: 0.08, active: 0.05, recovery: 0.16, comboFrom: 0.10, dmg: 9, reach: 26, stun: 0.24, hitstop: 0.03, knock: 95, step: 46 },
-    hook: { startup: 0.11, active: 0.06, recovery: 0.20, dmg: 11, reach: 24, arc: true, multi: true, arcReach: 34, stun: 0.30, hitstop: 0.05, knock: 115, step: 20 },
-    uppercut: { startup: 0.10, active: 0.06, recovery: 0.24, dmg: 10, reach: 20, launch: 260, hitstop: 0.05, stun: 0.36, knock: 30, step: 18 },
+    hook: { startup: 0.11, active: 0.06, recovery: 0.20, dmg: 11, reach: 18, arc: true, multi: true, arcReach: 30, stun: 0.30, hitstop: 0.05, knock: 115, step: 20 },
+    uppercut: { startup: 0.10, active: 0.06, recovery: 0.24, dmg: 10, reach: 16, launch: 260, hitstop: 0.05, stun: 0.36, knock: 30, step: 18 },
     dashStraight: { startup: 0.04, active: 0.07, recovery: 0.22, dmg: 12, reach: 30, knockback: 180, hitstop: 0.055, stun: 0.32 },
     counter: { startup: 0.03, active: 0.05, recovery: 0.16, dmg: 16, reach: 26, hitstop: 0.065, stun: 0.42, knock: 150, step: 110 },
-    flurry: { time: 0.5, hits: 6, dmg: 3, finisherDmg: 8, reach: 22, startup: 0.05, recovery: 0.16, cooldown: 0.5,
+    // Flurry hits land on the frames art.js draws them (see FLURRY_ART): hit i at (i + 0.45) * time/hits, finisher at time + 0.06.
+    flurry: { time: 0.5, hits: 6, dmg: 3, finisherDmg: 8, reach: 22, recovery: 0.16, cooldown: 0.5,
       stun: 0.16, knock: 26, finisherStun: 0.4, finisherKnock: 160, hitstop: 0.02, finisherHitstop: 0.05 },
     returnCross: { dist: 1.0 },          // H covered stepping back in, so the cross reaches what the backdash left
     guardReduce: 0.75, guardSpeedMul: 0.45,
@@ -83,13 +87,14 @@
       breath: S.tune.breath.max, breathMax: S.tune.breath.max, breathSpentAt: -99, exhausted: false,
       charges: S.tune.dashCharges, chargeMax: S.tune.dashCharges, rechargeT: 0, chargeK: 0,
       airDashUsed: false, airHangUsed: false, coyoteT: 0, jumpHeld: false, landT: 0,
-      atk: null, chain: 0, chainUntil: -99, fl: null, flurryCdUntil: -99,
-      dash: null, returnCrossUntil: -99, invulnUntil: -99,
-      slipCdUntil: -99, slipAt: -99, slipEvaded: false, counterT: 0, counterTarget: null,
+      // chainT / returnCrossT / counterT count down in Jin's own time, so a hit-stop freeze never shortens them.
+      atk: null, chain: 0, chainT: 0, fl: null, flurryCdUntil: -99,
+      dash: null, returnCrossT: 0, invulnUntil: -99,
+      slipCdUntil: -99, slipAt: -99, slipEvaded: false, evadeAt: -99, counterT: 0, counterTarget: null,
       buffer: null, walkMode: false, carry: null, carryReason: null,
       inCombat: false, combatT: 9, autoTurnT: 0,
       hurtT: 0, grab: null, ladder: null, auto: null, locked: false, scriptedDown: false,
-      combo: 0, comboAt: -99, jabStreak: [], lastAttackName: null, blockFlash: 0,
+      combo: 0, comboAt: -99, readStreak: { n: 0, at: -99 }, lastAttackName: null, blockFlash: 0,
       afterT: 0, afterN: 0, stepT: 0, squashT: 0, squash: 0, wasGround: true, fallV: 0,
       getupTaps: 0,
     };
@@ -383,14 +388,43 @@
   }
   const dirOf = (inp) => (inp.down.right ? 1 : 0) - (inp.down.left ? 1 : 0);
   // One slot: the newest press replaces whatever was waiting (PDF §5: store only the next intended action).
+  // `age` counts Jin's own time (updateJin adds dt), so a press made during hit-stop keeps its whole window.
   const BUF_ORDER = ['slip', 'dash', 'jump', 'punch', 'flurry'];
   function capturePresses(j, inp) {
     for (const k of BUF_ORDER) {
       if (!inp.pressed[k]) continue;
       if (!verbOpen(k)) { onBlockedVerb(k); continue; }
-      j.buffer = { a: k, t: S.time, dir: dirOf(inp), down: !!inp.down.down, up: !!inp.down.up };
+      j.buffer = { a: k, t: S.time, age: 0, dir: dirOf(inp), down: !!inp.down.down, up: !!inp.down.up };
       return;
     }
+  }
+  function bufferExpired(b) { return !b || b.age > S.tune.inputBuffer + 1e-9; }
+  // States that ignore the walk/run toggle (their presses are still buffered for when they end).
+  const BUSY = { hurt: 1, down: 1, getup: 1, grabbed: 1, thrown: 1, block: 1 };
+  // Read Jin's input for this step and keep any press in the buffer (updateJin, and every frozen hit-stop step).
+  // At most once per sim step: the press edges and the sabotage delay queue must not see a step twice. Keyed
+  // on main's step counter and S.time together (S.time stands still on the step a pause ends; a harness that
+  // drives the world without main.step leaves the counter still).
+  let sampleAt = null, sample = null;
+  const stepKey = () => (S.main && Number.isFinite(S.main.steps) ? S.main.steps : '') + ':' + S.time;
+  function sampleJin(j, a) {
+    const key = stepKey();
+    if (sample && sampleAt === key) return sample;
+    const ctl = controlEnabled(j, a);
+    const inp = readInput(ctl, j, a);
+    if (ctl) {
+      if (inp.pressed.run && !BUSY[j.state]) { if (C.allowed.run) toggleWalk(j); else onBlockedVerb('run'); }
+      capturePresses(j, inp);                 // also in busy states: a press just before recovery ends still counts
+    }
+    sampleAt = key; sample = { ctl, inp };
+    return sample;
+  }
+  // Hit-stop freezes the actors, not the player's hands: a press that lands on a frozen step is buffered
+  // (PDF §5) and fires once the freeze ends.
+  function sampleFrozen() {
+    const a = jinActor(), j = C.jin;
+    if (!a || S.paused || a.scripted || j.state === 'scripted') return;
+    sampleJin(j, a);
   }
 
   /* ── Effects (visual only; nothing is recorded when headless) ───────── */
@@ -398,6 +432,13 @@
   function fx(o) { if (S.headless) return; o.age = 0; FX.push(o); if (FX.length > 120) FX.splice(0, FX.length - 120); }
   function dust(x, y, dir, n) { fx({ k: 'dust', x, y, dir: dir || 0, life: 0.32, n: n || 1 }); }
   function spark(x, y, heavy, color) { fx({ k: 'spark', x, y, life: heavy ? 0.2 : 0.13, heavy: !!heavy, color: color || (heavy ? '#ffe2a0' : '#fff2d6') }); }
+  // Full-figure hit flash, following the reduced-flash setting (PDF §8; settings.flash 0..1). From half strength
+  // down the white becomes a soft gray-blue; at 0 there is no figure flash (spark, recoil and sound still mark
+  // the hit). Telegraph tints are not hit flashes and stay: they are how a player reads the next strike.
+  function hitTint() {
+    const f = S.settings && S.settings.flash != null && Number.isFinite(+S.settings.flash) ? clamp(+S.settings.flash, 0, 1) : 1;
+    return f >= 0.5 ? '#ffffff' : f > 0 ? '#c9d3dc' : null;
+  }
   function smear(a, kind) { fx({ k: 'smear', x: a.x, y: a.y, face: a.face, kind, life: 0.09, follow: a }); }
   function afterimage(a) { fx({ k: 'after', x: a.x, y: a.y, face: a.face, pose: a.pose, t: a.poseT || 0, look: a.look, life: 0.16 }); }
 
@@ -504,7 +545,7 @@
   function tryBuffered(j, a, inp) {
     const b = j.buffer;
     if (!b) return false;
-    if (S.time - b.t > S.tune.inputBuffer + 1e-9) { j.buffer = null; return false; }
+    if (bufferExpired(b)) { j.buffer = null; return false; }
     let ok = false;
     switch (b.a) {
       case 'jump': ok = tryJump(j, a, b, inp); break;
@@ -517,7 +558,7 @@
     return ok;
   }
 
-  const FREE = { idle: 1, move: 1, brake: 1, land: 1, air: 1, guard: 1 };
+  const FREE = { idle: 1, move: 1, brake: 1, turn: 1, land: 1, air: 1, guard: 1 };
 
   /* Jump: variable height, coyote time, momentum carried within a limit. Down+jump on a one-way platform drops through. */
   function tryJump(j, a, b) {
@@ -552,7 +593,8 @@
     if (j.state === 'dash') { if (!j.dash || j.dash.t < T.dashChainFrom) return false; }
     else if (!(FREE[j.state] || j.state === 'attack')) return false;
     if (j.state === 'flurry') return false;
-    const grounded = a.onGround || j.coyoteT > 0;
+    // Coyote time is for jumping only: a dash after walking off a ledge is the one air dash (PDF §2).
+    const grounded = !!a.onGround;
     if (!grounded) {
       if (!C.allowed.airdash) { onBlockedVerb('airdash'); return false; }
       if (j.airDashUsed) return false;
@@ -571,6 +613,7 @@
     if (!grounded) j.airDashUsed = true;
     spendBreath(T.breath.dashCost);
     j.dash = { dir, back, air: !grounded, t: 0, T: time, D: dist };
+    breakRead();
     j.afterT = 0; j.afterN = 0;
     if (!grounded) a.vy = 0;
     setJ(j, 'dash');
@@ -591,6 +634,7 @@
     j.slipCdUntil = S.time + T.slipCooldown;
     j.slipAt = S.time;
     j.slipEvaded = false;
+    breakRead();
     a.vx *= 0.2;
     setJ(j, 'slip');
     snd('slip', { vol: 0.8 });
@@ -605,9 +649,10 @@
     if (!(FREE[j.state] || j.state === 'attack')) return false;
     j.atk = null;
     const F = T.flurry;
-    j.fl = { t: 0, i: 0, fin: false, startup: F.startup, interval: (F.time - F.startup - 0.06) / Math.max(1, F.hits), finAt: F.time,
+    j.fl = { t: 0, i: 0, fin: false, per: F.time / Math.max(1, F.hits), finAt: F.time + FLURRY_ART.finPeak,
       recovery: F.recovery * (j.exhausted ? T.breath.exhaustedRecoveryMul : 1), hitStopped: false, connected: false, hit: new Set() };
     spendBreath(T.breath.punchCost * T.breath.flurryCostMul);
+    breakRead();
     setJ(j, 'flurry');
     a.vx *= 0.3;
     statAdd('punches');
@@ -618,14 +663,15 @@
   // Which punch a press produces right now.
   function choosePunch(j, a, b) {
     const al = C.allowed, grounded = a.onGround;
-    if (j.counterT > 0 && al.counter && grounded) return 'counter';
+    // PDF §3: the counter answers the evade. A press made before the slip actually avoided anything is not one.
+    if (j.counterT > 0 && al.counter && grounded && b.t > j.evadeAt) return 'counter';
     if (j.state === 'dash' && j.dash) {
       if (j.dash.back) return al.cross ? 'returnCross' : (al.jab ? 'jab' : null);
       if (!j.dash.air && al.dashStraight) return 'dashStraight';
     }
-    if (S.time < j.returnCrossUntil && grounded && al.cross) return 'returnCross';
+    if (j.returnCrossT > 0 && grounded && al.cross) return 'returnCross';
     if (b.down && grounded && al.uppercut) return 'uppercut';
-    const inChain = j.state === 'attack' || S.time <= j.chainUntil;
+    const inChain = j.state === 'attack' || j.chainT > 0;
     const step = inChain ? j.chain : 0;
     if (step === 1 && al.cross) return 'cross';
     if (step === 2 && al.hook) return 'hook';
@@ -649,13 +695,14 @@
     else if (!FREE[j.state]) return false;
     const name = choosePunch(j, a, b);
     if (!name) return false;
-    // Turning: a held direction turns Jin when the threat is that way (or nothing is in front).
+    // Turning (PDF §10: change targets without losing control). A held direction is the player's choice:
+    // it turns the punch whenever a man stands that way within 70 px, or when nobody is in front. Holding
+    // back with nobody behind keeps the guard on the man in front (step back and jab). The returning cross
+    // always goes back the way Jin faced: it steps in toward what the backdash left.
     if (name === 'counter' && j.counterTarget && j.counterTarget.x !== undefined) {
       const d = sign(j.counterTarget.x - a.x); if (d) a.face = d;
-    } else if (j.state !== 'dash' && b.dir && b.dir !== a.face) {
-      const behind = nearestHostile(a, b.dir, 70), front = nearestHostile(a, a.face, 60);
-      if (behind && (!front || Math.abs(behind.x - a.x) < Math.abs(front.x - a.x))) a.face = b.dir;
-      else if (!front) a.face = b.dir;
+    } else if (j.state !== 'dash' && name !== 'returnCross' && b.dir && b.dir !== a.face) {
+      if (nearestHostile(a, b.dir, 70) || !nearestHostile(a, a.face, 60)) a.face = b.dir;
     } else if (!b.dir && j.state !== 'dash') {
       // No direction: turn to a man right behind Jin when nobody is in front.
       const front = nearestHostile(a, a.face, 56), behind = nearestHostile(a, -a.face, 40);
@@ -693,22 +740,31 @@
     j.lastAttackName = name;
     j.counterT = name === 'counter' ? 0 : j.counterT;
     if (name === 'counter') j.counterTarget = null;
-    j.returnCrossUntil = name === 'returnCross' ? -99 : j.returnCrossUntil;
+    if (name === 'returnCross') j.returnCrossT = 0;
     setJ(j, 'attack');
     statAdd('punches');
     spendBreath(T.breath.punchCost);
     if (air && !j.airHangUsed) { j.airHangUsed = true; if (a.vy > -40) a.vy = -40; }   // one small hang per airborne sequence
     if (!air && name !== 'dashStraight') a.vx *= 0.35;
-    trackJab(name);
+    trackRead(name);
     notifyJinAttack(a, name);
   }
-  // Three quick jabs in a row are what a trained boxer waits for.
-  function trackJab(name) {
-    const j = C.jin;
-    if (name !== 'jab') { j.jabStreak.length = 0; return; }
-    j.jabStreak.push(S.time);
-    while (j.jabStreak.length && S.time - j.jabStreak[0] > 1.4) j.jabStreak.shift();
+  /* What a trained boxer reads (PDF §9: varied play beats mashing): a third light straight (jab, cross,
+     returning cross) in one unbroken run of punches. The run continues while each punch starts within
+     READ_GAP of the previous one ending (a cancel into the next punch is a gap of 0); hooks keep it going
+     without counting. A slip, dash, guard, step back, getting hit, or any other punch starts it over.
+     Pressing punch fast (jab, cross, hook, jab ...) is such a run; jab-cross then moving, or spaced
+     single jabs, are not. */
+  const READ_GAP = 0.25;
+  const READ_STRAIGHTS = { jab: 1, cross: 1, returnCross: 1 };
+  function trackRead(name) {
+    const r = C.jin.readStreak;
+    if (S.time - r.at > READ_GAP + 1e-9) r.n = 0;
+    if (READ_STRAIGHTS[name]) r.n++;
+    else if (name !== 'hook') r.n = 0;
+    r.at = S.time;
   }
+  function breakRead() { const r = C.jin.readStreak; r.n = 0; r.at = -99; }
 
   function attackUpdate(j, a, inp, dir, dt) {
     const k = j.atk, T = S.tune;
@@ -749,7 +805,7 @@
     if (tryBuffered(j, a, inp)) return;
     if (j.atk === k && k.t >= end) {
       j.atk = null;
-      j.chainUntil = S.time + T.comboGrace;
+      j.chainT = T.comboGrace;
       setJ(j, a.onGround ? (dir ? 'move' : 'idle') : 'air');
     }
   }
@@ -829,19 +885,30 @@
     if (tryBuffered(j, a, inp)) return;
     if (d.t >= d.T) {
       j.dash = null;
-      if (d.back) j.returnCrossUntil = S.time + T.returnCrossWindow;
+      if (d.back) j.returnCrossT = T.returnCrossWindow;
       a.vx = (!d.back && dir === d.dir && !d.air) ? d.dir * T.runSpeed * T.H * EB.speedMul * 0.85 : (d.air ? d.dir * T.runSpeed * T.H * 0.5 : 0);
       setJ(j, a.onGround ? (dir ? 'move' : 'idle') : 'air');
     }
   }
 
+  /* The flurry's hits land on the frames art.js draws (PDF §5: attacks and effects in sync). art.js 'flurry'
+     draws `punches` alternating straights over `burst` s, each fist fully out `peak` into its slot, then the
+     finishing cross, fully out `finPeak` s after the burst. Combat runs on the flurry clock u = t * handSpeed:
+     hit i at (i + peak) * per (per = time / hits), the finisher at time + finPeak; flurryArtT maps u to the
+     art's clock (the identity with the default time 0.5 s and 6 hits). */
+  const FLURRY_ART = { burst: 0.5, punches: 6, peak: 0.45, finPeak: 0.06 };
+  function flurryArtT(fl) {
+    const F = S.tune.flurry, u = fl.t * handSpeed();
+    if (u < F.time) return Math.min(u / fl.per, FLURRY_ART.punches - 1e-3) * (FLURRY_ART.burst / FLURRY_ART.punches);
+    return FLURRY_ART.burst + (u - F.time);
+  }
   function flurryUpdate(j, a, inp, dir, dt) {
     const fl = j.fl, T = S.tune, F = T.flurry;
     if (!fl) { setJ(j, 'idle'); return; }
     fl.t += dt;
     a.vx = approach(a.vx, 0, 2400 * dt);
     const Hs = handSpeed();
-    while (fl.i < F.hits && fl.t >= fl.startup + fl.i * fl.interval / Hs) {
+    while (fl.i < F.hits && fl.t * Hs >= (fl.i + FLURRY_ART.peak) * fl.per - 1e-9) {
       const sp = { name: 'flurry', dmg: F.dmg, reach: F.reach, stun: F.stun, knock: F.knock, hitstop: fl.hitStopped ? 0 : F.hitstop,
         kind: 'light', sound: 'jab', top: 0.95, bot: 0.25, back: 0, multi: false, poiseMul: 0.7, flurry: true };
       smear(a, fl.i % 2 ? 'cross' : 'jab');
@@ -849,7 +916,7 @@
       if (n) { fl.connected = true; fl.hitStopped = true; }
       fl.i++;
     }
-    if (!fl.fin && fl.t >= fl.finAt / Hs) {
+    if (!fl.fin && fl.t * Hs >= fl.finAt - 1e-9) {
       fl.fin = true;
       const sp = { name: 'flurryFinisher', dmg: F.finisherDmg, reach: F.reach + 2, stun: F.finisherStun, knock: F.finisherKnock,
         hitstop: F.finisherHitstop, kind: 'heavy', sound: 'heavy', top: 1.0, bot: 0.2, back: 2, multi: true, poiseMul: 2 };
@@ -876,13 +943,13 @@
     const grounded = a.onGround;
     // Guard: hold down while grounded and not punching.
     if (grounded && inp.down.down && C.allowed.guard && !j.carry && !(inp.down.down && onLadderTop(a))) {
-      if (j.state !== 'guard') setJ(j, 'guard');
+      if (j.state !== 'guard') { setJ(j, 'guard'); breakRead(); }
     } else if (j.state === 'guard') setJ(j, grounded ? 'idle' : 'air');
 
     const maxRun = T.runSpeed * Hp * eb.speedMul;
     let retreat = false;
     if (dir !== 0 && dir !== a.face) {
-      if (j.state === 'guard' || wantsBackstep(j, a)) retreat = true;
+      if (j.state === 'guard' || wantsBackstep(j, a)) { retreat = true; breakRead(); }
       else { if (grounded && Math.abs(a.vx) > maxRun * 0.5) dust(a.x, a.y, -dir, 2); a.face = dir; }
     }
     let spd = 0;
@@ -909,11 +976,15 @@
     if (!grounded) { if (j.state !== 'air' && j.state !== 'guard') setJ(j, 'air'); return; }
     if (j.state === 'guard') return;
     if (j.state === 'land') { if (j.t >= T.landRecover) setJ(j, dir ? 'move' : 'idle'); return; }
-    // Sudden braking from full speed reads as its own silhouette.
-    if (j.state === 'move' && !j.inCombat && Math.abs(before) > maxRun * 0.75 && (dir === 0 || dir !== sign(before))) {
-      setJ(j, 'brake'); dust(a.x + sign(before) * 4, a.y, sign(before), 2); return;
+    // Sudden braking and full-speed reversals read as their own silhouettes (PDF §1, §7): letting go at a run
+    // digs the heel in ('brake': hair and jacket swing on); reversing pivots for a frame or two ('turn').
+    // Purely visual states: the velocity above is already decided, and any new input ends them.
+    if (j.state === 'move' && !j.inCombat && Math.abs(before) > maxRun * 0.75 && dir !== sign(before)) {
+      dust(a.x + sign(before) * 4, a.y, sign(before), 2);
+      setJ(j, dir === 0 ? 'brake' : 'turn'); return;
     }
-    if (j.state === 'brake') { if (j.t >= 0.08 || dir === sign(before)) setJ(j, dir ? 'move' : 'idle'); return; }
+    if (j.state === 'brake') { if (j.t >= T.brakeTime || dir !== 0) setJ(j, dir ? 'move' : 'idle'); return; }
+    if (j.state === 'turn') { if (j.t >= T.turnTime || dir !== a.face) setJ(j, dir ? 'move' : 'idle'); return; }
     const moving = dir !== 0 || Math.abs(a.vx) > 6;
     if (moving && j.state !== 'move') setJ(j, 'move');
     else if (!moving && j.state !== 'idle') setJ(j, 'idle');
@@ -1080,14 +1151,18 @@
     }
     atk.resolved = 'hit';
     let dmg = atk.dmg * (ai.dmgMul || 1);
-    // Mistimed slip: still inside it (outside the window) takes a little extra; one that ended just
-    // before the strike was too early. Both are reported so tips and drills can say which.
+    // Mistimed slip: still inside it (outside the window) takes a little extra. Reported so tips and drills can
+    // say which mistake it was: met before the window opened = Jin slipped too LATE; after it closed, or once
+    // the slip had ended, = too EARLY.
     const mistimed = j.state === 'slip';
-    if (mistimed) { dmg *= S.tune.slipBadMul; emit('slip', { ok: false, late: j.t > S.tune.slipWindow[1], attacker: e }); }
-    else if (S.time - j.slipAt < S.tune.slipTime + 0.25) emit('slip', { ok: false, early: true, attacker: e });
+    if (mistimed) {
+      dmg *= S.tune.slipBadMul;
+      emit('slip', { ok: false, late: j.t < S.tune.slipWindow[0], early: j.t > S.tune.slipWindow[1], unslippable: atk.slippable === false, attacker: e });
+    } else if (S.time - j.slipAt < S.tune.slipTime + 0.25) emit('slip', { ok: false, early: true, late: false, attacker: e });
     const heavy = !!(atk.heavy || atk.knockdown || dmg >= 13);
     // Interrupt whatever Jin was doing: a canceled punch deals nothing.
     j.atk = null; j.dash = null; j.fl = null; j.counterT = 0;
+    breakRead();
     const kx = a.x - atk.dir * 3, ky = a.y - Hp * (atk.low ? 0.45 : 0.68);
     emit('hit', { attacker: e, target: a, kind: heavy ? 'heavy' : 'light', dmg, x: kx, y: ky, move: atk.name });
     spark(kx, ky, heavy, '#f0b8a0');
@@ -1108,6 +1183,7 @@
   }
   function blockHit(e, ai, atk, a, j) {
     atk.resolved = 'blocked';
+    breakRead();
     const T = S.tune, Hp = T.H;
     const dmg = atk.dmg * (ai.dmgMul || 1) * (1 - T.guardReduce);
     j.atk = null;
@@ -1130,6 +1206,10 @@
     j.slipEvaded = true;
     j.counterT = T.counterWindow;
     j.counterTarget = e;
+    // Only a press made after this moment counts as the counter (PDF §3): drop a punch pressed during the
+    // slip before it avoided anything, so "slip then punch at once" is not a blind macro.
+    j.evadeAt = S.time;
+    if (j.buffer && j.buffer.a === 'punch') j.buffer = null;
     statAdd('slips');
     snd('slipOk');
     fx({ k: 'slipok', x: a.x, y: a.y - T.H * 0.85, face: a.face, life: 0.22 });
@@ -1147,21 +1227,17 @@
       return true;
     }
     if (j.state === 'scripted') setJ(j, 'idle');
-    const ctl = controlEnabled(j, a);
-    const inp = readInput(ctl, j, a);
-    let dir = dirOf(inp);
+    // Jin's own clocks advance first (a press captured this step starts at age 0).
     j.t += dt; j.loopT += dt;
+    if (j.buffer) j.buffer.age += dt;
     if (j.counterT > 0) { j.counterT -= dt; if (j.counterT <= 0) { j.counterT = 0; j.counterTarget = null; } }
+    if (j.chainT > 0) j.chainT = Math.max(0, j.chainT - dt);
+    if (j.returnCrossT > 0) j.returnCrossT = Math.max(0, j.returnCrossT - dt);
     if (j.squashT > 0) { j.squashT -= dt; if (j.squashT <= 0) j.squash = 0; }
     if (j.blockFlash > 0) j.blockFlash -= dt;
-    const busyStates = { hurt: 1, down: 1, getup: 1, grabbed: 1, thrown: 1, block: 1 };
-    if (ctl && !busyStates[j.state]) {
-      if (inp.pressed.run) { if (C.allowed.run) toggleWalk(j); else onBlockedVerb('run'); }
-      capturePresses(j, inp);
-    } else if (ctl && busyStates[j.state]) {
-      capturePresses(j, inp);                 // a press just before recovery ends still counts (buffer)
-    }
-    if (j.buffer && S.time - j.buffer.t > T.inputBuffer + 1e-9) j.buffer = null;
+    const { inp } = sampleJin(j, a);
+    let dir = dirOf(inp);
+    if (bufferExpired(j.buffer)) j.buffer = null;
     if (j.auto) {
       const au = j.auto;
       if (Math.abs(au.x - a.x) <= au.tol || S.time - au.at > au.timeout) {
@@ -1208,12 +1284,13 @@
       if (j.atk && j.atk.air) { j.atk = null; setJ(j, 'land'); }
       j.fallV = 0;
     }
-    if (!a.onGround && (j.state === 'idle' || j.state === 'move' || j.state === 'brake' || j.state === 'land')) setJ(j, 'air');
+    if (!a.onGround && (j.state === 'idle' || j.state === 'move' || j.state === 'brake' || j.state === 'turn' || j.state === 'land')) setJ(j, 'air');
     // Running steps (sound only).
     if (j.state === 'move' && a.onGround && Math.abs(a.vx) > 60) {
       j.stepT -= dt * Math.abs(a.vx) / (T.runSpeed * T.H);
       if (j.stepT <= 0) { j.stepT = 0.28; snd('step', { vol: 0.3 }); }
     }
+    if (j.state === 'attack' || j.state === 'flurry') j.readStreak.at = S.time;   // the run's gap counts from the punch's end
     jinPose(j, a, dir);
     return true;
   }
@@ -1225,6 +1302,10 @@
     for (const e of enemyActors()) {
       const ai = e.enemy;
       if (ai.ko || ai.fled || e.hidden || ai.state === 'launched' || ai.state === 'knockdown') continue;
+      // Passive targets (bag, dummy, a man told to stand still) are props: Jin walks past them, so
+      // training gear placed in an open map never walls off the path (found in the sandbox yard).
+      // A drill's own bag (opts.drill) stays solid so Jin works it from the side, not from inside it.
+      if ((ai.arch.passive || ai.state === 'passive') && !(ai.opts && ai.opts.drill)) continue;
       if (prot && ai.arch.passable !== false) continue;
       const minD = (a.w || 12) / 2 + (e.w || 14) / 2 - 3;
       const dx = a.x - e.x;
@@ -1240,7 +1321,7 @@
 
   /* Pose output. One-shot punch poses are time-mapped so the arm is extended during active frames:
      startup -> first 35% of the pose, active -> 35–60%, recovery -> the rest. */
-  const POSE_SET = new Set(['idle', 'guard', 'walk', 'run', 'backstep', 'jump', 'fall', 'land', 'dash', 'backdash', 'slip', 'jab', 'cross', 'hook',
+  const POSE_SET = new Set(['idle', 'guard', 'walk', 'run', 'backstep', 'brake', 'turn', 'jump', 'fall', 'land', 'dash', 'backdash', 'slip', 'jab', 'cross', 'hook',
     'uppercut', 'dashStraight', 'counter', 'flurry', 'hurt', 'stagger', 'knockdown', 'down', 'getup', 'carry', 'limp', 'tired', 'block', 'reach', 'windup',
     'baton', 'grab', 'shove', 'point']);
   function phaseMap(t, s, act, rec) {
@@ -1282,7 +1363,8 @@
         else { pose = 'run'; o.speed = Math.max(0.7, runK); o.lean = 0.12 * runK; }
         break;
       }
-      case 'brake': pose = 'land'; o.lean = -0.35; t = j.t; break;
+      case 'brake': k = clamp(j.t / T.brakeTime, 0, 1); pose = 'brake'; t = k * poseDur('brake', T.brakeTime); break;
+      case 'turn': k = clamp(j.t / T.turnTime, 0, 1); pose = 'turn'; t = k * poseDur('turn', T.turnTime); break;
       case 'land': pose = 'land'; t = j.t; o.squash = 0.2 * (1 - j.t / Math.max(0.01, T.landRecover)); break;
       case 'air': pose = a.vy < 0 ? 'jump' : 'fall'; t = j.t; o.lean = clamp(a.vx / (T.runSpeed * Hp), -1, 1) * 0.1 * a.face; break;
       case 'guard': pose = 'guard'; if (Math.abs(a.vx) > 6) { pose = sign(a.vx) !== a.face ? 'backstep' : 'walk'; o.speed = 0.7; } break;
@@ -1305,8 +1387,8 @@
         }
         break;
       }
-      case 'flurry': pose = 'flurry'; t = j.fl ? j.fl.t : 0; k = j.fl ? clamp(j.fl.t / (T.flurry.time + T.flurry.recovery), 0, 1) : 1; break;
-      case 'hurt': pose = 'hurt'; t = j.t; o.tint = j.t < 0.06 ? '#ffffff' : null; break;
+      case 'flurry': pose = 'flurry'; t = j.fl ? flurryArtT(j.fl) : 0; break;   // the flurry pose reads its own clock (t)
+      case 'hurt': pose = 'hurt'; t = j.t; o.tint = j.t < 0.06 ? hitTint() : null; break;
       case 'grabbed': pose = 'hurt'; t = j.t; break;
       case 'thrown': pose = 'knockdown'; t = j.t; break;
       case 'down': pose = j.t < 0.4 ? 'knockdown' : 'down'; t = j.t; break;
@@ -1667,7 +1749,9 @@
     if (!A.passive) applyGravity(e, dt, gravMul);
     integrate(e, dt);
     separate(e, ai);
-    if (!ai.fled) clampToArena(e, 8);
+    // Passive props (bag, dummy) are not fighters: a fight's arena must not drag them into the ring
+    // (the sandbox bell fight pulled the yard's bag and dummy 150 px into the arena).
+    if (!ai.fled && !A.passive && ai.state !== 'passive') clampToArena(e, 8);
     enemyPose(e, ai);
     return true;
   }
@@ -1903,7 +1987,7 @@
   }
   function noteChampionPattern(ai) { ai.lastPattern = ai.seq && ai.seq[0] ? ai.seq[0].name : null; }
 
-  /* Jin started a punch: trained fighters read it. Boxers punish a third quick jab;
+  /* Jin started a punch: trained fighters read it. Boxers punish a predictable run of straights (trackRead);
      the champion leans back from predictable straights and counters. */
   function notifyJinAttack(a, name) {
     const j = C.jin;
@@ -1912,8 +1996,8 @@
       if (!isHostileAwake(e) || ai.state !== 'engage' || ai.script) continue;
       const dx = e.x - a.x, adx = Math.abs(dx);
       if (adx > (A.punishJabs ? 80 : 60) || sign(dx) !== a.face || e.face !== -a.face) continue;
-      if (A.punishJabs && name === 'jab' && j.jabStreak.length >= 3) {
-        j.jabStreak.length = 0;
+      if (A.punishJabs && READ_STRAIGHTS[name] && j.readStreak.n >= 3) {
+        breakRead();
         evadeAndCounter(e, ai, A.punish, 0.2, 'slip');
         emit('enemyRead', { enemy: e, read: 'jabs' });
         continue;
@@ -2073,7 +2157,7 @@
       if (A.boss || A.staggerImmune) { ai.immuneUntil = S.time + (A.staggerImmune || 1.2); ai.staggerResist = Math.min(1.5, ai.staggerResist + 0.35); }
       e.vx = face * (sp.knock || 80) / A.mass;
     } else {
-      ai.tintT = 0.06; ai.tintCol = '#ffffff';
+      ai.tintT = 0.06; ai.tintCol = hitTint();
       e.vx = face * (sp.knock || 80) * 0.3 / A.mass;
       if (wasAttacking) ai.flinched = true;
     }
@@ -2589,6 +2673,8 @@
     try {
       // Hit-stop: actors freeze; if nobody else counts it down, count it down here.
       if (S.hitstop > 0) {
+        // world.update froze the actors for this step from this same value, so read the player's hands here.
+        sampleFrozen();
         if (Math.abs(S.hitstop - hsSeen) < 1e-12) S.hitstop = Math.max(0, S.hitstop - dt);
         hsSeen = S.hitstop;
         frozenThisStep = S.hitstop > 0;
@@ -2673,7 +2759,7 @@
     Object.assign(j, makeJin(), keep);
     const a = jinActor();
     if (a) { a.vx = 0; a.vy = 0; a.scripted = false; }
-    inQ.length = 0;
+    inQ.length = 0; sample = null;
   };
   C.healJin = function (amount) {
     const j = C.jin;

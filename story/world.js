@@ -133,7 +133,7 @@
     bakes: null, lights: null, dirty: false, rebake: false,
     css: null, cssAt: -1e9, cssFrame: -1, loops: null, muffle: 0, hbT: 0, beatAt: -1e9,
     routeCache: Object.create(null), routeAt: -1,
-    hooks: { back: [], effects: [], front: [], screen: [] },
+    hooks: { back: [], effects: [], front: [], emissive: [], screen: [] },
   };
 
   const FX_DEFAULT = { muffle: 0, blur: 0, double: 0, desat: 0, vignette: 0.25, heartbeat: 0, flash: 0, flashColor: '#ffffff',
@@ -1548,7 +1548,9 @@
     }
   }
   // Draw hooks for other modules: where = 'back' (after the back layer), 'effects' (after actors),
-  // 'front' (after the front layer) — world transform; 'screen' (after lighting) — identity transform.
+  // 'front' (after the front layer) — world transform; 'emissive' — world transform, composited after
+  // the lighting pass so darkness never dims it (hit sparks, telegraphs, cue marks); 'screen' (after
+  // lighting) — logical 640x360 coordinates (the transform may scale to device pixels: never reset it).
   // fn(ctx, cam). Returns a function that removes the hook.
   W.addDraw = function (where, fn) {
     const list = st.hooks[where];
@@ -1644,6 +1646,7 @@
   function releaseBakes() {
     const b = st.bakes;
     st.bakes = null;
+    releaseRenderBufs();
     if (!b) return;
     // Zero-size canvases hand their memory back promptly (Safari keeps big ones around otherwise).
     for (const n in b) if (b[n]) for (const ch of b[n].chunks) { ch.c.width = 0; ch.c.height = 0; }
@@ -1952,7 +1955,8 @@
     for (const pc of statics) { const sp = pieceSpan(pc); if (sp) { x0 = Math.min(x0, sp[0] + 150); x1 = Math.max(x1, sp[1] - 150); } }
     x0 = Math.floor(Math.max(x0, -VW * 2)); x1 = Math.ceil(Math.min(x1, x0 + 24000));
     const H = Math.ceil(L.h + PADY * 2);
-    const out = { name, p, chunks: [], anim, x0, x1 };
+    const haze = layerHaze(L, name);
+    const out = { name, p, chunks: [], anim, x0, x1, haze };
     for (let cx = x0; cx < x1; cx += CHUNK) {
       const cw = Math.min(CHUNK, x1 - cx);
       const cv = makeCanvas(cw, H);
@@ -1971,10 +1975,25 @@
         try { S.pieces.draw(c, pc, L, true); } catch (e) { report(e, 'bake piece ' + pc.t); }
         c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       }
+      // Distance haze tints only what was drawn (source-atop), as dev/pieces.html bakes it.
+      if (haze) hazeRect(c, haze, cx, -PADY, cw, H);
       c.restore();
       out.chunks.push({ x: cx, w: cw, c: cv });
     }
     return out;
+  }
+  // Atmospheric haze for the far and mid parallax layers (pieces.js S.backdrop.hazeFor): they lean toward
+  // the sky colour, so contrast and detail fall off with distance. null = no haze for this layer.
+  function layerHaze(L, name) {
+    if ((name !== 'far' && name !== 'mid') || !S.backdrop || typeof S.backdrop.hazeFor !== 'function') return null;
+    let hz = null;
+    try { hz = S.backdrop.hazeFor(L, name); } catch (e) { report(e, 'backdrop.hazeFor'); }
+    return hz && hz.color && +hz.k > 0.003 ? { color: hz.color, k: clamp(+hz.k, 0, 1) } : null;
+  }
+  function hazeRect(c, hz, x, y, w, h) {
+    c.globalCompositeOperation = 'source-atop'; c.globalAlpha = hz.k; c.fillStyle = hz.color;
+    c.fillRect(x, y, w, h);
+    c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
   }
   function bake() {
     const L = W.loc;
@@ -2016,11 +2035,29 @@
   // screen VW/2 + z (X - lcx), lcx = camLeft * p + VW/2 (p = 1 is the world). Vertically the same around a
   // reference view (the one framing the main ground), so far layers never drift off the horizon on tall maps.
   const rc = { x: 0, y: 0, zoom: 1, cx: VW / 2, cy: VH / 2, refTop: 0, w: VW, h: VH };
-  function setupRenderCam(L) {
+  // Render target. Every world pass draws at zoom 1 (one world pixel = one canvas pixel). At zoom 1 that is
+  // the 640x360 frame itself. Otherwise it is a scene canvas covering the zoomed view, which is scaled once
+  // onto a frame of K device pixels per logical pixel (the display's own resolution), s = K * zoom device
+  // pixels per world pixel. Nearest-neighbour at s >= 1 never drops a source pixel, and at the usual K = 2..4
+  // neighbouring pixels differ by at most one device pixel. Zooming the 640x360 canvas itself instead dropped
+  // or doubled whole rows (letters, sleeve stripes, window frames).
+  //   K     device px per logical px of the frame (1 unless zoomed)
+  //   s     device px per world px (K * zoom)
+  //   sx/sy where the view centre sits in the world target (pixels)
+  //   ox/oy world -> target offset for p = 1; dx/dy where target pixel (0, 0) lands on the frame
+  const rt = { K: 1, s: 1, hi: false, sx: VW / 2, sy: VH / 2, ox: 0, oy: 0, dx: 0, dy: 0, tw: VW, th: VH,
+    fc: null, c: null, wc: null, scv: null, ec: null, ecv: null };
+  // The zoom actually drawn: never below one device pixel per world pixel of the output (st.outK, known
+  // once a frame has rendered), so a zoom-out on a 640-pixel-wide display stays at 1 instead of dropping rows.
+  function renderZoom() {
+    const z = Math.max(0.05, +cam.zoom || 1), k = st.outK;
+    return k ? Math.max(z, 1 / k) : z;
+  }
+  function setupRenderCam(L, z) {
     const sh = shakeOffset();
     st.shx = sh[0]; st.shy = sh[1];
-    rc.zoom = cam.zoom || 1;
-    rc.cx = camS.cx - sh[0] / rc.zoom; rc.cy = camS.cy - sh[1] / rc.zoom;
+    rc.zoom = z;
+    rc.cx = camS.cx - sh[0] / z; rc.cy = camS.cy - sh[1] / z;
     rc.x = rc.cx - VW / 2; rc.y = rc.cy - VH / 2;
     const ref = clampCentre(rc.cx, L.ground - VH * 0.12 + (+L.camera.yOffset || 0), 1);
     rc.refTop = ref[1] - VH / 2;
@@ -2029,15 +2066,82 @@
     if (p === 1) return [rc.cx, rc.cy];
     return [(rc.cx - VW / 2) * p + VW / 2, (rc.cy - VH / 2 - rc.refTop) * p + rc.refTop + VH / 2];
   }
+  // Layer p -> world target (zoom 1, whole-pixel offsets so every piece stays on the pixel grid).
   function applyLayer(c, p) {
-    const lc = layerCentre(p), z = rc.zoom;
-    c.setTransform(z, 0, 0, z, Math.round(VW / 2 - lc[0] * z), Math.round(VH / 2 - lc[1] * z));
+    const lc = layerCentre(p);
+    c.setTransform(1, 0, 0, 1, Math.round(rt.sx - lc[0]), Math.round(rt.sy - lc[1]));
     return lc;
   }
+  // Logical 640x360 coordinates on the frame (sky, weather, lighting, screen hooks, post fx).
+  function screenT(c) { c.setTransform(rt.K, 0, 0, rt.K, 0, 0); }
+  // World coordinates straight onto the frame (debug overlay), matching where the scene lands.
+  function frameWorld(c) { c.setTransform(rt.s, 0, 0, rt.s, rt.dx + rt.s * rt.ox, rt.dy + rt.s * rt.oy); }
   // Visible layer-space rect for culling.
   function viewOf(p) {
     const lc = layerCentre(p), hw = VW / (2 * rc.zoom), hh = VH / (2 * rc.zoom);
     return { x0: lc[0] - hw, x1: lc[0] + hw, y0: lc[1] - hh, y1: lc[1] + hh };
+  }
+  // A grow-only offscreen canvas (sizes round up so a zoom tween does not reallocate every frame).
+  function growBuf(key, w, h) {
+    const b = st[key];
+    if (b && b.cv.width >= w && b.cv.height >= h) return b;
+    const cw = Math.max(w, b ? b.cv.width : 0), ch = Math.max(h, b ? b.cv.height : 0);
+    const cv = makeCanvas(Math.ceil(cw / 64) * 64, Math.ceil(ch / 64) * 64);
+    if (!cv) return null;
+    if (b) { b.cv.width = 0; b.cv.height = 0; }
+    return (st[key] = { cv, c: ctxOf(cv) });
+  }
+  // The frame canvas for K device px per logical px (640x360 at K = 1).
+  function frameBuf(K) {
+    const key = K === 1 ? 'frameBuf' : 'frameHi';
+    let b = st[key];
+    if (!b || b.cv.width !== VW * K || b.cv.height !== VH * K) {
+      if (b) { b.cv.width = 0; b.cv.height = 0; }
+      const cv = makeCanvas(VW * K, VH * K);
+      b = st[key] = cv ? { cv, c: ctxOf(cv) } : null;
+    }
+    return b;
+  }
+  // Big zoom buffers hand their memory back when the location changes or Story Mode closes.
+  function releaseRenderBufs() {
+    for (const k of ['frameHi', 'sceneBuf', 'emisBuf', 'animBuf', 'dblBuf']) { const b = st[k]; if (b) { b.cv.width = 0; b.cv.height = 0; st[k] = null; } }
+  }
+  // Pick the world target for this frame (see rt above). False when no canvas could be made.
+  function setupTarget(K, z, hi) {
+    rt.K = K; rt.hi = hi;
+    const f = frameBuf(K);
+    if (!f) return false;
+    rt.fc = f.cv; rt.c = f.c;
+    if (!hi) {
+      rt.s = 1; rt.tw = VW; rt.th = VH; rt.sx = VW / 2; rt.sy = VH / 2;
+      rt.wc = rt.c; rt.scv = rt.fc; rt.dx = 0; rt.dy = 0;
+    } else {
+      // Two spare pixels on each side keep the scaled scene past the frame edges at any rounding.
+      const tw = Math.ceil(VW / z) + 4, th = Math.ceil(VH / z) + 4;
+      const sb = growBuf('sceneBuf', tw, th);
+      if (!sb) return false;
+      rt.s = K * z; rt.tw = tw; rt.th = th; rt.sx = tw / 2; rt.sy = th / 2;
+      rt.wc = sb.c; rt.scv = sb.cv;
+    }
+    rt.ox = Math.round(rt.sx - rc.cx); rt.oy = Math.round(rt.sy - rc.cy);
+    if (hi) {
+      // the view centre (target pixel rc.cx + ox) lands on the frame centre
+      rt.dx = Math.round((K * VW) / 2 - rt.s * (rc.cx + rt.ox));
+      rt.dy = Math.round((K * VH) / 2 - rt.s * (rc.cy + rt.oy));
+    }
+    const eb = growBuf('emisBuf', rt.tw, rt.th);
+    rt.ec = eb ? eb.c : null; rt.ecv = eb ? eb.cv : null;
+    return true;
+  }
+  // Clear a target region (identity transform, default state).
+  function clearBuf(c, w, h) {
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+    c.clearRect(0, 0, w, h);
+  }
+  // A zoom-1 target (scene or emissive buffer) onto the frame at s device px per pixel.
+  function placeTarget(c, cv) {
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.imageSmoothingEnabled = false;
+    c.drawImage(cv, 0, 0, rt.tw, rt.th, rt.dx, rt.dy, rt.tw * rt.s, rt.th * rt.s);
   }
   function drawBaked(c, name) {
     const b = st.bakes && st.bakes[name], L = W.loc;
@@ -2050,12 +2154,22 @@
       c.drawImage(ch.c, ch.x, -PADY);
     }
     if (b.anim.length && S.pieces && S.pieces.drawAnimated) {
-      for (const pc of b.anim) {
-        const sp = pieceSpan(pc);
-        if (sp && (sp[1] < v.x0 || sp[0] > v.x1)) continue;
-        try { S.pieces.drawAnimated(c, pc, L, S.time); } catch (e) { report(e, 'animated piece ' + pc.t); }
+      const live = [];
+      for (const pc of b.anim) { const sp = pieceSpan(pc); if (!sp || (sp[1] >= v.x0 && sp[0] <= v.x1)) live.push(pc); }
+      if (!live.length) return;
+      // A hazed layer draws its moving parts through a scratch canvas so the haze tints only them.
+      const ab = b.haze ? growBuf('animBuf', rt.tw, rt.th) : null;
+      const t = ab ? ab.c : c;
+      if (ab) { clearBuf(t, rt.tw, rt.th); applyLayer(t, p); }
+      for (const pc of live) {
+        try { S.pieces.drawAnimated(t, pc, L, S.time); } catch (e) { report(e, 'animated piece ' + pc.t); }
       }
-      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      t.globalAlpha = 1; t.globalCompositeOperation = 'source-over';
+      if (ab) {
+        t.setTransform(1, 0, 0, 1, 0, 0); hazeRect(t, b.haze, 0, 0, rt.tw, rt.th);
+        c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(ab.cv, 0, 0, rt.tw, rt.th, 0, 0, rt.tw, rt.th);
+        applyLayer(c, p);
+      }
     }
   }
 
@@ -2131,9 +2245,15 @@
     c.globalAlpha = 1;
   }
 
-  function drawEffects(c, v) {
+  // Emissive effect kinds draw after the lighting pass (opts.emissive overrides per effect): an impact,
+  // a smear or a cue ring must read the same in a dark alley as under a lamp. Dust and afterimages are lit.
+  const EMISSIVE_FX = { spark: true, smear: true, ring: true, text: true };
+  const isEmissive = (e) => (e.emissive != null ? !!e.emissive : !!EMISSIVE_FX[e.kind]);
+  function drawEffects(c, v, emissive) {
     const art = S.art || {};
+    emissive = !!emissive;
     for (const e of W.effects) {
+      if (isEmissive(e) !== emissive) continue;
       if (e.x < v.x0 - 60 || e.x > v.x1 + 60) continue;
       const k = clamp(e.age / e.dur, 0, 1);
       try {
@@ -2160,9 +2280,31 @@
       c.globalAlpha = 1;
     }
     for (const p of W.particles) {
+      if (!!p.emissive !== emissive) continue;
       if (p.x < v.x0 - 8 || p.x > v.x1 + 8) continue;
       const k = p.t / p.life, a = (k > 0.7 ? (1 - k) / 0.3 : 1) * (p.alpha != null ? p.alpha : 1);
       RA(c, p.x, p.y, p.size || 1, p.size || 1, p.color || '#c9c1b0', a);
+    }
+  }
+  // Hit and telegraph tint flashes (actor.tint / poseOpts.tint, a few frames long): the lit pass already
+  // drew the tinted figure; this redraws the tint as a flat silhouette at the same strength on the emissive
+  // layer, so the flash stays bright in the dark. Same strength rule as art.drawFigure (white .82, else .55).
+  function drawTintFlashes(c, v) {
+    if (!S.art || typeof S.art.drawFigure !== 'function') return;
+    for (const a of W.actors) {
+      const po = a.poseOpts || {}, tint = a.tint || po.tint;
+      if (!tint || typeof a.draw === 'function' || !shown(a)) continue;
+      if (a.x < v.x0 - 90 || a.x > v.x1 + 90 || a.y < v.y0 - 20 || a.y - (a.h || 46) > v.y1 + 20) continue;
+      const tk = /^#?f{3,6}$/i.test(tint) ? 0.82 : 0.55;   // drawActor leaves tintK to art's default
+      const alpha = (a.alpha != null ? clamp(+a.alpha, 0, 1) : po.alpha != null ? clamp(+po.alpha, 0, 1) : 1) * tk;
+      if (alpha <= 0.01) continue;
+      const o = { alpha, tint, tintK: 1, shadow: false, squash: a.squash || po.squash || 0, lean: a.lean || po.lean || 0,
+        carry: a.carry || po.carry || null, speed: a.speed || po.speed || 1, scaleX: a.scaleX || po.scaleX || 1 };
+      if (a._blend && a._blend.k > 0) o.blendFrom = { pose: a._blend.pose, t: a._blend.t, k: clamp(a._blend.k, 0, 1) };
+      if (a.poseK != null) o.k = a.poseK;
+      try { S.art.drawFigure(c, Math.round(a.x), Math.round(a.y), a.face === -1 ? -1 : 1, a.pose || 'idle', +a.poseT || 0, lookDef(a.look) || a.look || 'man', o); }
+      catch (e) { report(e, 'tint flash ' + a.id); }
+      c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
     }
   }
 
@@ -2224,7 +2366,7 @@
 
   function drawDebug(c) {
     const L = W.loc;
-    applyLayer(c, 1);
+    frameWorld(c);
     const box = (x, y, w, h, col) => { c.strokeStyle = col; c.lineWidth = 1 / rc.zoom; c.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1); };
     for (const f of L.floors) { c.fillStyle = 'rgba(80,220,120,.8)'; c.fillRect(Math.min(f.x0, f.x1), f.y, Math.abs(f.x1 - f.x0), 1); }
     for (const s of L.solids) { if (s.oneway) { c.fillStyle = 'rgba(240,210,80,.9)'; c.fillRect(s.x, s.y, s.w, 1); } else box(s.x, s.y, s.w, s.h, 'rgba(230,80,70,.9)'); }
@@ -2234,7 +2376,7 @@
     for (const t of L.triggers) { if (t.x0 == null) continue; c.fillStyle = 'rgba(255,150,40,.15)'; c.fillRect(Math.min(t.x0, t.x1), t.y0 != null ? +t.y0 : 0, Math.abs(t.x1 - t.x0), (t.y1 != null ? +t.y1 : L.h) - (t.y0 != null ? +t.y0 : 0)); }
     for (const a of W.actors) if (shown(a)) box(a.x - a.w / 2, a.y - a.h, a.w, a.h, a === W.jin ? 'rgba(120,180,255,.9)' : 'rgba(255,255,255,.35)');
     if (W.focus) box(W.focus.x - 3, W.focus.y - 3, 6, 6, '#e8c272');
-    c.setTransform(1, 0, 0, 1, 0, 0);
+    screenT(c);
   }
 
   /* ── 17. Sky, lighting, post effects, W.render ────────────────────── */
@@ -2245,8 +2387,9 @@
   };
   function drawSky(c, L) {
     if (S.backdrop && typeof S.backdrop.draw === 'function') {
-      try { S.backdrop.draw(c, L, rc.x, rc.y, S.time); } catch (e) { report(e, 'backdrop.draw'); }
-      c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      // rc as the camera: the backdrop's bands follow the zoom actually drawn (renderZoom)
+      try { S.backdrop.draw(c, L, rc, null, S.time); } catch (e) { report(e, 'backdrop.draw'); }
+      screenT(c); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       return;
     }
     const k = SKY[L.sky] || SKY.night;
@@ -2283,7 +2426,7 @@
     const lights = frameLights();
     if (S.light && typeof S.light.composite === 'function') {
       try { S.light.composite(c, L, rc, lights, S.time); } catch (e) { report(e, 'light.composite'); }
-      c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      screenT(c); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       return;
     }
     // Fallback: darkness with soft holes for lights, then a faint warm glow.
@@ -2326,9 +2469,10 @@
   }
   // S.fx post effects, in order: desaturation and sepia, blur, double vision, vignette, heartbeat,
   // flash, letterbox, door-transition fade, S.fx.fade (world draws it: S.world.rendersFade).
+  // Drawn in logical 640x360 coordinates under screenT (the frame may be K device px per logical px).
   function postFx(c, fc) {
     const fx = S.fx, t = S.realTime || S.time;
-    c.setTransform(1, 0, 0, 1, 0, 0);
+    screenT(c); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.imageSmoothingEnabled = false;
     const desat = clamp(+fx.desat || 0, 0, 1), sepia = clamp(+fx.sepia || 0, 0, 1);
     if (desat > 0.003 || sepia > 0.003) {
       c.globalCompositeOperation = 'saturation'; c.globalAlpha = Math.max(desat, sepia);
@@ -2353,12 +2497,13 @@
     }
     const dbl = clamp(+fx.double || 0, 0, 1);
     if (dbl > 0.01) {
-      const tc = st.tmpCv || (st.tmpCv = makeCanvas(VW, VH));
-      if (tc) {
-        const x = tc.getContext('2d');
-        x.clearRect(0, 0, VW, VH); x.drawImage(fc, 0, 0);
+      // a copy of the frame at its own resolution, offset in logical pixels
+      const tb = growBuf('dblBuf', fc.width, fc.height);
+      if (tb) {
+        const x = tb.cv.getContext('2d');
+        x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, fc.width, fc.height); x.drawImage(fc, 0, 0);
         const ox = Math.round((3 + 7 * dbl) * (0.6 + 0.4 * Math.sin(t * 1.3))), oy = Math.round(2 * dbl * Math.sin(t * 0.9));
-        c.globalAlpha = clamp(0.48 * dbl, 0, 0.5); c.drawImage(tc, ox, oy); c.globalAlpha = 1;
+        c.globalAlpha = clamp(0.48 * dbl, 0, 0.5); c.drawImage(tb.cv, 0, 0, fc.width, fc.height, ox, oy, VW, VH); c.globalAlpha = 1;
       }
     }
     const vig = clamp(+fx.vignette || 0, 0, 1) + sepia * 0.3;
@@ -2382,78 +2527,153 @@
     return pulse;
   }
 
-  // Full frame into an internal 640x360 canvas (post effects need a copy of the frame), then blitted onto
+  // Where this frame ends up, in device px per logical px. main.js hands world its 640x360 logical canvas
+  // and blits that k times up onto the display canvas; a zoomed frame is instead rendered at the display's
+  // resolution and drawn onto the display itself (present). An identity-transformed ctx of another size is
+  // rendered at its own scale. Anything else: K = 1.
+  function outputOf(ctx) {
+    const M = S.main, cv = ctx.canvas;
+    if (M && ctx === M.ctx && M.dctx && M.canvas) {
+      const k = Math.round((+M.canvas.width || 0) / VW);
+      if (k >= 1 && k <= 6 && M.canvas.width === VW * k && M.canvas.height === VH * k) return { K: k, display: M };
+    }
+    if (cv && (cv.width > VW || cv.height > VH) && isIdentity(ctx)) return { K: clamp(Math.ceil(Math.max(cv.width / VW, cv.height / VH) - 1e-6), 1, 6), display: null };
+    return { K: 1, display: null };
+  }
+  function isIdentity(ctx) {
+    const m = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null;
+    return !!m && m.a === 1 && m.b === 0 && m.c === 0 && m.d === 1 && m.e === 0 && m.f === 0;
+  }
+
+  // Full frame into an internal frame canvas (post effects need a copy of the frame), then blitted onto
   // ctx under the caller's transform; an identity-transformed ctx of another size is filled entirely.
+  // Order: sky -> world passes at zoom 1 (far, mid, back, actors, lit effects, front, fore; the emissive
+  // cues into their own buffer) -> the scene scaled onto the frame (zoomed frames only) -> weather ->
+  // lighting -> emissive buffer -> 'screen' hooks -> debug -> fallback labels -> post fx -> present.
   W.rendersFade = true;
   W.render = function (ctx) {
     if (S.headless || !ctx) return;
     st.frame = (st.frame || 0) + 1;
+    st.pendingDisplay = null;            // a newer frame replaces a zoomed one still waiting for the display
     if (ctx.canvas) st.displayCanvas = ctx.canvas;
-    const fc = st.frameCv || (st.frameCv = makeCanvas(VW, VH));
-    if (!fc) return;
-    const c = st.frameCtx || (st.frameCtx = ctxOf(fc));
     const L = W.loc;
-    c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.imageSmoothingEnabled = false;
-    if (!L) { c.fillStyle = '#000'; c.fillRect(0, 0, VW, VH); postFx(c, fc); blit(ctx, fc, 0); return; }
+    const out = outputOf(ctx);
+    st.outK = out.K;
+    if (!L) {
+      rt.K = 1;
+      const f = frameBuf(1);
+      if (!f) return;
+      const c = f.c;
+      screenT(c); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.imageSmoothingEnabled = false;
+      c.fillStyle = '#000'; c.fillRect(0, 0, VW, VH); postFx(c, f.cv); present(ctx, f.cv, 0, out);
+      return;
+    }
+    const z = renderZoom(), hi = Math.abs(z - 1) > 1e-4;
     try {
       if (!st.bakes || st.rebake) bake();
-      setupRenderCam(L);
+      setupRenderCam(L, z);
+    } catch (e) { report(e, 'render setup'); }
+    if (!setupTarget(hi ? out.K : 1, z, hi)) return;
+    const fc = rt.fc, c = rt.c;
+    screenT(c); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; c.imageSmoothingEnabled = false;
+    try {
       // 1. sky + far parallax backdrop (exteriors), else the room colour
       if (L.kind === 'exterior' || (L.sky && L.sky !== 'none')) drawSky(c, L);
       else { c.fillStyle = L.room && L.room.wall ? ramp(L.room.wall)[0] : '#17141d'; c.fillRect(0, 0, VW, VH); }
-      // 2. far / mid parallax layers, room shell + ground + back layer
-      drawBaked(c, 'far'); drawBaked(c, 'mid'); drawBaked(c, 'back');
-      applyLayer(c, 1);
-      const v = viewOf(1);
-      runHooks('back', c);
-      if (S.activities && typeof S.activities.draw === 'function') { try { S.activities.draw(c, 'back'); } catch (e) { report(e, 'activities.draw'); } applyLayer(c, 1); }
-      drawGlints(c, v); drawEdgeHints(c);
-      if (S.combat && typeof S.combat.drawUnder === 'function') { S.combat.drawUnder(c); applyLayer(c, 1); }
-      // 3. actors
-      drawActors(c, 'back', v); drawActors(c, 'main', v);
-      // 4. effects and particles
-      drawEffects(c, v);
-      if (S.combat && typeof S.combat.drawOver === 'function') { S.combat.drawOver(c); applyLayer(c, 1); }
-      runHooks('effects', c);
-      // 5. front layer, front actors, fore layer
-      drawBaked(c, 'front');
-      applyLayer(c, 1);
-      drawActors(c, 'front', v);
-      if (S.activities && typeof S.activities.draw === 'function') { try { S.activities.draw(c, 'front'); } catch (e) { report(e, 'activities.draw'); } applyLayer(c, 1); }
-      runHooks('front', c);
-      drawBaked(c, 'fore');
-      // 6. weather and lighting (screen space)
-      c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      // 2-5. world passes at zoom 1 (straight onto the frame at zoom 1, else into the scene canvas)
+      if (hi) clearBuf(rt.wc, rt.tw, rt.th);
+      if (rt.ec) clearBuf(rt.ec, rt.tw, rt.th);
+      drawWorld(rt.wc, rt.ec);
+      if (hi) placeTarget(c, rt.scv);
+      // 6. weather and lighting (logical screen space)
+      screenT(c); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       if (L.weather && S.weather && typeof S.weather.draw === 'function') {
         try { S.weather.draw(c, L, rc); } catch (e) { report(e, 'weather.draw'); }
-        c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+        screenT(c); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
       }
       composite(c, L);
+      // 7. emissive cues over the lit frame, then screen hooks, debug, labels
+      if (rt.ecv) placeTarget(c, rt.ecv);
+      screenT(c);
       runHooks('screen', c);
       if (W.debug) drawDebug(c);
       if (!S.ui || W.canvasLabels) drawLabelsFallback(c);
     } catch (e) {
       report(e, 'render');
-      c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
+      screenT(c); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
     }
     const pulse = postFx(c, fc);
-    blit(ctx, fc, pulse);
+    present(ctx, fc, pulse, out);
   };
+  // World passes into wc (zoom 1, layer transforms from applyLayer); emissive cues into ec when there is one.
+  function drawWorld(wc, ec) {
+    const em = ec || wc;
+    // 2. far / mid parallax layers, room shell + ground + back layer
+    drawBaked(wc, 'far'); drawBaked(wc, 'mid'); drawBaked(wc, 'back');
+    applyLayer(wc, 1);
+    const v = viewOf(1);
+    runHooks('back', wc);
+    // activities.js draws through the 'back'/'front' hooks when it registered them (W.__activitiesDraw)
+    const actDirect = S.activities && typeof S.activities.draw === 'function' && !W.__activitiesDraw;
+    if (actDirect) { try { S.activities.draw(wc, 'back'); } catch (e) { report(e, 'activities.draw'); } applyLayer(wc, 1); }
+    drawGlints(wc, v); drawEdgeHints(wc);
+    if (S.combat && typeof S.combat.drawUnder === 'function') { S.combat.drawUnder(wc); applyLayer(wc, 1); }
+    // 3. actors
+    drawActors(wc, 'back', v); drawActors(wc, 'main', v);
+    // 4. lit effects and particles; emissive ones (sparks, smears, telegraphs, tint flashes, combat's
+    //    drawOver marks) go to the emissive buffer, which lands after the lighting pass. combat.drawOver
+    //    draws once per frame, so this call (before the 'effects' hooks) is the one that draws.
+    drawEffects(wc, v, false);
+    applyLayer(em, 1);
+    drawEffects(em, v, true);
+    if (S.combat && typeof S.combat.drawOver === 'function') { S.combat.drawOver(em); applyLayer(em, 1); }
+    drawTintFlashes(em, v);
+    runHooks('emissive', em);
+    applyLayer(wc, 1);
+    runHooks('effects', wc);
+    // 5. front layer, front actors, fore layer
+    drawBaked(wc, 'front');
+    applyLayer(wc, 1);
+    drawActors(wc, 'front', v);
+    if (actDirect) { try { S.activities.draw(wc, 'front'); } catch (e) { report(e, 'activities.draw'); } applyLayer(wc, 1); }
+    runHooks('front', wc);
+    drawBaked(wc, 'fore');
+  }
   function runHooks(where, c) {
     const list = st.hooks[where];
     if (!list.length) return;
     for (const fn of list.slice()) {
       try { fn(c, rc); } catch (e) { report(e, 'draw hook ' + where); }
       c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
-      if (where === 'screen') c.setTransform(1, 0, 0, 1, 0, 0); else applyLayer(c, 1);
+      if (where === 'screen') screenT(c); else applyLayer(c, 1);
     }
+  }
+  // The finished frame onto the caller's ctx. A zoomed frame bound for main.js's display is also queued
+  // for the display itself: main blits the logical canvas there right after world.render returns, and the
+  // queued draw (a microtask, so before the browser paints) replaces that blit with the full-resolution
+  // frame. The logical canvas still gets a nearest-neighbour copy for anything that reads it.
+  function present(ctx, fc, pulse, out) {
+    blit(ctx, fc, pulse);
+    if (!out.display || rt.K <= 1) return;
+    st.pendingDisplay = { fc, pulse, w: fc.width, h: fc.height, M: out.display };
+    if (st.displayQueued) return;
+    const run = () => {
+      st.displayQueued = false;
+      const p = st.pendingDisplay;
+      st.pendingDisplay = null;
+      const M = p && p.M;
+      if (!M || !M.dctx || !M.canvas || M.canvas.width !== p.w || M.canvas.height !== p.h) return;
+      if (M.mode !== 'play' || !W.loc) return;
+      try { M.dctx.setTransform(1, 0, 0, 1, 0, 0); blit(M.dctx, p.fc, p.pulse); } catch (e) { report(e, 'display blit'); }
+    };
+    if (typeof queueMicrotask === 'function') { st.displayQueued = true; queueMicrotask(run); }
+    else if (typeof Promise === 'function') { st.displayQueued = true; Promise.resolve().then(run); }
   }
   function blit(ctx, fc, pulse) {
     ctx.save();
     try {
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.imageSmoothingEnabled = false;
-      const m = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null;
-      const ident = m && m.a === 1 && m.b === 0 && m.c === 0 && m.d === 1 && m.e === 0 && m.f === 0;
+      const ident = isIdentity(ctx);
       const cw = ctx.canvas ? ctx.canvas.width : VW, ch = ctx.canvas ? ctx.canvas.height : VH;
       const tw = ident && (cw !== VW || ch !== VH) ? cw : VW, th = ident && (cw !== VW || ch !== VH) ? ch : VH;
       if (pulse > 0.01) {
@@ -2494,14 +2714,14 @@
 
   // World point -> CSS px relative to #story-root (follows camera, zoom and shake).
   W.screenPos = function (x, y) {
-    const z = cam.zoom || 1;
+    const z = renderZoom();   // the zoom actually drawn
     const sx = VW / 2 + z * ((+x || 0) - camS.cx) + (st.shx || 0), sy = VH / 2 + z * ((+y || 0) - camS.cy) + (st.shy || 0);
     const v = W.viewRect();
     return { x: v.x + sx * v.sx, y: v.y + sy * v.sy, onScreen: sx >= -8 && sx <= VW + 8 && sy >= -8 && sy <= VH + 8 };
   };
   // Logical (canvas) position of a world point, for tests and canvas overlays.
   W.toScreen = function (x, y) {
-    const z = cam.zoom || 1;
+    const z = renderZoom();
     return { x: VW / 2 + z * ((+x || 0) - camS.cx), y: VH / 2 + z * ((+y || 0) - camS.cy) };
   };
   // Visible world rect after zoom.

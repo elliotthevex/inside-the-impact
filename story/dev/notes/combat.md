@@ -1,15 +1,18 @@
 # combat.js — builder notes
 
-Status: DONE (run 2: integration + verification pass over the run-1 file). Syntax-clean in JavaScriptCore.
+Status: DONE (run 2: integration + verification pass over the run-1 file; 2026-11-22 fix pass from the movement
+review, see "Fix pass"). Syntax-clean in JavaScriptCore.
 Headless tests used for this pass live in the session scratchpad (`ctest/`: run.js, fakeworld.js, bots.js, t_*.js);
 they are not part of the repo. When `story/dev/headless.js` exists, port the fairness bots there.
 
 ## What is in story/combat.js (contract §6)
-- `S.tune` (every PDF §6 number; H = 46) + extras: footwork/retreat multipliers, turnBoost, jump physics, dash chaining
+- `S.tune` (every PDF §6 number; H = 46) + extras: footwork/retreat multipliers, turnBoost, brakeTime/turnTime, jump physics, dash chaining
   (`dashStraightFrom`, `dashChainFrom`), `slipBadMul`, `comboGrace`, `heavyCancelFrac`, `returnCrossWindow`, recovery times,
   per-move `knock/step/stun`, `hook.arcReach`, `returnCross.dist` (H), breath extras, `regen` (difficulty recovery and
-  bout corner shares), `enemy` (AI-wide rules). `S.tuneBase` = untouched defaults.
-- Jin: input → one-slot buffer (newest press replaces, 0.10 s) → state machine (idle, move, brake, land, air, guard,
+  bout corner shares), `enemy` (AI-wide rules). `S.tuneBase` = untouched defaults. `flurry.startup` is gone: the
+  flurry schedule comes from art.js's drawn punches (see Fix pass below).
+- Jin: input → one-slot buffer (newest press replaces, 0.10 s of Jin's own time; presses on hit-stop steps are kept)
+  → state machine (idle, move, brake, turn, land, air, guard,
   block, dash (ground/air/back), slip, attack, flurry, hurt, down, getup, grabbed, thrown, climb (fallback only), scripted).
   Explicit cancel windows (`canCancel`): light punches chain at comboFrom and cancel into dash/slip any time (a pending
   hitbox is dropped); heavies keep active frames + 40% of recovery. Two shared dash charges recharge one at a time;
@@ -41,7 +44,9 @@ scripted knockdown), `C.carry(kind, reason)`, `C.walkTo(x, opts)`, `C.isFree()`,
 `C.resetTune()`.
 Events beyond §2: breathOut, launch, enemyPoint, enemyFeint, enemyRead {read:'jabs'|'leanBack'}, enemyCover,
 enemyBreakOut, enemyFled, needKnuckles, bossPhase, fightWave, fightRetry, boutRound {round, phase}, boutCorner
-{round, scene, claim()}, boutKnockdown {who, n}, boutCount {who, count}. 'slip' {ok:false} also carries early/late.
+{round, scene, claim()}, boutKnockdown {who, n}, boutCount {who, count}. 'slip' {ok:false} also carries early/late
+(late = Jin slipped too late: the strike met him before the window opened; early = too soon: after the window, or the
+slip had already ended) and unslippable (a push/grab met a well-timed slip).
 FightState/BoutState stats also have blocks, whiffs, punches, dashes, dmgDealt, dmgTaken, kos, knockdowns, maxCombo, retries.
 
 ## Actor fields combat writes (renderer/world read them)
@@ -94,6 +99,29 @@ combat never writes `actor.carry` except through `C.carry`.
 The dash spammer bot is really "dash in → straight", the PDF's own rhythm, so it stays competitive on light groups;
 pure dash spam without punching cannot win.
 
+## Fix pass (2026-11-22, movement review; all checked headless before/after, sandbox 29/29)
+- Hit-stop no longer eats presses: `C.update` reads Jin's input on frozen steps (`sampleFrozen`), input is read once per
+  step (`sampleJin`, keyed on main.steps + S.time), and the buffer ages in Jin's time (`b.age += dt` in updateJin).
+  `chainUntil`/`returnCrossUntil` became `chainT`/`returnCrossT` countdowns in Jin's time for the same reason.
+- Counter needs a press after the evade: `slipSuccess` stamps `j.evadeAt` and drops a buffered punch; `choosePunch`
+  gives 'counter' only for `b.t > j.evadeAt`. A punch pressed mid-slip before the evade is simply dropped.
+- Flurry hits land on art.js's drawn punch peaks (`FLURRY_ART` {burst .5, punches 6, peak .45, finPeak .06}): hit i at
+  (i + .45)·time/hits, finisher at time + .06, all on the flurry clock u = t·handSpeed; the pose gets `flurryArtT(fl)`
+  (identity at the defaults). If art.js changes its flurry timing, change FLURRY_ART with it.
+- Dash after walking off a ledge is the air dash (coyote time is for jumping only).
+- A held direction turns the punch whenever a hostile is within 70 px that way (or nobody is in front); the returning
+  cross never turns.
+- Boxer read (`readStreak`, replaces jabStreak): the third light straight (jab/cross/returnCross) in one unbroken run
+  of punches (each starting within 0.25 s of the previous one ending; hooks continue the run without counting; slip,
+  dash, guard, step back, getting hit/blocked or any other punch resets). Pressing every 0.10 s or 0.25 s → read;
+  spaced jabs every 0.5 s → never.
+- Reach matched to the drawn fist (art joints: jab 21/22, cross 23/26): hook reach 24 → 18 (trail tip 17.5), arcReach
+  34 → 30 (a two-man hook still works when the men are bunched), uppercut 20 → 16 (fist ~10.5). These differ from the
+  ARCHITECTURE §6 sample values on purpose (PDF §4 close range; the PDF itself gives no reach numbers).
+- Braking from a run uses art 'brake' (`brakeTime` .16, any input ends it); a full-speed reversal uses 'turn'
+  (`turnTime` .08). Both are FREE states (visual only; velocity is unchanged).
+- Full-figure white hit flashes (Jin hurt, enemy flinch) follow `settings.flash`: ≥ .5 white, (0, .5) '#c9d3dc', 0 none.
+
 ## Known gaps
 - Windows timed on S.time (invuln, slip cooldown) are not stretched by hit-stop or slow motion (tens of ms; negligible).
 - `C.resetTune()` restores defaults into the same object, so activities' training snapshot is not re-applied until
@@ -102,3 +130,8 @@ pure dash spam without punching cannot win.
 - The bout clock stops during knockdown counts (a game choice).
 - The ch0 'subtle' right-hand tell is only a pause + posture lean; the bots read internal state, so its readability
   needs a look in the browser once art.js lands.
+- art.js: the hook sweep (fist ~14 px, trail ~17.5 px) is shorter than the two-man arcReach (30); if art widens the hook
+  arc toward ~28-30 px, arcReach can stay and the visual will match. The uppercut fist (~10.5 px) is short for reach 16.
+- world.drawActor does not pass `tintK`, so the flash setting can only pick the tint colour, not scale its strength.
+- Telegraph tints (amber/red windup flash) ignore settings.flash on purpose: they are gameplay information.
+- The fairness table above predates the fix pass (shorter hook/uppercut, stricter boxer read); not re-simulated.

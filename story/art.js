@@ -1011,21 +1011,27 @@
       nhx: 23, nhy: -35.6, nex: 0, ney: 1, fhx: 6.8, fhy: -36.2, rot: 0.75, wind: 0.4, tilt: 0.18 });
     return kf(p, [[0, GUARD], [0.12, load], [0.35, ext], [0.6, mk(ext, { nhx: 22.2 })], [1, GUARD]]);
   });
+  // Hook and uppercut reach: combat.js registers a hit when the target's near edge is within
+  // S.tune reach (hook 18, arcReach 30 for the extra men; uppercut 16) and steps Jin ~3 px in
+  // during the punch. The fist peaks so that, with that step, it lands 2-3 px past the reach,
+  // the same overlap the jab and cross have: contact always happens where a fist is drawn.
   pose('hook', 0.37, (p, t, c) => {
-    // compact turn: lead elbow lifts to shoulder height, fist sweeps across in a curve
+    // compact turn: the hips and chest drive forward over the lead foot, the lead elbow lifts to
+    // shoulder height and the bent arm sweeps across in a curve (forearm foreshortened)
     const load = mk(GUARD, { hy: -20.2, rot: -0.95, fhx: 7.4, fhy: -34.6, fex: -1, fey: -0.2, cx: 1.4, kx: 2.8 });
-    const mid = mk(GUARD, { hx: 1, hy: -20.4, cx: 4.8, cy: -33.2, kx: 6.2, ky: -38.2, ffa: 0.6, nfa: 0.4, tilt: 0.25,
-      fhx: 14.6, fhy: -35, ffs: 0.32, fex: 0, fey: -1, rot: 0.35, nhx: 6.4, nhy: -36.4, wind: 0.4, ffront: 1 });
-    const thru = mk(mid, { fhx: 13.2, fhy: -35, ffs: 0.3, rot: 0.95, cx: 5.2, kx: 6.6 });
+    const mid = mk(GUARD, { hx: 2.4, hy: -20.4, cx: 6.8, cy: -33.2, kx: 8.2, ky: -38.2, ffx: 6.6, nfx: -4.6, ffa: 0.6, nfa: 0.4, tilt: 0.25,
+      fhx: 18.6, fhy: -35, ffs: 0.52, fex: 0, fey: -1, rot: 0.35, nhx: 8.2, nhy: -36.4, wind: 0.4, ffront: 1 });
+    const thru = mk(mid, { fhx: 17.8, fhy: -35, ffs: 0.5, rot: 0.8, cx: 7.4, kx: 8.8 });
     return kf(p, [[0, GUARD], [0.15, load], [0.35, mid], [0.6, thru], [1, GUARD]]);
   });
   pose('uppercut', 0.4, (p, t, c) => {
-    // quick knee dip, then hips and rear shoulder drive the fist straight up
+    // quick knee dip, then the hips and rear shoulder drive up and in: the fist rises up the
+    // middle to chin height in front of him
     const dip = mk(GUARD, { hy: -17.2, cx: 3, cy: -29.4, kx: 4.8, ky: -34.4, nhx: 5.2, nhy: -25.4, nex: -1, ney: 0.5,
       rot: -0.35, tilt: 0.25, nfa: 0.2 });
-    const drive = mk(GUARD, { hx: 1, hy: -22.8, cx: 3.6, cy: -35.4, kx: 4, ky: -40.8, nfa: 0.75, ffa: 0.25,
-      nhx: 10.4, nhy: -43.8, nex: 0.4, ney: 1, fhx: 6.4, fhy: -37, rot: 0.55, tilt: -0.22, wind: -0.3 });
-    return kf(p, [[0, GUARD], [0.2, dip], [0.4, drive], [0.6, mk(drive, { nhy: -44.6 })], [1, GUARD]]);
+    const drive = mk(GUARD, { hx: 2.2, hy: -22.8, cx: 5.4, cy: -35.4, kx: 5.8, ky: -40.8, ffx: 6, nfa: 0.75, ffa: 0.25,
+      nhx: 15, nhy: -42.6, nex: 0.4, ney: 1, fhx: 7.6, fhy: -37, rot: 0.55, tilt: -0.22, wind: -0.3 });
+    return kf(p, [[0, GUARD], [0.2, dip], [0.4, drive], [0.6, mk(drive, { nhx: 15.2, nhy: -43.4 })], [1, GUARD]]);
   });
   pose('dashStraight', 0.33, (p, t, c) => {
     // the dash carries into a fully extended straight: long, low, the rear leg trailing
@@ -1963,21 +1969,24 @@
       ctx.fillRect(Math.min(xa, xb), Y(dy), Math.abs(xb - xa) + 1, 1);
     };
     if (kind === 'hook') {
-      // a short arc swept from wide to centre, in front of the head
-      const n = 9;
+      // a broad flattened arc swept from wide to centre at shoulder height. It peaks at x 24: past
+      // the fist (~18 + the in-punch step) to show the sweep that can catch a second man
+      // (combat arcReach 30), never further.
+      const n = 12;
       for (let i = 0; i < n; i++) {
         const u = i / (n - 1);
         if (u < k * 0.8) continue;
         const an = -0.35 * Math.PI + u * 0.9 * Math.PI;
-        const px = 9 + Math.cos(an) * 8.5, py = -36.5 + Math.sin(an) * 4.4;
+        const px = 11 + Math.cos(an) * 13, py = -36.5 + Math.sin(an) * 4.4;
         ctx.globalAlpha = a * (0.4 + 0.6 * u); ctx.fillStyle = u > 0.6 ? S.pal.smear : S.pal.smear2;
         ctx.fillRect(X(px), Y(py), 2, 1);
       }
     } else if (kind === 'upper' || kind === 'uppercut') {
+      // follows the rear fist from the dip (8, -25) up and in to chin height (15, -43)
       for (let i = 0; i < 8; i++) {
         const u = i / 7;
         if (u < k * 0.8) continue;
-        const px = 7.5 + u * 3 - Math.sin(u * Math.PI) * 1.2, py = -24 - u * 20;
+        const px = 8 + u * 7 - Math.sin(u * Math.PI) * 1.5, py = -25 - u * 19;
         ctx.globalAlpha = a * (0.35 + 0.65 * u); ctx.fillStyle = u > 0.55 ? S.pal.smear : S.pal.smear2;
         ctx.fillRect(X(px), Y(py), 1, 3);
       }
@@ -2010,18 +2019,43 @@
     }
     ctx.globalAlpha = prevA; ctx.fillStyle = prevF;
   }
-  // Foot dust: a few low pixel clusters that spread and rise slightly as they fade.
-  function dust(ctx, x, y, k) {
+  // Push-off particles (PDF §7: "small dust or water particles where his feet push off").
+  // Dry ground: low dust clusters that spread and rise slightly as they fade. Wet ground: pale
+  // blue-white splash pixels flicked up in a short arc and falling back. `wet` (0..1) defaults to
+  // how wet the current location is (S.weather.wet), so callers need not pass it.
+  const DUST_PTS = [[-3, 0], [-1, -1], [1, 0], [3, -1], [0, -2]];
+  const SPLASH = [[-4, 0.7], [-2.5, 1], [-1, 1.25], [1, 1.2], [2.5, 0.95], [4, 0.65]];  // [dx, rise scale]
+  function dust(ctx, x, y, k, wet) {
     if (!canDraw(ctx)) return;
     k = clamp(+k || 0, 0, 1);
+    if (wet === undefined || wet === null) {
+      try { wet = S.weather && S.world && S.world.loc ? +S.weather.wet(S.world.loc) || 0 : 0; } catch (_) { wet = 0; }
+    }
+    wet = clamp(+wet || 0, 0, 1);
     const prevA = ctx.globalAlpha, prevF = ctx.fillStyle;
-    const pts = [[-3, 0], [-1, -1], [1, 0], [3, -1], [0, -2]];
-    for (let i = 0; i < pts.length; i++) {
-      const [ox, oy] = pts[i], spread = 1 + k * 2.2;
-      ctx.globalAlpha = prevA * (1 - k) * (i === 4 ? 0.35 : 0.55);
-      ctx.fillStyle = i % 2 ? S.pal.dust : S.pal.dust2;
-      const px = Math.round(x + ox * spread), py = Math.round(y - 1 + oy - k * 2.5);
-      ctx.fillRect(px, py, k < 0.5 ? 2 : 1, 1);
+    // early in the puff the particles are strong enough to read on dark ground
+    const fade = (1 - k) * (k < 0.4 ? 1 : 1 - (k - 0.4) * 0.6);
+    if (wet > 0.05) {
+      for (let i = 0; i < SPLASH.length; i++) {
+        const [ox, rise] = SPLASH[i], spread = 1 + k * 1.8, arc = Math.sin(Math.min(1, k * 1.25) * Math.PI) * 4.5 * rise;
+        ctx.globalAlpha = prevA * fade * (0.55 + 0.3 * wet) * (i === 0 || i === 5 ? 0.75 : 1);
+        ctx.fillStyle = i % 2 ? S.pal.smear2 : S.pal.smear;
+        ctx.fillRect(Math.round(x + ox * spread), Math.round(y - 1 - arc), 1, k < 0.3 ? 2 : 1);
+      }
+      // a thin ripple on the wet ground under the foot
+      ctx.globalAlpha = prevA * (1 - k) * 0.45 * wet; ctx.fillStyle = S.pal.smear2;
+      const rw = Math.round(3 + k * 6);
+      ctx.fillRect(Math.round(x - rw), Math.round(y), rw * 2 + 1, 1);
+    }
+    if (wet < 0.95) {
+      const dry = 1 - wet * 0.8;
+      for (let i = 0; i < DUST_PTS.length; i++) {
+        const [ox, oy] = DUST_PTS[i], spread = 1 + k * 2.2;
+        ctx.globalAlpha = prevA * fade * dry * (i === 4 ? 0.5 : 0.8);
+        ctx.fillStyle = i % 2 ? S.pal.dust : S.pal.dust2;
+        const px = Math.round(x + ox * spread), py = Math.round(y - 1 + oy - k * 2.5);
+        ctx.fillRect(px, py, k < 0.5 ? 2 : 1, 1);
+      }
     }
     ctx.globalAlpha = prevA; ctx.fillStyle = prevF;
   }
@@ -2056,10 +2090,14 @@
     top: { kind: 'cardigan', color: '#7a5a62', color2: '#d8cfc0' }, bottom: { kind: 'long_skirt', color: '#3e4250' }, shoes: '#3a2c26', extras: [] });
   S.defineLook('kid', { h: 30, build: 'kid', skin: '#c9966e', hair: { style: 'short', color: '#2a1f18' },
     top: { kind: 'tee', color: '#a85a3c' }, bottom: { kind: 'shorts', color: '#41506a' }, shoes: '#d0cbbf', extras: [] });
+  // Enemy base looks sit in the mid values (muted, never bright) so they separate from night
+  // brick and charcoal shadow by value and hue, not only by a silhouette edge: the thug in a faded
+  // tan work hoodie (yellower than any brick), the collector in a worn brown leather coat over
+  // charcoal slacks. Jin's blue top stays the only blue mass in a fight.
   S.defineLook('thug', { h: 47, build: 'broad', skin: '#b98563', hair: { style: 'beanie', color: '#33363c' },
-    top: { kind: 'hoodie', color: '#4a4f48' }, bottom: { kind: 'jeans', color: '#36425a' }, shoes: '#2a2624', extras: [] });
+    top: { kind: 'hoodie', color: '#6e5a40' }, bottom: { kind: 'jeans', color: '#3c465a' }, shoes: '#2e2a26', extras: [] });
   S.defineLook('collector', { h: 50, build: 'heavy', skin: '#c08a66', hair: { style: 'buzz', color: '#2a221c' },
-    top: { kind: 'coat', color: '#2e3038', color2: '#5a5048' }, bottom: { kind: 'slacks', color: '#24252c' }, shoes: '#16151a', extras: ['beard:#3a2e26'] });
+    top: { kind: 'coat', color: '#5a4a3c', color2: '#6e6256' }, bottom: { kind: 'slacks', color: '#3a3a42' }, shoes: '#221f22', extras: ['beard:#3a2e26'] });
   S.defineLook('guard', { h: 47, build: 'avg', skin: '#b07e5c', hair: { style: 'cap', color: '#2a3448' },
     top: { kind: 'uniform', color: '#3c4a62', color2: '#c9b26a' }, bottom: { kind: 'slacks', color: '#232a38' }, shoes: '#151519', extras: ['badge'] });
   // A few more generic people so placeholder NPCs vary until the cast defines its own.

@@ -877,6 +877,7 @@
       setText(s.name, plate ? l.name : '');
       toggle(s.name, 'jin', l.speaker === 'jin' || l.name === 'Jin');
       s.choices.innerHTML = '';
+      toggle(s.choices, 'two', false);
       setHtml(s.help, '');
     }
     const len = text.length, shown = clamp(l.shown | 0, 0, len);
@@ -896,6 +897,13 @@
         (c.enabled ? '' : ' aria-disabled="true"') + '><span class="n">' + (i + 1) + '</span><span>' + esc(c.text) +
         (!c.enabled && c.hint ? '<span class="why">' + esc(c.hint) + '</span>' : '') + '</span></button>').join('');
       setHtml(s.help, keyCap('↑↓') + ' choose  ' + keyHtml('interact') + ' answer');
+      // Three or more short answers sit in two columns (column-major, so ↑↓ still walks them in order):
+      // a tall single list covered the speakers standing above the box.
+      const n = l.choices.length;
+      const two = n >= 3 && l.choices.every((c) => String(c.text || '').length <= 44 && (c.enabled || !c.hint));
+      toggle(s.choices, 'two', two);
+      s.choices.style.gridTemplateRows = two ? 'repeat(' + Math.ceil(n / 2) + ', auto)' : '';
+      toggle(s.box, 'asks', true);
       s.sel = -1;
     }
     if (l.choices && s.choicesOn && l.sel !== s.sel) {

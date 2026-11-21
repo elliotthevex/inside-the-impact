@@ -63,7 +63,7 @@
     return {
       id: 'sb_controls', title: 'Back lot — how it works', kind: 'document',
       pages: [
-        'MOVE  ' + k('left') + ' / ' + k('right') + '   (hold ' + k('run') + ' to walk instead of run)\n' +
+        'MOVE  ' + k('left') + ' / ' + k('right') + '   (' + k('run') + ' switches between running and walking)\n' +
         'JUMP  ' + k('jump') + ' — tap for a hop, hold for the full jump. You can steer in the air.\n' +
         'DROP  ' + k('down') + ' + ' + k('jump') + ' on a plank drops through it.\n' +
         'GUARD hold ' + k('down') + ' on the ground.\n' +
@@ -520,8 +520,8 @@
     },
     scenes, dialogs,
     mapNodes: [
-      { id: 'sb_lot', name: 'Back lot', x: 260, y: 190, locs: ['sb_yard', 'sb_warehouse'], travel: true },
-      { id: 'sb_ave', name: 'Avenue (test block)', x: 360, y: 170, locs: ['sb_street'], travel: true },
+      { id: 'sb_lot', name: 'Back lot', x: 230, y: 200, locs: ['sb_yard', 'sb_warehouse'], travel: true },
+      { id: 'sb_ave', name: 'Avenue (test block)', x: 420, y: 140, locs: ['sb_street'], travel: true },
     ],
     summary: (G) => {
       const done = CHECKS.filter(([id]) => flag(G, 'sb_chk_' + id)).length;

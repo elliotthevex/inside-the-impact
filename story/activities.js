@@ -1061,6 +1061,9 @@
   }
   function comboPrompt(combo) {
     const bits = [Ext.label('punch') + ' punches; press again to chain'];
+    // Repeated presses always run jab → cross → hook, so a jab after a jab or a cross needs a beat first.
+    const CHAIN = { jab: 'cross', cross: 'hook' };
+    if (combo.some((k, i) => i > 0 && k === 'jab' && CHAIN[combo[i - 1]] !== 'jab')) bits.push('pause a beat to start again with a jab');
     if (combo.includes('uppercut')) bits.push(Ext.label('down') + '+' + Ext.label('punch') + ' uppercut');
     if (combo.includes('dashStraight')) bits.push('back off, ' + Ext.label('dash') + ' in, then ' + Ext.label('punch'));
     if (combo.includes('flurry')) bits.push(Ext.label('flurry') + ' flurry');
@@ -1092,6 +1095,9 @@
         bx = placed ? a.cx : j ? j.x + (j.face || 1) * 40 : a.cx;   // no spot: hang it just in front of Jin
       }
       this.bagX = bx; this.bagY = Ext.groundY(bx, a.y);
+      // The bag hangs where the "Use" spot is, so Jin usually starts inside it: step him to working
+      // distance on his side, facing it (combat lets him walk through idle props).
+      if (j && Math.abs(j.x - bx) < 18) { const side = j.x < bx || (j.x === bx && (j.face || 1) > 0) ? -1 : 1; j.x = bx + side * 22; j.vx = 0; j.face = -side; }
       // The punchable bag is a combat 'bag' actor (hits, sparks, sounds, sway). When the room already hangs a
       // heavy_bag piece here, that piece stays the visible bag: the actor draws nothing and its swing drives
       // the piece's sway, so there are never two bags on screen.
@@ -1513,7 +1519,8 @@
           if (a === 'punch' && pin && pin.owner === this) pin.flash = { pose: 'jab', t: 0.2 };
         }
         this.prog = this.count / s.count;
-        this.hud.prompt = (s.count > 1 ? key + ' ×' + (s.count - this.count) + ' — ' : key + ' ') + s.prompt;
+        const left = s.count - this.count;   // 0 during the short "DONE" pause before the next step
+        this.hud.prompt = (left <= 0 ? '' : s.count > 1 ? key + ' ×' + left + ' — ' : key + ' ') + s.prompt;
       }
       this.hud.bar = { value: this.prog, label: '' };
       this.hud.pips = { of: this.steps.length, list: this.steps.map((_, k) => (k < this.i ? 'ok' : k === this.i ? 'now' : 'todo')) };

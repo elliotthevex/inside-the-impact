@@ -55,3 +55,17 @@ Restart: everything in the contract (§3) is implemented and browser-checked. Fu
 - No per-frame figure cache. If scenes with many actors get heavy, cache rasterised frames keyed by look, pose, quantised t and the opts signature.
 - The `jin_ring` trunks colour and boots are my choice (drafts disagree: navy/blue trunks); cast.js can override any built-in look with S.defineLook.
 - The brass/steel knuckles colour follows draft-cinematic ("two gold glints").
+
+## Fix pass (visual review, 2026-11-22, fixer art+pieces)
+- Hook and uppercut reach: combat.js now registers the hook at reach 18 (arcReach 30) and the uppercut at 16,
+  and steps Jin ~3 px in during each. The hook drives hips and chest forward (hx 2.4, cx 6.8) with a less
+  foreshortened forearm (ffs .52/.5), so the lead fist peaks at x 17.9 and holds 17.1–17.9 through the active
+  frames; the uppercut drives up and in to x 15.0–15.2 at chin height (-42.6..-43.4). With the step, each lands
+  2–3 px past its reach, the same overlap the jab (21) and cross (23) have. Hook smear arc widened (centre 11,
+  radius 13, 12 dashes) to peak at x 24; the uppercut smear follows the new fist path (8,-25) -> (15,-44).
+- `S.art.dust(ctx, x, y, k, wet)`: wet (0..1) defaults to S.weather.wet(S.world.loc). Wet ground: 6 pale
+  blue-white (smear/smear2) splash pixels flicked up in an arc plus a thin ripple; drizzle mixes in some dust;
+  dry dust alpha raised to ~.8 early in the puff (k < .4).
+- Enemy looks lifted into the mid values: thug hoodie '#6e5a40' (faded tan, yellower than any brick), jeans
+  '#3c465a', shoes '#2e2a26'; collector coat '#5a4a3c' (worn brown leather), trim '#6e6256', slacks '#3a3a42',
+  shoes '#221f22'. Not camel (the camel coat belongs to the briber).

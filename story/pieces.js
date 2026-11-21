@@ -74,24 +74,31 @@
   }
 
   /* ── 2. Palette (material ramps, dark → light; index 2 is the base) ─ */
+  // Contract §3: S.pal (art.js, loaded first) is the shared palette. Every colour and ramp that has
+  // a counterpart there is taken from it, so walls, props and figures share one set of tones; the
+  // literal values are only the fallback for pages that load pieces.js without art.js. Ramps with
+  // no S.pal counterpart (stone, siding, glass, posters' weathered paper, ...) stay local.
+  const SP = S.pal && typeof S.pal === 'object' ? S.pal : null;
+  const spc = (key, fb) => (SP && typeof SP[key] === 'string' ? SP[key] : fb);
+  const sp5 = (pre, fb) => (SP && [0, 1, 2, 3, 4].every((i) => typeof SP[pre + i] === 'string') ? [0, 1, 2, 3, 4].map((i) => SP[pre + i]) : fb);
   const PAL = {
-    ink: '#0c0a11', night: '#11131b', shadow: '#17141d', plum: '#271e2c', plum2: '#36293a', charcoal: '#1d1c22',
-    brick: ['#2a1e1c', '#3a2924', '#4c362e', '#5f4639', '#735645'],
-    brick_red: ['#2c1918', '#43221e', '#5a2e27', '#703c32', '#854f42'],
+    ink: spc('black', '#0c0a11'), night: spc('sky0', '#11131b'), shadow: spc('charcoal0', '#17141d'), plum: spc('plum1', '#271e2c'), plum2: spc('plum2', '#36293a'), charcoal: spc('charcoal', '#1d1c22'),
+    brick: sp5('brick', ['#2a1e1c', '#3a2924', '#4c362e', '#5f4639', '#735645']),
+    brick_red: sp5('brickRed', ['#2c1918', '#43221e', '#5a2e27', '#703c32', '#854f42']),
     brick_dark: ['#1a1618', '#241f22', '#30292c', '#3d3437', '#4a4043'],
     stone: ['#25262b', '#34353a', '#45454a', '#57565a', '#6b6968'],
     siding: ['#1e252e', '#29323d', '#36404c', '#45505d', '#57626f'],
     concrete: ['#232528', '#313437', '#404346', '#505255', '#626365'],
     plaster: ['#2b2a2c', '#3b3a3b', '#4d4b4a', '#615e5a', '#77726b'],
-    metal: ['#1a201e', '#262e2b', '#343e39', '#444f49', '#57635b'],
+    metal: sp5('metal', ['#1a201e', '#262e2b', '#343e39', '#444f49', '#57635b']),
     iron: ['#121417', '#1b1e22', '#262a2f', '#33383e', '#434950'],
     steel: ['#24282d', '#33383e', '#454b52', '#5a6168', '#737a80'],
-    rust: ['#3a2218', '#55301f', '#704328', '#8a5733'],
-    wood: ['#23180f', '#332417', '#463220', '#5b432c', '#72573b'],
+    rust: SP && SP.rust && SP.rust2 ? [shade(SP.rust, -0.42), shade(SP.rust, -0.2), SP.rust, SP.rust2] : ['#3a2218', '#55301f', '#704328', '#8a5733'],
+    wood: sp5('wood', ['#23180f', '#332417', '#463220', '#5b432c', '#72573b']),
     woodPale: ['#3b2f22', '#52432f', '#6b593e', '#83704f', '#9a8662'],
     asphalt: ['#111318', '#171a20', '#1e222a', '#272c35', '#323843'],
     walk: ['#262930', '#30343c', '#3b4049', '#474d57', '#565c66'],
-    amber: ['#5a3c20', '#956532', '#cf964a', '#ecbd6c', '#fbdc9c'],
+    amber: sp5('amber', ['#5a3c20', '#956532', '#cf964a', '#ecbd6c', '#fbdc9c']),
     glass: ['#0e131b', '#151c27', '#1d2633', '#293443', '#3a4757'],
     paper: ['#5f584c', '#7a7262', '#958c78', '#b0a68e', '#c8bea4'],
     cloth: ['#1f2530', '#2b3340', '#3a4352', '#4b5566', '#5f697a'],
@@ -100,8 +107,12 @@
     sheet: ['#5c6672', '#717c88', '#8a949e', '#a3acb3', '#bcc2c4'],
     canvas: ['#4d4a46', '#625e58', '#79746c', '#908a80', '#a59e92'],
     fadedRed: '#7c3a31', fadedBlue: '#3d5168', fadedYellow: '#a98c47', fadedGreen: '#4f6852', cream: '#c4b896', offWhite: '#cfc8b6',
-    neonRed: '#d9634f', neonBlue: '#7fb0c8', neonAmber: '#e8b860', neonPink: '#c97a8e', neonGreen: '#86b88c',
-    lamp: '#f2c46e', lampWarm: '#e9a95a', lampCool: '#b9cbd6', fluoro: '#cfe0d6', tvBlue: '#7d9cc4', fire: '#e07a3a',
+    neonRed: spc('neon', '#d9634f'), neonBlue: '#7fb0c8', neonAmber: '#e8b860', neonPink: '#c97a8e', neonGreen: '#86b88c',
+    // Light colours. `lamp` is the colour a warm lamp casts (S.pal.glow); `bulb` the hot filament
+    // itself (S.pal.lamp), for the few pixels of a visible bulb.
+    lamp: spc('glow', '#f2c46e'), bulb: spc('lamp', '#ffe4ae'), lampWarm: spc('amber3', '#e9a95a'), lampCool: '#b9cbd6', fluoro: '#cfe0d6', tvBlue: '#7d9cc4', fire: '#e07a3a',
+    // Warm tungsten for arena rigs and stage cans: amber, but paler than a streetlight.
+    tungsten: SP && SP.glow && SP.paper ? mix(SP.glow, SP.paper, 0.22) : '#f2d29a',
   };
   const STYLE = { brick: PAL.brick, brick_red: PAL.brick_red, brick_dark: PAL.brick_dark, stone: PAL.stone, siding: PAL.siding, concrete: PAL.concrete, plaster: PAL.plaster, wood: PAL.wood, metal: PAL.metal };
   const styleRamp = (s) => STYLE[s] || (typeof s === 'string' && s[0] === '#' ? ramp(s) : PAL.brick);
@@ -451,10 +462,12 @@
     } else if (kind === 'glass') {
       R(c, x, top, w, h, base[2]);
       const lit = !!o.lit;
-      R(c, x + 2, top + 2, w - 4, h - 8, lit ? PAL.amber[3] : PAL.glass[1]);
+      // a lit shop door matches the shop windows: soft amber falling off toward the floor
+      if (lit) vbands(c, x + 2, top + 2, w - 4, h - 8, PAL.amber[3], mix(PAL.amber[1], PAL.amber[0], 0.4), 4);
+      else R(c, x + 2, top + 2, w - 4, h - 8, PAL.glass[1]);
       if (!lit) {
         for (let i = 0; i < Math.min(w, h) - 6; i++) if (i % 6 < 2) Px(c, x + w - 3 - i, top + 2 + i, PAL.glass[3]);
-      } else RA(c, x + 2, top + 2, w - 4, 3, PAL.amber[4], 0.6);
+      } else RA(c, x + 2, top + 2, w - 4, 2, PAL.amber[4], 0.35);
       R(c, x + 2, top + Math.floor(h * 0.55), w - 4, 2, base[3]);
       R(c, x + 2, gy - 6, w - 4, 4, base[1]);
       if (o.hours !== false) R(c, x + 3, top + 4, 4, 3, lit ? PAL.amber[1] : PAL.paper[2]);
@@ -503,6 +516,43 @@
       if (hash(seed + i * 1.3) < 0.15) line(c, x + i, y - 1, x + i + 1, y + 6, col);
     }
     line(c, x, y + 7, x + w - 1, y + 6, col2);
+  }
+  // A period throw-up: n fat bubble letters (rounded blocks) leaning on each other, a 1 px
+  // outline over a drop shadow, a muted fill with a shine, letter counters (O, S, A, E shapes)
+  // and a few drips. Muted paint, never neon. Returns its width.
+  const THROW_FILL = ['#8a8986', '#73586a', '#4f6a72', '#857446', '#7c4e40', '#6a7a62'];
+  function bubbleBlock(c, x, y, w, h, col) {
+    R(c, x + 2, y, w - 4, 1, col); R(c, x + 1, y + 1, w - 2, 1, col); R(c, x, y + 2, w, h - 4, col);
+    R(c, x + 1, y + h - 2, w - 2, 1, col); R(c, x + 2, y + h - 1, w - 4, 1, col);
+  }
+  function throwUp(c, x, y, h, n, seed) {
+    const fill = mute(THROW_FILL[Math.floor(hash(seed + 3) * THROW_FILL.length)], 0.15);
+    const pale = hash(seed + 4) < 0.35, out = pale ? '#a9a294' : '#1c1a22', shadowC = pale ? '#1c1a22' : mix(fill, '#120f16', 0.65);
+    const shine = shade(fill, 0.32), K = Math.floor(hash(seed + 5) * 4);
+    const L = [];
+    let lx = x + 1;
+    for (let i = 0; i < n; i++) {
+      const w = Math.max(6, Math.round(h * (0.58 + 0.14 * hash(seed + i * 2.3)))), bob = Math.round((hash(seed + i * 4.1) - 0.5) * 3);
+      L.push({ x: lx, y: y + 1 + bob, w, kind: (K + i) % 4 });
+      lx += w - 1;                                   // letters overlap by their outlines
+    }
+    const hh = h - 2;
+    for (const l of L) bubbleBlock(c, l.x, l.y + 1, l.w + 2, hh + 2, shadowC);          // drop shadow
+    for (const l of L) bubbleBlock(c, l.x - 1, l.y - 1, l.w + 2, hh + 2, out);           // outline
+    for (const l of L) {
+      bubbleBlock(c, l.x, l.y, l.w, hh, fill);
+      R(c, l.x + 2, l.y + 1, Math.max(1, l.w - 5), 1, shine); Px(c, l.x + 1, l.y + 2, shine);
+      const mx = l.x + Math.floor(l.w / 2);
+      if (l.kind === 0) R(c, mx - 1, l.y + 3, 2, hh - 6, out);                            // O
+      else if (l.kind === 1) { R(c, l.x + 2, l.y + 3, l.w - 2, 1, out); R(c, l.x, l.y + hh - 4, l.w - 2, 1, out); } // S
+      else if (l.kind === 2) { R(c, mx - 1, l.y + hh - 3, 2, 3, out); R(c, mx - 1, l.y + 3, 2, 2, out); }        // A
+      else { R(c, l.x + 3, l.y + 3, l.w - 3, 1, out); R(c, l.x + 3, l.y + hh - 4, l.w - 3, 1, out); }            // E
+    }
+    for (let i = 0; i < 3; i++) if (hash(seed + i * 7.7) < 0.6) {
+      const l = L[Math.floor(hash(seed + i * 8.3) * L.length)], dx = 2 + Math.floor(hash(seed + i * 9.1) * Math.max(1, l.w - 4));
+      R(c, l.x + dx, l.y + hh, 1, 2 + Math.floor(hash(seed + i) * 3), fill);
+    }
+    return lx - x + 3;
   }
 
   // Paper rows with a torn corner; returns per-row [x0, x1] so content can be clipped.
@@ -614,10 +664,15 @@
       if (hash(seed + f) < 0.35) { R(c, x + 4 + Math.floor(hash(seed + f * 2) * (w - 12)), py - 5, 4, 5, '#4a3a2c'); Px(c, x + 6 + Math.floor(hash(seed + f * 2) * (w - 12)), py - 7, '#4d6b44'); }
       speckle(c, x, py - 9, w, 11, PAL.rust[1], Math.floor(w / 6), seed + f * 3, false);
     }
+    // drop > 0: the drop ladder hangs that many px below the lowest landing.
+    // drop < 0: no room below (a storefront sign): the counterweighted ladder is stowed, raised
+    // through the landing so it stands against the railing instead of crossing the sign.
     if (drop) {
       const by = Math.round(yTop + (floors - 1) * floorH), lx = x + Math.floor(w * 0.5);
-      R(c, lx, by + 2, 1, drop, ir[2]); R(c, lx + 6, by + 2, 1, drop, ir[2]);
-      for (let yy = by + 5; yy < by + drop; yy += 4) R(c, lx, yy, 7, 1, ir[3]);
+      const y0 = drop > 0 ? by + 2 : by - 17, len = drop > 0 ? drop : 19;
+      R(c, lx, y0, 1, len, ir[2]); R(c, lx + 6, y0, 1, len, ir[2]);
+      for (let yy = y0 + 3; yy < y0 + len - 1; yy += 4) R(c, lx, yy, 7, 1, ir[3]);
+      if (drop < 0) { R(c, lx - 1, y0, 9, 1, ir[3]); RA(c, lx + 7, y0 + 1, 1, len - 1, PAL.ink, 0.35); }
     }
   }
   function waterTank(c, cx, by, seed) {
@@ -713,6 +768,19 @@
       if (roof.tank) waterTank(c, x + Math.round(w * (roof.tankAt || 0.7)), top, s + 3);
       if (roof.antenna) antenna(c, x + Math.round(w * (roof.antennaAt || 0.22)), top, 22 + Math.floor(hash(s + 4) * 10), s + 5);
       if (roof.chimney) { box(c, x + Math.round(w * 0.45), top - 12, 8, 12, r); R(c, x + Math.round(w * 0.45) - 1, top - 13, 10, 2, PAL.stone[3]); }
+      // Over a shop the fire escape is drawn before the storefront, so the sign and awning sit in
+      // front of its lowest landing, and the drop ladder stops above the sign (or is stowed when
+      // there is no room). On a plain building it hangs in front of the ground floor as before.
+      const drawFE = () => {
+        if (!p.fireEscape || !(b.floors > 0)) return;
+        const k = typeof p.fireEscape === 'number' ? p.fireEscape : Math.min(b.cols - 1, Math.floor(b.cols / 2));
+        const fw = Math.min(w - 8, b.ww + 26), fx = clamp(Math.round(x + (w / b.cols) * (k + 0.5) - fw / 2), x + 2, x + w - fw - 2);
+        const feTop = top + b.corn + b.fh * 0.45 + b.wh + 3, lowY = Math.round(feTop + (b.floors - 1) * b.fh);
+        let drop = 18;
+        if (b.shop) { const room = gy - b.shopH - lowY - 6; drop = room >= 8 ? Math.min(18, room) : -1; }
+        fireEscape(c, fx, fw, feTop, b.floors, b.fh, s + 10, drop);
+      };
+      if (b.shop) drawFE();
       // storefront or plain ground floor
       const d = b.door;
       if (b.shop) {
@@ -721,21 +789,19 @@
         speckle(c, x + 3, signY + 1, w - 6, 9, sc[3], Math.floor(w / 5), s + 6, true);
         if (sh.sign) txt(c, sh.sign, x + Math.floor(w / 2), signY + 3, { align: 'center', color: sh.lit === false ? PAL.paper[2] : '#e2d6b4', shadow: sc[0] });
         const wx0 = x + 5, wx1 = x + d.dx - 4, wy0 = signY + 14, wy1 = gy - 8;
-        const winKind = sh.window || 'lit';
-        if (wx1 - wx0 > 6) shopWindow(c, wx0, wy0, wx1 - wx0, wy1 - wy0, winKind, s + 7, sh);
+        const winKind = sh.window || 'lit', inside = shopInterior(sh);
+        // one OPEN card per storefront: in the window left of the door, else the one right of it
+        const hasL = wx1 - wx0 > 6;
+        if (hasL) shopWindow(c, wx0, wy0, wx1 - wx0, wy1 - wy0, winKind, s + 7, sh, { inside, card: true, side: 'L', top: sh.awning ? 9 : 0 });
         const rx0 = x + d.dx + d.w + 4, rx1 = x + w - 5;
-        if (rx1 - rx0 > 10) shopWindow(c, rx0, wy0, rx1 - rx0, wy1 - wy0, winKind, s + 8, sh);
+        if (rx1 - rx0 > 10) shopWindow(c, rx0, wy0, rx1 - rx0, wy1 - wy0, winKind, s + 8, sh, { inside, card: !hasL, side: 'R', top: sh.awning ? 9 : 0 });
         R(c, x + 2, gy - 8, w - 4, 8, PAL.stone[1]); R(c, x + 2, gy - 8, w - 4, 1, PAL.stone[3]);
         drawDoor(c, x + d.dx, gy, d.w, d.h, { kind: d.kind, lit: winKind === 'lit', color: d.color, label: d.label, seed: s, open: d.open, fresh: d.fresh });
         if (sh.awning) awningShape(c, x + 3, signY + 11, w - 6, typeof sh.awning === 'string' ? sh.awning : sh.color || PAL.fadedRed, sh.stripes !== false, s + 9);
       } else {
         drawDoor(c, x + d.dx, gy, d.w, d.h, { kind: d.kind, color: d.color, label: d.label, seed: s, open: d.open, fresh: d.fresh, lit: d.lit });
         R(c, x, gy - 3, w, 3, PAL.concrete[1]); R(c, x, gy - 3, w, 1, PAL.concrete[3]);
-      }
-      if (p.fireEscape) {
-        const k = typeof p.fireEscape === 'number' ? p.fireEscape : Math.min(b.cols - 1, Math.floor(b.cols / 2));
-        const fw = Math.min(w - 8, b.ww + 26), fx = clamp(Math.round(x + (w / b.cols) * (k + 0.5) - fw / 2), x + 2, x + w - fw - 2);
-        if (b.floors > 0) fireEscape(c, fx, fw, top + b.corn + b.fh * 0.45 + b.wh + 3, b.floors, b.fh, s + 10, 18);
+        drawFE();
       }
       // posters on the ground floor
       (p.posters || []).forEach((po, i) => {
@@ -749,34 +815,204 @@
       const b = bLayout(p, L), out = [];
       for (const o of b.wins) if (o.lit && !o.boarded) out.push({ x: o.x + o.w / 2, y: o.y + o.h / 2, r: 14 + o.w, color: o.tv ? PAL.tvBlue : '#efb866', k: o.tv ? 0.6 : 0.8, flicker: o.tv ? 0.35 : 0, win: true });
       if (b.shop && (b.shop.window || 'lit') === 'lit') {
-        const d = b.door, cx = b.x + Math.max(20, d.dx / 2);
-        out.push({ x: cx, y: b.gy - b.shopH / 2 + 4, r: Math.max(60, Math.min(110, b.w * 0.6)), color: PAL.lamp, k: 0.85, reflect: true });
+        // Light spilling out of the shop: soft and diffuse (no lens glare, `core: false`), so the
+        // streetlights and Jin stay the focal points. Bars are dim and warm; laundromats and gyms
+        // run on cooler tubes.
+        const d = b.door, cx = b.x + Math.max(20, d.dx / 2), li = SHOP_LIGHT[shopInterior(b.shop)] || SHOP_LIGHT.store;
+        out.push({ x: cx, y: b.gy - b.shopH / 2 + 4, r: Math.max(60, Math.min(110, b.w * 0.6)), color: li.color, k: li.k, reflect: true, core: false, glow: 0.6 });
         if (b.shop.neon) out.push({ x: cx, y: b.gy - b.shopH + 22, r: 40, color: b.shop.neon === true ? PAL.neonRed : b.shop.neon, k: 0.55, flicker: 0.1 });
       }
       return out;
     },
   });
 
-  function shopWindow(c, x, y, w, h, kind, seed, sh) {
+  // What a lit storefront shows inside. `shop.interior` wins; otherwise it is read from the sign.
+  const SHOP_KINDS = ['store', 'diner', 'laundry', 'bar', 'liquor', 'gym', 'pawn'];
+  function shopInterior(sh) {
+    if (!sh) return 'store';
+    if (SHOP_KINDS.indexOf(sh.interior) >= 0) return sh.interior;
+    const s = String(sh.sign || '').toUpperCase();
+    if (/WASH|LAUND|CLEANER|COIN.?OP/.test(s)) return 'laundry';
+    if (/DINER|CAFE|COFFEE|LUNCH|GRILL|EATS|KITCHEN|RESTAURANT|PIZZA|BURGER|DONUT|BAKERY|DELI\b/.test(s)) return 'diner';
+    if (/LIQUOR|SPIRITS|PACKAGE|WINE/.test(s)) return 'liquor';
+    if (/\bBAR\b|TAVERN|\bPUB\b|LOUNGE|SALOON|TAPROOM|\bTAP\b/.test(s)) return 'bar';
+    if (/GYM|FITNESS|BOXING|ATHLETIC|KARATE|BARBELL/.test(s)) return 'gym';
+    if (/PAWN|LOAN|JEWEL|\bGOLD\b|CHECK.?CASH/.test(s)) return 'pawn';
+    return 'store';
+  }
+  // Colour and strength of the light each kind of shop spills onto the street.
+  const SHOP_LIGHT = {
+    store: { color: PAL.lamp, k: 0.6 }, diner: { color: PAL.lamp, k: 0.62 }, pawn: { color: PAL.lamp, k: 0.5 },
+    bar: { color: PAL.lampWarm, k: 0.42 }, liquor: { color: PAL.lamp, k: 0.55 },
+    laundry: { color: mix(PAL.lamp, PAL.fluoro, 0.45), k: 0.6 }, gym: { color: mix(PAL.lamp, PAL.fluoro, 0.55), k: 0.55 },
+  };
+  // A plain dark figure seen through shop glass: head, shoulders, body cut off at `footY`.
+  function shopFigure(c, cx, footY, h, col) {
+    const hy = Math.round(footY - h);
+    R(c, cx - 2, hy, 5, 1, col); R(c, cx - 3, hy + 1, 7, 5, col); R(c, cx - 2, hy + 6, 5, 1, col);
+    R(c, cx - 1, hy + 7, 3, 2, col);
+    R(c, cx - 5, hy + 9, 11, 1, col); R(c, cx - 6, hy + 10, 13, Math.max(0, footY - hy - 10), col);
+  }
+
+  /* Storefront glass. kind 'lit' | 'dark' | 'boarded'. o: { inside (see shopInterior), card (this
+     window carries the OPEN card or the bar's beer neon), side 'L' | 'R' of the door, top (rows the
+     awning hides) }. Lit glass starts at a soft amber (amber[3]) and falls to amber[1], with a
+     darker lower third, so a lit shop reads warm but never brighter than the streetlights. */
+  function shopWindow(c, x, y, w, h, kind, seed, sh, o) {
+    o = o || {};
+    const card = o.card !== false;
     R(c, x - 1, y - 1, w + 2, h + 2, PAL.steel[1]);
     if (kind === 'boarded') { drawWin(c, x, y, w, h, { boarded: true, seed, lintel: false, sill: false }); return; }
     if (kind === 'dark') {
       R(c, x, y, w, h, PAL.glass[1]); RA(c, x, y, w, Math.floor(h / 2), PAL.glass[2], 0.6);
       for (let i = 0; i < w; i += 7) line(c, x + i, y + h - 1, Math.min(x + w - 1, x + i + 6), y + h - 7, PAL.glass[3]);
-      if (sh && sh.closed !== false) { R(c, x + Math.floor(w / 2) - 7, y + 4, 14, 6, PAL.paper[2]); txt(c, 'CLOSED', x + Math.floor(w / 2), y + 5, { align: 'center', color: PAL.fadedRed }); }
+      if (card && sh && sh.closed !== false) { const cy0 = y + (o.top || 0) + 4; R(c, x + Math.floor(w / 2) - 13, cy0, 26, 7, PAL.paper[2]); txt(c, 'CLOSED', x + Math.floor(w / 2), cy0 + 1, { align: 'center', color: PAL.fadedRed }); }
       return;
     }
-    // lit: amber interior with shelves and stock in silhouette
-    vbands(c, x, y, w, h, PAL.amber[4], PAL.amber[2], 4);
-    const a = PAL.amber;
-    for (let yy = y + 6; yy < y + h - 2; yy += 7) {
-      R(c, x, yy, w, 1, a[1]);
-      for (let xx = x + 1; xx < x + w - 1; xx += 3) if (hash(seed + xx * 0.7 + yy) < 0.7) R(c, xx, yy - 3, 2, 3, hash(seed + xx + yy * 0.3) < 0.5 ? a[1] : '#8a5a3a');
+    const a = PAL.amber, inside = o.inside || shopInterior(sh), top = Math.max(0, Math.min(h - 20, o.top || 0));
+    // background light: warm amber; laundromats and gyms lean toward fluorescent; bars are dim
+    let T = a[3], B = a[1];
+    if (inside === 'laundry') { T = mix(a[2], PAL.fluoro, 0.38); B = mix(a[1], PAL.cloth[2], 0.4); }
+    else if (inside === 'gym') { T = mix(a[2], PAL.fluoro, 0.45); B = mix(a[1], PAL.cloth[2], 0.45); }
+    else if (inside === 'bar') { T = mix(a[2], a[1], 0.35); B = mix(a[0], PAL.plum, 0.3); }
+    vbands(c, x, y, w, h, T, B, 5);
+    const S0 = mix(B, PAL.ink, 0.5), S1 = mix(B, PAL.ink, 0.25), M = mix(T, B, 0.5), HL = mix(T, a[4], 0.3);
+    const vinyl = mix('#7a3a2e', B, 0.3), fy = y + h, ty = y + top;
+    // ceiling tubes (broken row of 1 px fixtures just under the awning line)
+    for (let xx = x + 4 + Math.floor(hash(seed + 31) * 6); xx < x + w - 8; xx += 20) R(c, xx, ty + 1, 8, 1, mix(T, '#ffffff', 0.22));
+    const farR = o.side === 'R';  // booths, cases and racks go to the end away from the door
+    if (inside === 'diner') {
+      const bw = w >= 56 ? Math.round(w * 0.42) : 0, zx0 = farR ? x + w - bw : x, cx0 = farR ? x : x + bw, cw = w - bw;
+      // menu board over the counter
+      const mbw = Math.min(cw - 6, 34);
+      if (mbw > 10) { const mx = cx0 + 3, my = ty + 4; R(c, mx, my, mbw, 7, S0); for (let r = 0; r < 2; r++) for (let xx = mx + 2; xx < mx + mbw - 2; xx += 2) if (hash(seed + xx * 0.9 + r * 7) < 0.6) Px(c, xx, my + 2 + r * 3, mix(T, a[4], 0.4)); }
+      // counter with a cook or waitress behind it, urns and a pie case on top
+      const cy = y + Math.round(h * 0.58);
+      if (hash(seed + 41) < 0.65 && cw > 24) shopFigure(c, cx0 + 8 + Math.floor(hash(seed + 42) * (cw - 16)), fy + 8, 38, S1);
+      R(c, cx0, cy, cw, 2, HL); R(c, cx0, cy + 2, cw, 1, mix(PAL.steel[4], T, 0.4)); R(c, cx0, cy + 3, cw, fy - cy - 3, S1);
+      for (let xx = cx0 + 4; xx < cx0 + cw - 4; xx += 16) { R(c, xx, cy - 5, 3, 5, M); Px(c, xx + 1, cy - 6, S1); }
+      if (cw > 30) { const px0 = cx0 + cw - 14; R(c, px0, cy - 6, 10, 6, mix(T, PAL.glass[4], 0.4)); R(c, px0 + 1, cy - 3, 8, 2, mix('#9a6a3a', B, 0.3)); }
+      // stools in front of the counter, one customer now and then
+      for (let sx = cx0 + 5; sx < cx0 + cw - 3; sx += 9) {
+        const sy = fy - 12;
+        if (hash(seed + sx * 0.37) < 0.25) shopFigure(c, sx, sy + 1, 22, S0);
+        R(c, sx - 2, sy, 5, 2, vinyl); R(c, sx, sy + 2, 1, fy - sy - 2, S0);
+      }
+      // booths along the glass: back, seat, table, seat, back
+      for (let bx = zx0 + 1; bx + 29 <= zx0 + bw; bx += 31) {
+        const by = fy - 18;
+        if (hash(seed + bx * 0.53) < 0.55) shopFigure(c, bx + 8, by + 10, 20, S0);
+        R(c, bx, by, 4, 18, vinyl); R(c, bx + 1, by - 1, 2, 1, vinyl); R(c, bx + 25, by, 4, 18, vinyl); R(c, bx + 26, by - 1, 2, 1, vinyl);
+        R(c, bx + 4, fy - 9, 6, 2, mix(vinyl, PAL.ink, 0.3)); R(c, bx + 19, fy - 9, 6, 2, mix(vinyl, PAL.ink, 0.3));
+        R(c, bx + 10, fy - 13, 9, 2, HL); R(c, bx + 14, fy - 11, 1, 11, S0); Px(c, bx + 12, fy - 14, PAL.offWhite);
+      }
+    } else if (inside === 'laundry') {
+      // two rows of machines along the back wall; round dark port doors
+      const body = mix(PAL.offWhite, B, 0.62), bodyD = mix(body, PAL.ink, 0.3), bodyL = mix(body, T, 0.4), port = mix(PAL.glass[1], B, 0.25);
+      const mw = 11, n = Math.floor((w - 3) / (mw + 1)), mx0 = x + Math.floor((w - n * (mw + 1) + 1) / 2);
+      for (let row = 0; row < 2; row++) {
+        const ry = fy - 12 - row * 13;
+        for (let i = 0; i < n; i++) {
+          const mx = mx0 + i * (mw + 1);
+          R(c, mx, ry, mw, 12, body); R(c, mx, ry, mw, 1, bodyL); R(c, mx + mw - 1, ry + 1, 1, 11, bodyD);
+          R(c, mx + 1, ry + 1, mw - 2, 2, bodyD); Px(c, mx + 2 + Math.floor(hash(seed + i + row * 5) * 6), ry + 1, mix(PAL.neonRed, body, 0.3));
+          ellipse(c, mx + 5, ry + 7, 3, 3, bodyD); ellipse(c, mx + 5, ry + 7, 2, 2, port); Px(c, mx + 4, ry + 6, mix(port, T, 0.45));
+          if (row === 1 && hash(seed + i * 1.7) < 0.18) { R(c, mx + 2, ry - 4, 7, 3, mix('#5a6a7a', B, 0.3)); R(c, mx + 2, ry - 4, 7, 1, mix('#8a9aaa', B, 0.3)); }
+        }
+      }
+      // wall clock and a soap dispenser above the machines
+      const wy = fy - 38;
+      if (wy > ty + 4) { const ck = farR ? x + w - 10 : x + 9; ellipse(c, ck, wy, 3, 3, S1); ellipse(c, ck, wy, 2, 2, HL); Px(c, ck, wy - 1, S0); Px(c, ck + 1, wy, S0); }
+      if (wy > ty + 2 && w > 40) { const dx0 = farR ? x + 4 : x + w - 12; R(c, dx0, wy - 3, 8, 9, mix('#4a6a7a', B, 0.35)); R(c, dx0 + 1, wy - 1, 6, 2, mix(T, '#ffffff', 0.15)); }
+    } else if (inside === 'bar' || inside === 'liquor') {
+      const liquor = inside === 'liquor', glassC = ['#4a6a4a', '#7a4a2a', '#5a3a2a', '#8a8070', '#6a2a2a'];
+      // back bar (a mirror in a bar; plain shelving in a liquor store), shelves of bottles
+      const shelves = liquor ? Math.max(2, Math.floor((h - top - 12) / 9)) : 2, sTop = ty + 3;
+      if (!liquor) R(c, x + 2, sTop, w - 4, 18, mix(B, PAL.glass[2], 0.4));
+      for (let k = 0; k < shelves; k++) {
+        const sy = sTop + 8 + k * (liquor ? 9 : 8);
+        if (sy > fy - 4) break;
+        R(c, x + 1, sy, w - 2, 1, M);
+        for (let bx = x + 3; bx < x + w - 3; bx += 2 + (hash(seed + bx + k) < 0.3 ? 1 : 0)) {
+          if (hash(seed + bx * 1.3 + k * 5) > 0.82) continue;
+          const bh = 4 + Math.floor(hash(seed + bx * 0.7 + k) * 3), col = mix(glassC[Math.floor(hash(seed + bx * 2.1 + k) * 5)], B, 0.3);
+          R(c, bx, sy - bh, 1, bh, col); Px(c, bx, sy - bh - 1, mix(col, PAL.ink, 0.3));
+          if (bh > 4) Px(c, bx, sy - bh + 2, mix(col, T, 0.5));
+        }
+      }
+      // the bar (or the till counter): wood top, dark front with panels, a brass foot rail
+      const cy = y + Math.round(h * (liquor ? 0.7 : 0.62)), cx0 = liquor ? (farR ? x : x + w - Math.round(w * 0.45)) : x, cw = liquor ? Math.round(w * 0.45) : w;
+      if (!liquor && hash(seed + 51) < 0.7) shopFigure(c, x + 10 + Math.floor(hash(seed + 52) * Math.max(1, w - 20)), fy + 8, 38, S1);
+      R(c, cx0, cy, cw, 2, mix(PAL.wood[3], T, 0.25)); R(c, cx0, cy + 2, cw, fy - cy - 2, S0);
+      for (let xx = cx0 + 4; xx < cx0 + cw - 2; xx += 8) R(c, xx, cy + 4, 1, fy - cy - 6, S1);
+      if (liquor) { const rx = farR ? cx0 + 3 : cx0 + cw - 11; R(c, rx, cy - 5, 8, 5, S1); R(c, rx + 1, cy - 4, 4, 1, mix('#7ac08a', B, 0.4)); }
+      else {
+        R(c, x, fy - 3, w, 1, mix('#b8a050', B, 0.45));
+        for (let sx = x + 6; sx < x + w - 4; sx += 11) {
+          if (hash(seed + sx * 0.41) < 0.3) shopFigure(c, sx, cy + 6, 26, mix(S0, PAL.ink, 0.2));
+          R(c, sx - 2, cy + 6, 5, 2, vinyl); R(c, sx, cy + 8, 1, fy - cy - 8, mix(S0, PAL.ink, 0.3));
+        }
+      }
+    } else if (inside === 'gym') {
+      // mirror wall, heavy bags on chains, a bench and a loaded bar at the end away from the door
+      const mh = Math.round((h - top) * 0.45);
+      R(c, x + 2, ty + 3, w - 4, mh, mix(T, PAL.glass[3], 0.45));
+      for (let i = 0; i < 3; i++) { const gx = x + 6 + Math.floor(hash(seed + i * 3) * (w - 16)); line(c, gx, ty + 3 + mh - 1, gx + 5, ty + 4, mix(T, '#ffffff', 0.18)); }
+      const bagC = mix('#5a2a24', B, 0.25);
+      for (let bx = x + (farR ? 10 : w - 14) ; farR ? bx < x + w - 6 : bx > x + 6; bx += farR ? 24 : -24) {
+        const bt = ty + 10 + Math.floor(hash(seed + bx) * 3);
+        R(c, bx, ty, 1, bt - ty, S0);
+        R(c, bx - 3, bt + 1, 7, 18, bagC); R(c, bx - 2, bt, 5, 1, bagC); R(c, bx - 2, bt + 19, 5, 1, bagC);
+        R(c, bx - 3, bt + 1, 1, 18, mix(bagC, T, 0.3)); R(c, bx - 3, bt + 5, 7, 1, mix(bagC, PAL.ink, 0.35));
+      }
+      const ex = farR ? x + w - 30 : x + 6;
+      if (w > 44) {
+        R(c, ex, fy - 9, 22, 2, S1); R(c, ex + 3, fy - 7, 1, 7, S0); R(c, ex + 18, fy - 7, 1, 7, S0);
+        R(c, ex + 2, fy - 20, 1, 13, S0); R(c, ex + 19, fy - 20, 1, 13, S0); R(c, ex - 2, fy - 18, 26, 1, mix(PAL.steel[3], T, 0.3));
+        for (const px0 of [ex - 2, ex + 22]) { R(c, px0, fy - 22, 2, 9, S0); }
+      }
+    } else if (inside === 'pawn') {
+      // guitars on the wall, a TV stack, a glass case with a few glints
+      const gc = [mix('#8a4a24', B, 0.3), mix('#3a3a3a', B, 0.25), mix('#6a2a2a', B, 0.3)];
+      for (let i = 0, gx = x + (farR ? w - 10 : 8); i < 3 && gx > x + 4 && gx < x + w - 4; i++, gx += farR ? -12 : 12) {
+        const gb = ty + 22, col = gc[i];
+        R(c, gx, gb - 13, 1, 9, S0); R(c, gx - 1, gb - 15, 3, 2, S0);
+        ellipse(c, gx, gb - 3, 2, 2, col); ellipse(c, gx, gb + 2, 3, 3, col); Px(c, gx, gb, S0);
+      }
+      const tx = farR ? x + 3 : x + w - 15;
+      if (w > 36) for (let k = 0; k < 2; k++) { const tyy = fy - 10 - k * 10; R(c, tx, tyy, 12, 10, S1); R(c, tx + 1, tyy + 1, 8, 7, mix(PAL.glass[2], B, 0.3)); Px(c, tx + 10, tyy + 3, M); }
+      const cw = Math.round(w * 0.5), cx0 = farR ? x + w - cw - 2 : x + 2;
+      R(c, cx0, fy - 12, cw, 12, S0); R(c, cx0, fy - 12, cw, 2, mix(T, PAL.glass[4], 0.45));
+      for (let i = 0; i < Math.floor(cw / 5); i++) Px(c, cx0 + 2 + Math.floor(hash(seed + i * 2.3) * (cw - 4)), fy - 9 + Math.floor(hash(seed + i * 3.1) * 3), mix('#d8b860', B, 0.25));
+    } else {
+      // corner store / grocery: shelves of stock, a counter by the door, the clerk now and then
+      const stock = [S1, mix('#8a5a3a', B, 0.25), mix('#6a3a32', B, 0.35), mix('#4a5a6a', B, 0.35), mix('#7a6a3a', B, 0.35)];
+      for (let yy = ty + 7; yy < fy - 2; yy += 7) {
+        R(c, x, yy, w, 1, S1);
+        for (let xx = x + 1; xx < x + w - 1; xx += 3) if (hash(seed + xx * 0.7 + yy) < 0.7) R(c, xx, yy - 3, 2, 3, stock[Math.floor(hash(seed + xx + yy * 0.3) * 5)]);
+      }
+      if (sh && sh.counter !== false && w > 30) {
+        const cw = Math.floor(w * 0.4), cx0 = farR ? x + 3 : x + w - cw - 3;
+        if (hash(seed + 61) < 0.5) shopFigure(c, cx0 + Math.floor(cw / 2), fy + 8, 38, S0);
+        R(c, cx0, fy - 9, cw, 9, S0); R(c, cx0, fy - 9, cw, 1, M);
+        R(c, farR ? cx0 + 2 : cx0 + cw - 9, fy - 13, 7, 4, S1);
+      }
     }
-    if (sh && sh.counter !== false && w > 30) { R(c, x + 3, y + h - 8, Math.floor(w * 0.4), 8, a[0]); R(c, x + 3, y + h - 8, Math.floor(w * 0.4), 1, a[2]); }
-    if (sh && sh.open !== false && w > 24) { R(c, x + w - 18, y + 3, 15, 7, '#3a1c18'); txt(c, 'OPEN', x + w - 17, y + 4, { color: PAL.neonRed }); }
-    R(c, x, y, w, 1, PAL.amber[1]);
-    for (let i = 0; i < 3; i++) RA(c, x + Math.floor(hash(seed + i) * w), y, 1, h, '#ffffff', 0.08);
+    // the floor end of the room falls into shadow
+    const lo = y + Math.round(h * 0.66);
+    RA(c, x, lo, w, fy - lo, PAL.plum, 0.3); RA(c, x, fy - 3, w, 3, PAL.ink, 0.25);
+    // pawn shops keep bars over the glass
+    if (inside === 'pawn') { for (let xx = x + 2; xx < x + w - 1; xx += 5) R(c, xx, y, 1, h, PAL.iron[2]); R(c, x, ty + 3, w, 1, PAL.iron[2]); R(c, x, fy - 4, w, 1, PAL.iron[2]); }
+    // window frame: a mullion on wide glass, the head rail
+    if (w > 60) R(c, x + Math.round(w / 2), y, 1, h, PAL.steel[1]);
+    R(c, x, y, w, 1, mix(B, PAL.ink, 0.3));
+    // the card by the door: OPEN, or a small beer neon in a bar
+    if (card && sh && sh.open !== false && w > 24) {
+      const cxL = o.side === 'R' ? x + 3 : x + w - 18, cyT = ty + 3;
+      if (inside === 'bar') neonText(c, 'BEER', cxL + 8, cyT + 1, PAL.neonAmber, 1, true);
+      else { R(c, cxL, cyT, 15, 7, '#3a1c18'); txt(c, 'OPEN', cxL + 1, cyT + 1, { color: PAL.neonRed }); }
+    }
+    for (let i = 0; i < 3; i++) RA(c, x + Math.floor(hash(seed + i) * w), y, 1, h, '#ffffff', 0.06);
   }
   function awningShape(c, x, y, w, color, stripes, seed) {
     const r = colorRamp(color);
@@ -921,13 +1157,30 @@
 
   def('newspapers', {
     draw(c, p, L) {
-      const gy = gyOf(p, L), x = Math.round(+p.x || 0), s = seedOf(p, 11);
-      for (let i = 0; i < 5; i++) {
-        const nx = x - 14 + Math.floor(hash(s + i) * 28), nw = 5 + Math.floor(hash(s + i * 2) * 5);
-        R(c, nx, gy - 1 + (i % 2), nw, 1, i % 3 ? PAL.paper[3] : PAL.paper[2]);
-        if (i % 2) for (let k = 1; k < nw - 1; k += 2) Px(c, nx + k, gy - 1 + (i % 2), PAL.paper[1]);
+      // A folded tabloid (dark headline bar, a photo block, text columns) and loose sheets with
+      // faint column lines; the first sheet curls up off the ground in the draught.
+      const gy = gyOf(p, L), x = Math.round(+p.x || 0), s = seedOf(p, 11), pp = PAL.paper, n = p.n !== undefined ? clamp(+p.n, 0, 4) : 2;
+      for (let i = 0; i < n; i++) {
+        const sx = x - 16 + i * 13 + Math.floor(hash(s + i) * 4), sw = 9 + Math.floor(hash(s + i * 2) * 3);
+        if (i === 0 && p.lift !== false) {
+          RA(c, sx + 2, gy - 1, sw - 1, 1, PAL.ink, 0.3);
+          for (let k = 0; k < sw; k++) {
+            const hh = Math.round(4 * Math.pow(k / (sw - 1), 2)), col = k === sw - 1 ? pp[4] : k % 3 === 1 ? pp[2] : pp[3];
+            R(c, sx + k, gy - 2 - hh, 1, 2, col);
+          }
+        } else {
+          R(c, sx, gy - 2, sw, 2, pp[3]); R(c, sx, gy - 2, sw, 1, pp[4]);
+          for (let k = 2; k < sw - 1; k += 3) Px(c, sx + k, gy - 1, pp[1]);
+          RA(c, sx, gy, sw, 1, PAL.ink, 0.25);
+        }
       }
-      R(c, x + 3, gy - 4, 6, 4, PAL.paper[2]); R(c, x + 4, gy - 5, 4, 1, PAL.paper[3]); Px(c, x + 5, gy - 3, PAL.paper[0]); Px(c, x + 7, gy - 2, PAL.paper[0]);
+      const tx = x + 2;
+      contact(c, tx + 4, gy, 10);
+      R(c, tx, gy - 5, 8, 5, pp[3]); R(c, tx, gy - 5, 8, 1, pp[4]);
+      R(c, tx + 1, gy - 4, 6, 1, '#2a2626');                                   // headline
+      R(c, tx + 1, gy - 2, 2, 2, pp[1]);                                       // photo
+      for (const cx of [tx + 4, tx + 6]) R(c, cx, gy - 2, 1, 2, mix(pp[3], pp[0], 0.5)); // columns
+      R(c, tx + 7, gy - 5, 1, 5, pp[2]);                                       // the fold
     },
   });
 
@@ -1017,25 +1270,32 @@
 
   def('hydrant', {
     draw(c, p, L) {
+      // about 0.75 m at Jin's scale (~26 px/m): 21 px to the top of the operating nut
       const gy = gyOf(p, L), x = Math.round(+p.x || 0), r = colorRamp(p.color, ramp('#7a3a2e'));
-      contact(c, x, gy, 10);
-      R(c, x - 4, gy - 2, 9, 2, r[1]); R(c, x - 3, gy - 10, 7, 8, r[2]); R(c, x - 3, gy - 10, 2, 8, r[3]); R(c, x + 3, gy - 10, 1, 8, r[0]);
-      R(c, x - 5, gy - 8, 2, 3, r[2]); R(c, x + 4, gy - 8, 2, 3, r[1]); R(c, x - 1, gy - 7, 3, 3, r[1]);
-      R(c, x - 4, gy - 11, 9, 2, r[3]); R(c, x - 2, gy - 13, 5, 2, r[2]); Px(c, x, gy - 14, r[3]);
-      speckle(c, x - 3, gy - 10, 7, 8, PAL.paper[1], 4, seedOf(p, 15), false);
+      contact(c, x, gy, 14);
+      R(c, x - 5, gy - 3, 11, 3, r[1]); R(c, x - 5, gy - 3, 11, 1, r[2]);                       // base flange
+      R(c, x - 4, gy - 15, 9, 12, r[2]); R(c, x - 4, gy - 15, 2, 12, r[3]); R(c, x + 3, gy - 15, 1, 12, r[1]); R(c, x + 4, gy - 15, 1, 12, r[0]); // barrel
+      R(c, x - 7, gy - 12, 3, 4, r[2]); R(c, x - 7, gy - 12, 1, 4, r[3]); R(c, x + 5, gy - 12, 3, 4, r[1]); R(c, x + 7, gy - 12, 1, 4, r[0]); // side nozzles
+      R(c, x - 2, gy - 12, 5, 5, r[1]); R(c, x - 1, gy - 11, 3, 3, r[3]); Px(c, x, gy - 10, r[4]); // pumper cap
+      line(c, x - 6, gy - 8, x - 3, gy - 6, PAL.iron[3]);                                          // cap chain
+      R(c, x - 5, gy - 17, 11, 2, r[3]); R(c, x - 5, gy - 17, 11, 1, r[4]);                       // top flange
+      R(c, x - 3, gy - 19, 7, 2, r[2]); R(c, x - 2, gy - 20, 5, 1, r[3]); R(c, x - 1, gy - 21, 3, 1, r[1]); // bonnet and nut
+      speckle(c, x - 4, gy - 15, 9, 12, PAL.paper[1], 5, seedOf(p, 15), false);
     },
   });
 
   def('mailbox', {
     draw(c, p, L) {
+      // a street collection box, about 1.25 m: 32 px to the top of the dome
       const gy = gyOf(p, L), x = Math.round(+p.x || 0), r = colorRamp(p.color, ramp('#2f4a6a'));
-      contact(c, x, gy, 16);
-      R(c, x - 6, gy - 4, 2, 4, r[0]); R(c, x + 4, gy - 4, 2, 4, r[0]);
-      box(c, x - 7, gy - 22, 14, 18, r);
-      for (let i = 0; i < 4; i++) R(c, x - 7 + Math.floor(i * 0.7), gy - 23 - i, 14 - Math.floor(i * 1.4), 1, i < 2 ? r[3] : r[4]);
-      R(c, x - 4, gy - 18, 8, 2, r[0]); R(c, x - 4, gy - 18, 8, 1, PAL.steel[2]);
-      txt(c, 'MAIL', x, gy - 13, { align: 'center', color: '#a9b7c6' });
-      speckle(c, x - 7, gy - 22, 14, 18, r[1], 8, seedOf(p, 16), true);
+      contact(c, x, gy, 20);
+      R(c, x - 8, gy - 5, 2, 5, r[0]); R(c, x + 6, gy - 5, 2, 5, r[0]); R(c, x - 9, gy - 1, 4, 1, r[1]); R(c, x + 5, gy - 1, 4, 1, r[1]);
+      box(c, x - 9, gy - 27, 18, 22, r);
+      for (let i = 0; i < 5; i++) R(c, x - 9 + Math.floor(i * 0.8), gy - 28 - i, 18 - Math.floor(i * 0.8) * 2, 1, i < 2 ? r[3] : r[4]);
+      R(c, x - 6, gy - 24, 12, 4, r[1]); R(c, x - 6, gy - 24, 12, 1, PAL.steel[3]); R(c, x - 3, gy - 21, 6, 1, PAL.steel[2]); // pull-down chute
+      txt(c, 'MAIL', x, gy - 17, { align: 'center', color: '#a9b7c6' });
+      R(c, x - 3, gy - 11, 7, 4, PAL.paper[2]); R(c, x - 2, gy - 10, 5, 1, PAL.paper[0]);     // pickup times
+      speckle(c, x - 9, gy - 27, 18, 22, r[1], 10, seedOf(p, 16), true);
     },
   });
 
@@ -1076,9 +1336,10 @@
         R(c, x0 + 6, gy - 12, 26, 2, st[3]); R(c, x0 + 8, gy - 10, 1, 10, st[1]); R(c, x0 + 29, gy - 10, 1, 10, st[1]);
       }
       R(c, x + (p.shelter ? 34 : 0), gy - 64, 2, 64, st[2]);
-      const sx = x + (p.shelter ? 34 : 0);
-      R(c, sx - 6, gy - 66, 14, 10, '#2c4a3a'); R(c, sx - 5, gy - 65, 12, 8, '#cfc8b6');
-      txt(c, p.sign || 'BUS', sx + 1, gy - 64, { align: 'center', color: '#2c4a3a' });
+      // the plate grows with its text and stays centred on the 2 px pole
+      const sx = x + (p.shelter ? 34 : 0), sign = p.sign || 'BUS', tw = Math.max(10, txtW(sign) + 4), px0 = sx + 1 - Math.floor(tw / 2);
+      R(c, px0 - 1, gy - 66, tw + 2, 10, '#2c4a3a'); R(c, px0, gy - 65, tw, 8, PAL.offWhite);
+      txt(c, sign, sx + 1, gy - 64, { align: 'center', color: '#2c4a3a' });
       R(c, sx - 3, gy - 52, 8, 10, PAL.paper[2]); R(c, sx - 2, gy - 50, 6, 1, PAL.paper[0]); R(c, sx - 2, gy - 48, 6, 1, PAL.paper[0]);
     },
   });
@@ -1294,13 +1555,13 @@
 
   def('graffiti', {
     draw(c, p, L) {
+      // a bubble-letter throw-up with a thin scrawled tag beside (or under) it, weathered into the wall
       const x = Math.round(+p.x || 0), y = Math.round(p.y !== undefined ? +p.y : gyOf({}, L) - 30), w = +p.w || 40, s = seedOf(p, 24);
-      graffitiTag(c, x, y, Math.floor(w * 0.55), s);
-      if (w > 30) {
-        const bx = x + Math.floor(w * 0.6), bw = Math.floor(w * 0.38), col = ['#4f5a6e', '#6a4a5a', '#5a6a4a'][Math.floor(hash(s + 2) * 3)];
-        for (let i = 0; i < 3; i++) { ellipse(c, bx + 3 + i * Math.floor(bw / 3), y + 4, Math.floor(bw / 6) + 1, 5, col); ellipse(c, bx + 3 + i * Math.floor(bw / 3), y + 4, Math.max(1, Math.floor(bw / 6) - 1), 3, shade(col, 0.2)); }
-      }
-      RA(c, x, y - 2, w, 12, '#40404a', 0.12);
+      const h = clamp(Math.round(w * 0.26), 11, 14), n = p.letters ? clamp(+p.letters, 1, 4) : w >= 52 ? 3 : 2;
+      const tw = throwUp(c, x, y, h, n, s), rest = w - tw - 3;
+      if (rest >= 12) graffitiTag(c, x + tw + 3, y + Math.floor(h / 2) - 3, rest, s + 9);
+      else graffitiTag(c, x + 2, y + h + 3, Math.min(w - 4, 22), s + 9);
+      RA(c, x - 1, y - 1, w + 2, h + 12, '#40404a', 0.14);
     },
   });
 
@@ -2360,12 +2621,13 @@
     draw(c, p, L) {
       const x = Math.round(+p.x || 0), cy = p.y !== undefined ? +p.y : ceilOf(L), st = PAL.iron;
       R(c, x - 5, cy, 11, 2, st[3]); R(c, x - 5, cy + 2, 1, 6, st[2]); R(c, x + 5, cy + 2, 1, 6, st[2]);
-      R(c, x - 4, cy + 4, 9, 10, st[2]); R(c, x - 4, cy + 4, 2, 10, st[3]); R(c, x - 3, cy + 14, 7, 1, p.on === false ? st[1] : '#fff0c8');
+      R(c, x - 4, cy + 4, 9, 10, st[2]); R(c, x - 4, cy + 4, 2, 10, st[3]); R(c, x - 3, cy + 14, 7, 1, p.on === false ? st[1] : PAL.bulb);
     },
     lights(p, L) {
       if (p.on === false) return [];
       const cy = p.y !== undefined ? +p.y : ceilOf(L);
-      return [{ x: +p.x || 0, y: cy + 14, r: p.r || 230, color: p.color || '#fff0c8', k: 1, cone: { dir: p.dir || 'down', width: p.width || 26 }, flicker: +p.flicker || 0 }];
+      // warm tungsten by default; in smoke the shaft is toned down so overlapping beams do not wash the hall grey
+      return [{ x: +p.x || 0, y: cy + 14, r: p.r || 230, color: p.color || PAL.tungsten, k: 1, cone: { dir: p.dir || 'down', width: p.width || 26 }, flicker: +p.flicker || 0, shaft: p.shaft !== undefined ? +p.shaft : smokyOf(L) ? 0.6 : 1 }];
     },
   });
 
@@ -2430,17 +2692,29 @@
 
   def('forklift', {
     draw(c, p, L) {
+      // Sized against the 46 px figure (~26 px/m): overhead guard ~56 px (2.1 m), counterweight
+      // ~31 px, mast 58 px. Forks point toward `face`.
       const gy = gyOf(p, L), x = Math.round(+p.x || 0), f = faceOf(p), r = colorRamp(p.color, ramp('#9a7a32')), ir = PAL.iron;
-      contact(c, x, gy, 40);
       const X = (dx) => x + f * dx;
-      R(c, Math.min(X(-14), X(8)), gy - 18, 22, 12, r[2]); R(c, Math.min(X(-14), X(8)), gy - 18, 22, 1, r[4]);
-      R(c, Math.min(X(-18), X(-12)), gy - 22, 6, 16, r[1]);
-      R(c, X(-10), gy - 40, 1, 22, ir[3]); R(c, X(6), gy - 40, 1, 22, ir[3]); R(c, Math.min(X(-10), X(6)), gy - 40, 17, 2, ir[3]);
-      R(c, Math.min(X(-6), X(0)), gy - 24, 7, 6, VINYL[2]);
-      R(c, X(11), gy - 42, 2, 38, ir[2]); R(c, X(14), gy - 42, 1, 38, ir[3]);
-      R(c, Math.min(X(14), X(28)), gy - 4, 15, 2, ir[3]); R(c, X(14), gy - 12, 1, 8, ir[3]);
-      for (const wx of [-10, 6]) { ellipse(c, X(wx), gy - 4, 4, 4, '#121216'); ellipse(c, X(wx), gy - 4, 1, 1, PAL.steel[3]); }
-      speckle(c, Math.min(X(-14), X(8)), gy - 18, 22, 12, r[1], 8, seedOf(p, 68), true);
+      const RX = (a, b, yy, hh, col) => R(c, f > 0 ? x + a : x - b, yy, b - a, hh, col);   // rect over dx a..b, mirrored with face
+      contact(c, X(4), gy, 66);
+      RX(-28, 12, gy - 14, 8, r[1]);                                                  // chassis
+      RX(-22, 10, gy - 24, 10, r[2]); RX(-22, 10, gy - 24, 1, r[4]);                  // body
+      RX(-29, -16, gy - 31, 25, r[1]); RX(-28, -17, gy - 32, 1, r[2]); RX(-29, -16, gy - 31, 1, r[3]); // counterweight
+      for (let i = 0; i < 4; i++) RX(-28 + i * 3, -26 + i * 3, gy - 12, 3, '#26241e');  // hazard hatching
+      RX(-16, 2, gy - 28, 4, r[2]); RX(-16, 2, gy - 28, 1, r[3]);                     // hood
+      RX(-12, -4, gy - 31, 3, VINYL[2]); RX(-14, -12, gy - 39, 11, VINYL[2]); RX(-14, -12, gy - 39, 1, VINYL[3]); // seat
+      line(c, X(2), gy - 28, X(-1), gy - 36, ir[2]); RX(-4, 2, gy - 37, 1, VINYL[3]); // steering
+      line(c, X(-15), gy - 31, X(-14), gy - 55, ir[3]); line(c, X(4), gy - 28, X(9), gy - 55, ir[3]); // guard posts
+      RX(-17, 11, gy - 56, 2, ir[3]); for (let dx = -15; dx < 10; dx += 3) R(c, X(dx), gy - 54, 1, 1, ir[1]);
+      RX(-3, 0, gy - 58, 2, '#7a5226');                                               // beacon
+      RX(12, 14, gy - 58, 55, ir[2]); RX(15, 16, gy - 58, 55, ir[3]);                 // mast channels
+      RX(11, 17, gy - 58, 2, ir[3]); RX(11, 17, gy - 33, 1, ir[1]);
+      line(c, X(6), gy - 18, X(12), gy - 22, ir[1]);                                  // tilt cylinder
+      RX(16, 19, gy - 26, 12, ir[1]); for (let yy = gy - 25; yy < gy - 15; yy += 3) RX(16, 19, yy, 1, ir[3]); // load backrest
+      RX(16, 19, gy - 14, 11, ir[3]); RX(17, 42, gy - 3, 2, ir[3]); RX(17, 42, gy - 1, 1, ir[1]); // carriage and forks
+      for (const [wx, wr] of [[-17, 5], [6, 6]]) { ellipse(c, X(wx), gy - wr, wr, wr, '#121216'); ellipse(c, X(wx), gy - wr, 2, 2, PAL.steel[3]); Px(c, X(wx), gy - wr, '#121216'); }
+      speckle(c, f > 0 ? x - 22 : x - 10, gy - 24, 32, 10, r[1], 10, seedOf(p, 68), true);
     },
   });
 
@@ -2468,14 +2742,20 @@
 
   def('container', {
     draw(c, p, L) {
-      const gy = gyOf(p, L), x = Math.round(+p.x || 0), r = colorRamp(p.color, ramp('#6a3a2a')), len = p.len || 120, h = 52, x0 = x - len / 2, s = seedOf(p, 70);
+      // A 20 ft box (2.59 x 6.06 m) at ~26 px/m: 68 x 158 px. `len` 316 makes a 40 footer, `h` 74 a high cube.
+      const gy = gyOf(p, L), x = Math.round(+p.x || 0), r = colorRamp(p.color, ramp('#6a3a2a')), len = +p.len || 158, h = +p.h || 68, x0 = Math.round(x - len / 2), s = seedOf(p, 70);
       contact(c, x, gy, len + 4);
       R(c, x0, gy - h, len, h, r[2]);
-      for (let xx = x0 + 2; xx < x0 + len - 2; xx += 4) { R(c, xx, gy - h + 3, 1, h - 6, r[3]); R(c, xx + 2, gy - h + 3, 1, h - 6, r[1]); }
-      R(c, x0, gy - h, len, 3, r[3]); R(c, x0, gy - 3, len, 3, r[0]); R(c, x0, gy - h, 3, h, r[1]); R(c, x0 + len - 3, gy - h, 3, h, r[1]);
-      for (const cx of [x0, x0 + len - 4]) { R(c, cx, gy - h, 4, 4, PAL.iron[2]); R(c, cx, gy - 4, 4, 4, PAL.iron[2]); }
-      if (p.doors !== false) { const dx = p.face === -1 ? x0 + 3 : x0 + len - 30; R(c, dx + 13, gy - h + 3, 1, h - 6, r[0]); for (const bx of [dx + 4, dx + 9, dx + 18, dx + 23]) R(c, bx, gy - h + 4, 1, h - 8, PAL.steel[3]); }
-      txt(c, p.text || 'HRLU 304172', x0 + 10, gy - h + 7, { color: shade(r[2], 0.35) });
+      for (let xx = x0 + 2; xx < x0 + len - 2; xx += 4) { R(c, xx, gy - h + 4, 1, h - 8, r[3]); R(c, xx + 2, gy - h + 4, 1, h - 8, r[1]); }
+      R(c, x0, gy - h, len, 4, r[3]); R(c, x0, gy - h, len, 1, r[4]); R(c, x0, gy - 4, len, 4, r[0]); R(c, x0, gy - h, 3, h, r[1]); R(c, x0 + len - 3, gy - h, 3, h, r[1]);
+      for (const cx of [x0, x0 + len - 5]) { R(c, cx, gy - h, 5, 5, PAL.iron[2]); R(c, cx + 1, gy - h + 1, 3, 2, PAL.iron[0]); R(c, cx, gy - 5, 5, 5, PAL.iron[2]); R(c, cx + 1, gy - 4, 3, 2, PAL.iron[0]); }
+      if (p.doors !== false) {
+        const dw = 36, dx = p.face === -1 ? x0 + 4 : x0 + len - dw - 4;
+        R(c, dx + Math.floor(dw / 2), gy - h + 4, 1, h - 8, r[0]);
+        for (const bx of [dx + 5, dx + 11, dx + dw - 12, dx + dw - 6]) { R(c, bx, gy - h + 5, 1, h - 10, PAL.steel[3]); R(c, bx - 1, gy - Math.round(h * 0.45), 3, 2, PAL.steel[2]); }
+        R(c, dx + 2, gy - Math.round(h * 0.7), 7, 5, mix(r[2], PAL.paper[2], 0.5));     // data plate
+      }
+      txt(c, p.text || 'HRLU 304172', x0 + 10, gy - h + 8, { color: shade(r[2], 0.35) });
       streaks(c, x0, gy - h + 3, len, h * 0.7, PAL.rust[1], Math.floor(len / 10), s, 0.6);
       speckle(c, x0, gy - h, len, h, PAL.rust[2], Math.floor(len / 3), s + 1, true);
     },
@@ -2898,14 +3178,14 @@
       const n = p.n || Math.max(2, Math.floor(w / 60));
       for (let i = 0; i < n; i++) {
         const lx = Math.round(x + (w * (i + 0.5)) / n);
-        R(c, lx - 1, y + 7, 3, 2, ir[2]); R(c, lx - 3, y + 9, 7, 7, ir[2]); R(c, lx - 3, y + 9, 1, 7, ir[3]); R(c, lx - 2, y + 16, 5, 1, p.on === false ? ir[1] : '#fff0c8');
+        R(c, lx - 1, y + 7, 3, 2, ir[2]); R(c, lx - 3, y + 9, 7, 7, ir[2]); R(c, lx - 3, y + 9, 1, 7, ir[3]); R(c, lx - 2, y + 16, 5, 1, p.on === false ? ir[1] : PAL.bulb);
       }
     },
     lights(p, L) {
       if (p.on === false) return [];
       const x = +p.x || 0, w = +p.w || 200, y = p.y !== undefined ? +p.y : ceilOf(L) + 6, n = p.n || Math.max(2, Math.floor(w / 60));
       const out = [];
-      for (let i = 0; i < n; i++) out.push({ x: x + (w * (i + 0.5)) / n, y: y + 16, r: p.r || 220, color: p.color || '#fff0cc', k: p.k || 0.8, cone: { dir: 'down', width: p.width || 26 }, flicker: +p.flicker || 0, glow: 0.5, shaft: 0.6 });
+      for (let i = 0; i < n; i++) out.push({ x: x + (w * (i + 0.5)) / n, y: y + 16, r: p.r || 220, color: p.color || PAL.tungsten, k: p.k || 0.8, cone: { dir: 'down', width: p.width || 26 }, flicker: +p.flicker || 0, glow: 0.5, shaft: p.shaft !== undefined ? +p.shaft : smokyOf(L) ? 0.35 : 0.6 });
       return out;
     },
   });
@@ -3531,6 +3811,8 @@
     return out;
   }
   const wxKindCache = new Map();
+  // Smoke in the air (arena haze): beam lights tone their shafts down so the hall keeps its contrast.
+  function smokyOf(L) { return weatherKinds(L).indexOf('smoke') >= 0; }
   // Kind names only (also used by the puddle piece to decide whether rain rings show).
   function weatherKinds(L) {
     const w = L && L.weather;
@@ -3774,9 +4056,13 @@
        2. glow: additive ('lighter') warm halos, a hot core at each lamp, faint beams.
        3. wet ground: lights flagged `reflect` (and lit windows, weaker) leave broken horizontal
           reflections below the floor line when it rains or L.wet is set; puddle pieces always do.
+          Under world.js they are drawn earlier instead, right after the back layer (a 'back' draw
+          hook, see S.light.reflections), so actors and front-layer props (a parked car) cover
+          them; composite() then skips them for that frame.
        4. fog (L.ambient.fog), then emissive weather bits (embers, lightning wash).
      Light: { x, y, r, color, k, flicker, cone: { dir: 'down'|'up'|'left'|'right'|deg, width: deg },
-              reflect, win, glow (halo scale), shaft (beam scale), par/parY (layer parallax), layer, seed } */
+              reflect, win, glow (halo scale), shaft (beam scale), core (false: no hot lens core, for
+              diffuse light such as a shop interior), par/parY (layer parallax), layer, seed } */
   const DARK_DEF = '#0f1322';
   const LB = { cv: null, c: null, w: 0, h: 0 };
   function lightBuf(w, h) {
@@ -3894,7 +4180,7 @@
     // a beam lamp gets a tight lens glare; the beam itself carries the light
     const hr = cg ? (wide ? a.r * 0.45 : Math.min(a.r * 0.22, 46 * a.z)) : a.r * 0.85;
     radial(c, a.sx, a.sy + (wide ? hr * 0.55 * Math.sin(cg.ang) : 0), hr * (1 + fog * 0.35), base * (cg && !wide ? 0.8 : 1), a.col);
-    if (!a.l.win) radial(c, a.sx, a.sy, Math.max(3, 7 * a.z), Math.min(1, a.k * 0.5 * Math.min(1, gs + 0.3)), mix(a.col, '#ffffff', 0.35));
+    if (!a.l.win && a.l.core !== false) radial(c, a.sx, a.sy, Math.max(3, 7 * a.z), Math.min(1, a.k * 0.5 * Math.min(1, gs + 0.3)), mix(a.col, '#ffffff', 0.35));
     if (!cg) return;
     const sh = a.k * (0.035 + 0.035 * dark + 0.12 * fog + 0.09 * hazeK) * (a.l.shaft !== undefined ? +a.l.shaft : 1) * (wide ? 0.3 : 1);
     if (sh > 0.003) for (const [spread, m] of wide ? [[1, 1]] : [[1.3, 0.35], [1, 0.75]]) {
@@ -3907,7 +4193,9 @@
   }
   // Broken horizontal reflections under lights on wet ground: dashes of 1–N px, densest at a
   // mirrored depth, re-shuffled several times a second while it rains (slowly when only wet).
-  function reflections(c, L, act, cam, time, wetK, vh) {
+  // `boost` > 1 when drawn before the darkness pass (which will dim them again).
+  function reflections(c, L, act, cam, time, wetK, vh, boost) {
+    boost = boost || 1;
     const pud = puddlesOf(L).map((p) => { const a = toScreen(p.x0, p.y, cam), b = toScreen(p.x1, p.y, cam); return { x0: a[0], x1: b[0], y: a[1] }; });
     if (!(wetK > 0) && !pud.length) return;
     const step = Math.floor(time * (wetK >= 0.9 ? 9 : 3));
@@ -3931,10 +4219,67 @@
           const xx = Math.round(a.sx + (hash(sd + yy * 2.31 + j * 1.7 + step * 0.293) - 0.5) * halfW * 2 * (0.5 + 0.5 * f) - len / 2);
           let k = base * f * wetK;
           for (const p of near) if (xx + len > p.x0 && xx < p.x1 && gyS + yy >= p.y - 1 && gyS + yy <= p.y + 6) { k = Math.max(k * 1.8, base * f * 0.9); break; }
+          k *= boost;
           if (k > 0.01) RA(c, xx, gyS + yy, len, 1, a.col, Math.min(0.85, k));
         }
       }
     }
+  }
+  // Lights in view this frame, with flicker applied: [{ l, sx, sy, r, k, z, par, col, cg }].
+  // sx/sy are in the drawing coordinates `cam` maps to; `view` {x0, y0, x1, y1} is the visible rect there.
+  function activeLights(L, cam, src, time, view) {
+    const act = [];
+    for (const l of src) {
+      if (!l) continue;
+      const par = l.par !== undefined && l.par !== null ? +l.par : l.layer && LAYER_PAR[l.layer] !== undefined ? LAYER_PAR[l.layer] : 1;
+      const sp = toScreen(+l.x || 0, +l.y || 0, cam, par, l.parY), z = cam.zoom || 1, r = Math.max(2, (l.r !== undefined ? +l.r : 60) * z);
+      const reach = l.cone ? r * 1.7 : r;
+      if (sp[0] < view.x0 - reach || sp[0] > view.x1 + reach || sp[1] < view.y0 - reach || sp[1] > view.y1 + reach) continue;
+      const k = clamp(l.k === undefined ? 1 : +l.k, 0, 1.5) * flickerK(l, time);
+      if (k <= 0.01) continue;
+      const a = { l, sx: sp[0], sy: sp[1], r, k, z, par, col: l.color || PAL.lamp, cg: null };
+      if (l.cone) a.cg = coneOf(a, L, cam);
+      act.push(a);
+    }
+    return act;
+  }
+
+  /* Early reflections. Reflections lie on the ground, so actors and front-layer props must cover
+     them. Under world.js they are drawn right after the back layer through its public draw hook
+     (S.world.addDraw('back', fn), registered on the first composite call for the current place),
+     in WORLD coordinates under the hook's own layer transform (so it works at any zoom and on
+     world.js's zoom-1 scene buffer), from the reflective lights of the previous composite of the
+     same location (static lamps; a moving light lags one frame). composite() then skips them for
+     that frame. Pages without world.js (the pieces gallery) keep drawing them inside composite(). */
+  const REFL = { done: null, L: null, list: [], hooked: false };
+  const WORLD_CAM = { x: 0, y: 0, zoom: 1 };   // toScreen() with this cam is the identity on layer 1
+  const reflBoost = (L) => 1 / (1 - 0.5 * clamp(+((L && L.ambient && L.ambient.dark) || 0), 0, 1));
+  // world: true = ctx already carries the world transform and `view` is a world rect.
+  function drawReflectionsEarly(ctx, L, cam, src, time, view, world) {
+    if (REFL.done === L) return false;   // already drawn this frame
+    const wetK = wxIsWet(L);
+    if (!(wetK > 0) && !puddlesOf(L).length) { REFL.done = L; return true; }
+    const act = activeLights(L, cam, src, time, view);
+    ctx.save();
+    if (!world) ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'lighter';
+    try { reflections(ctx, L, act, cam, time, wetK, view.y1, reflBoost(L)); } finally { ctx.restore(); }
+    REFL.done = L;
+    return true;
+  }
+  function hookReflections() {
+    if (REFL.hooked || !S.world || typeof S.world.addDraw !== 'function') return;
+    REFL.hooked = true;
+    // fn(ctx, renderCam): ctx carries world.js's layer-1 transform; world.js restores state after.
+    S.world.addDraw('back', (c, rc) => {
+      const L = S.world.loc;
+      if (S.headless || !c || !L || REFL.L !== L) return;   // nothing gathered for this place yet
+      try {
+        const z = (rc && +rc.zoom) || 1, cx = rc && isFinite(rc.cx) ? +rc.cx : (rc ? +rc.x || 0 : 0) + W / 2, cy = rc && isFinite(rc.cy) ? +rc.cy : (rc ? +rc.y || 0 : 0) + H / 2;
+        const view = { x0: cx - W / (2 * z), x1: cx + W / (2 * z), y0: cy - H / (2 * z), y1: cy + H / (2 * z) };
+        drawReflectionsEarly(c, L, WORLD_CAM, REFL.list, S.time, view, true);
+      } catch (e) { if (!lightFailed) { lightFailed = true; fail(e, 'light.reflections'); } }
+    });
   }
 
   function composite(ctx, L, cam, lights, time, opts) {
@@ -3943,18 +4288,16 @@
     time = time === undefined || time === null ? S.time || 0 : +time;
     const vw = (opts && +opts.w) || W, vh = (opts && +opts.h) || H;
     const amb = L.ambient || {}, dark = clamp(+amb.dark || 0, 0, 1), fog = clamp(+amb.fog || 0, 0, 1), wetK = wxIsWet(L);
-    const src = Array.isArray(lights) ? lights : gatherLights(L), act = [];
-    for (const l of src) {
-      if (!l) continue;
-      const par = l.par !== undefined && l.par !== null ? +l.par : l.layer && LAYER_PAR[l.layer] !== undefined ? LAYER_PAR[l.layer] : 1;
-      const sp = toScreen(+l.x || 0, +l.y || 0, cam, par, l.parY), z = cam.zoom || 1, r = Math.max(2, (l.r !== undefined ? +l.r : 60) * z);
-      const reach = l.cone ? r * 1.7 : r;
-      if (sp[0] < -reach || sp[0] > vw + reach || sp[1] < -reach || sp[1] > vh + reach) continue;
-      const k = clamp(l.k === undefined ? 1 : +l.k, 0, 1.5) * flickerK(l, time);
-      if (k <= 0.01) continue;
-      const a = { l, sx: sp[0], sy: sp[1], r, k, z, par, col: l.color || PAL.lamp, cg: null };
-      if (l.cone) a.cg = coneOf(a, L, cam);
-      act.push(a);
+    const src = Array.isArray(lights) ? lights : gatherLights(L);
+    const act = activeLights(L, cam, src, time, { x0: 0, y0: 0, x1: vw, y1: vh });
+    // reflections already drawn under the actors this frame? (consumed here, once per frame)
+    const reflDone = REFL.done === L;
+    REFL.done = null;
+    // remember this place's reflective lights for the next frame's early pass
+    if (S.world && L === S.world.loc) {
+      hookReflections();
+      REFL.L = L; REFL.list.length = 0;
+      for (const l of src) if (l && (l.reflect || l.win)) REFL.list.push(l);
     }
     // 1. darkness with soft holes (half resolution, smoothed on the way up: soft edges, cheap)
     if (dark > 0.004) {
@@ -3980,7 +4323,7 @@
     const kinds = weatherKinds(L);
     const hazeK = clamp((kinds.indexOf('rain') >= 0 ? 0.6 : kinds.indexOf('drizzle') >= 0 ? 0.4 : 0) + (kinds.indexOf('smoke') >= 0 ? 0.8 : 0) + (kinds.indexOf('dust') >= 0 ? 0.35 : 0) + (kinds.indexOf('snow') >= 0 ? 0.4 : 0), 0, 1.2);
     for (const a of act) glow(ctx, a, dark, fog, hazeK);
-    reflections(ctx, L, act, cam, time, wetK, vh);
+    if (!reflDone) reflections(ctx, L, act, cam, time, wetK, vh);
     ctx.restore();
     // 4. ground fog, then emissive weather
     if (fog > 0.01) { const fc = amb.fogColor || '#566078'; for (let y = 0; y < vh; y += 4) RA(ctx, 0, y, vw, 4, fc, fog * 0.22 * (0.35 + 0.65 * (y / vh))); }
@@ -4006,6 +4349,17 @@
       try { composite(ctx, L, cam, lights, time, opts); } catch (e) { if (!lightFailed) { lightFailed = true; fail(e, 'light.composite'); } }
       resetCtx(ctx);
     },
+    // Wet-ground reflections only, drawn now (call after the back layer, before actors and the
+    // front layer, so those cover them); the next composite() for the same L skips its own pass.
+    // world.js gets this automatically through its 'back' draw hook. Same arguments as composite.
+    reflections(ctx, L, cam, lights, time, opts) {
+      if (S.headless || !ctx || !L) return;
+      try {
+        cam = camOf(cam || S.cam);
+        time = time === undefined || time === null ? S.time || 0 : +time;
+        drawReflectionsEarly(ctx, L, cam, Array.isArray(lights) ? lights : gatherLights(L), time, { x0: 0, y0: 0, x1: (opts && +opts.w) || W, y1: (opts && +opts.h) || H }, false);
+      } catch (e) { if (!lightFailed) { lightFailed = true; fail(e, 'light.reflections'); } }
+    },
     gather: gatherLights,
     flicker: flickerK,
     toScreen(x, y, cam, par, parY) { return toScreen(x, y, camOf(cam || S.cam), par, parY); },
@@ -4013,6 +4367,6 @@
   };
 
   // Drawing kit for world.js room shells and chapter-specific pieces (see notes).
-  Object.assign(pieces.util, { wallFill, brickPatches, drawWin, drawDoor, drawPoster, graffitiTag, person, makeCanvas, prng, toScreen, gyOf, ceilOf });
+  Object.assign(pieces.util, { wallFill, brickPatches, drawWin, drawDoor, drawPoster, graffitiTag, throwUp, shopWindow, shopInterior, person, makeCanvas, prng, toScreen, gyOf, ceilOf });
 
 })(window.STORY);
