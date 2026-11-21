@@ -97,3 +97,7 @@ Weekly line 95% leaves ~13 points; at this rate the chapters need more than that
 ## Chapters 0–2 started now — 06:03 KST, 2026-11-22 (the user: "Chapters 0–2 at 10:00", then "do it right now")
 
 RUNNING: `story-chapters-012.js` — task wbspxx5bl, run wf_747d9e2f-9a8 (three authors at once). The 5-hour window was at 70% when the user said to start now, so this run goes past the 80% line and may hit the 5-hour limit around 06:30; agents keep their partial files and the run resumes from them after the 10:00 KST reset, when the user says so. Weekly guard: stop at 93%.
+
+## Chapters 0–2 done — 2026-11-22 (usage limit reached)
+
+Run wf_747d9e2f-9a8 complete: c00.js, c01.js, c02.js written; each reaches its end headless under the restraint policy with no errors (commit 903ebc0). Left: chapters 3–10 (scripts story-chapters-a.js / -b.js with CHAPTERS trimmed to the rest), then story-integrate.js, story-review-a/-b.js, story-verify.js; then merge origin/main and ask the user before pushing live. Wait for the user before starting anything.
