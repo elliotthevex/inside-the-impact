@@ -64,3 +64,7 @@ The user said "Yes, at the reset". Script: `~/.claude/projects/-Users-elliot-jeo
 ## Release wish — 2026-11-22
 
 The user asked to "push it to live", then chose to wait for the chapters: push to the live site once chapters 0–10 are written and the full campaign passes, and ask them again then. origin/main has moved (2378207, two Missions bout fixes by another session): merge origin/main into story-mode before the release gates.
+
+## Chapters phase started — 05:04 KST, 2026-11-22 (5-hour 1%, weekly 73%)
+
+Task wrfokh85v, run wf_06933f2e-cd8, script `~/.claude/projects/-Users-elliot-jeong-Desktop-Inside-the-Impact/ca804261-1003-4979-b90e-1f8fbae65bec/workflows/scripts/story-chapters.js`. Resume after a stop: Workflow({scriptPath, resumeFromRunId: "wf_06933f2e-cd8"}) — only when the user says so.
