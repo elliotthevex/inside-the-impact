@@ -5962,23 +5962,37 @@ window.__openRealArena=(function(){
       /* ── REWARD HOOK ─────────────────────────────────────────────
          Wraps the simulation's own ending so every outcome pays into
          the meta layer, without touching the fight logic itself. */
+      /* One payout per bout. fight() opens the bout and the first payout
+         closes it, so when fin() has paid a bout and then hands over to
+         end() (third loss, title fight, knockout, qualification over),
+         the wrapper below cannot pay that bout a second time. */
+      function payBout(kind) {
+        if (!G || G.boutPaid) return null;
+        const r = grantReward(kind);
+        if (r) {
+          G.boutPaid = true;
+          G.payout = { ...r, kind };
+        }
+        return r;
+      }
+      /* The payout card, shown once on whichever screen the result lands:
+         the camp after an ordinary bout, the ending screen otherwise. */
+      function takePayoutCard() {
+        const r = G && G.payout;
+        if (!r) return "";
+        G.payout = null;
+        return `<div style="margin:12px 0 0;border:2px solid #e8c272;background:rgba(10,13,18,.9);padding:11px 13px;font:700 10.5px/1.6 var(--mono);letter-spacing:.08em;color:#ffeec4"><div style="color:#e8c272;letter-spacing:.16em;margin-bottom:5px">CORNER PAYOUT · ${escapeUI(r.label.toUpperCase())} · ${escapeUI(String(r.diff).toUpperCase())}</div>
+                <div style="color:#b9c4d0">+${r.gold} gold · +${r.xp} XP${r.sp ? ` · +${r.sp} SP` : ""}${r.gems ? ` · +${r.gems} gems` : ""}${r.levels ? ` · <b style="color:#8ad17e">LEVEL ${P.lv}</b>` : ""}</div>
+                ${(r.kind === "towel" || r.kind === "medstop") ? `<div style="margin-top:6px;color:#8ad17e;font-weight:400;font-size:10px;letter-spacing:.04em">Stoppages pay above a win in this game. That is deliberate.</div>` : ""}</div>`;
+      }
       function installRewards() {
         if (typeof end !== "function" || end.__wrapped) return;
         const inner = end;
         const wrapped = function (t) {
-          const r = grantReward(t);
+          payBout(t);
           const out = inner.apply(this, arguments);
-          if (r) {
-            const host = $("#m");
-            if (host) {
-              const card = document.createElement("div");
-              card.style.cssText = "margin:12px 0 0;border:2px solid #e8c272;background:rgba(10,13,18,.9);padding:11px 13px;font:700 10.5px/1.6 var(--mono);letter-spacing:.08em;color:#ffeec4";
-              card.innerHTML = `<div style="color:#e8c272;letter-spacing:.16em;margin-bottom:5px">CORNER PAYOUT · ${escapeUI(r.label.toUpperCase())} · ${escapeUI(String(r.diff).toUpperCase())}</div>
-                <div style="color:#b9c4d0">+${r.gold} gold · +${r.xp} XP${r.sp ? ` · +${r.sp} SP` : ""}${r.gems ? ` · +${r.gems} gems` : ""}${r.levels ? ` · <b style="color:#8ad17e">LEVEL ${P.lv}</b>` : ""}</div>
-                ${(t === "towel" || t === "medstop") ? `<div style="margin-top:6px;color:#8ad17e;font-weight:400;font-size:10px;letter-spacing:.04em">Stoppages pay above a win in this game. That is deliberate.</div>` : ""}`;
-              host.appendChild(card);
-            }
-          }
+          const host = $("#m");
+          if (host) host.insertAdjacentHTML("beforeend", takePayoutCard());
           return out;
         };
         wrapped.__wrapped = true;
@@ -6146,6 +6160,7 @@ window.__openRealArena=(function(){
         let h = "";
         if (G.msg || ch)
           h += `<div class="c res">${ch ? `<div>${ch}</div>` : ""}${G.msg ? compactMessage(G.msg) : ""}</div>`;
+        h += takePayoutCard();
         /* deliberately NOT run through compactMessage — this one is the
            lesson, and compacting it to a single clause would gut it */
         if (G.counter) {
@@ -6853,6 +6868,7 @@ window.__openRealArena=(function(){
         const m = G.me;
         if (m.sdh) return er();
         if (hasConcern()) return end("withdraw");
+        G.boutPaid = false;
         F = {
           r: 1,
           R: G.champ ? 5 : 3,
@@ -7166,6 +7182,11 @@ window.__openRealArena=(function(){
           cw = G.cutw,
           o = G.opp;
         G.cutw = false;
+        /* Every bout pays here, once, however it ends; the title fight pays
+           as "champ" when it is won. Most results go back to the camp and
+           never reach end(), so paying only from the end() hook left them
+           unpaid and uncounted. */
+        payBout(G.champ && t === "win" ? "champ" : t);
         if (!["win", "lose", "medstop", "towel"].includes(t)) return end(t);
         const W = t == "win";
         if (W) G.w++;
