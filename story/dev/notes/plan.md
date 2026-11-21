@@ -85,3 +85,11 @@ Foundation run wf_d5463e14-ce8 complete (commit 09367aa). RUNNING now:
 - `story-chapters-a.js` (chapters 0–5): task wcuwnepn3, run wf_eab357b2-3c0
 - `story-chapters-b.js` (chapters 6–10): task w2k75uq5k, run wf_a842f7ec-ec9
 Resume either after a stop: Workflow({scriptPath: <session scripts>/story-chapters-a.js or -b.js, resumeFromRunId}) — only when the user says so.
+
+## Paused at the usage line — 05:59 KST, 2026-11-22 (5-hour 70%, weekly 82%)
+
+Eleven chapter authors took the 5-hour window from 25% to 70% in 12 minutes (and weekly 76% -> 82%), so both chapter runs were stopped before the next check could overshoot 80%. Little chapter code was on disk yet (authors were still reading). Stopped:
+- `story-chapters-a.js` (0–5): run wf_eab357b2-3c0
+- `story-chapters-b.js` (6–10): run wf_a842f7ec-ec9
+Resume: Workflow({scriptPath: <session scripts>/story-chapters-a.js | -b.js, resumeFromRunId}) — only when the user says so.
+Weekly line 95% leaves ~13 points; at this rate the chapters need more than that. Options for the user: wait for the weekly reset (Nov 26, 15:00 KST), raise the weekly line, or run fewer authors at a time.
