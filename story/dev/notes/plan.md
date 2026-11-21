@@ -38,3 +38,7 @@ Design task wzztkdvqp, engine task welalgoh8 (same run ids). Pause at 70% this w
 ## Paused — 12:57 KST, 2026-11-20 (5-hour at 78%, weekly 44%; account usage limit reached)
 
 Same run ids and scripts (design wf_b87e3322-06d, engine wf_a47653da-b10); still no agent had returned. world.js was mid-write (syntax incomplete). Next 5-hour reset 15:40 KST.
+
+## On hold by the user — 2026-11-21
+
+The user said: "dont resume the code until i tell u". No workflow is running and no resume job is scheduled. Do not restart either workflow until the user says so; then resume with the run ids and scripts above.
