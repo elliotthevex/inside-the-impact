@@ -27,6 +27,7 @@
 | Ch8 Jin wraps alone | `stillness` | 6.0 s | the count restarts |
 | Ch10 E1.1 cut the chain | `holdE` | 2.0 s | the jaws open again; the hold restarts |
 | Ch10 E1.3 `Hold the door` | `holdE` | 10.0 s | progress pauses (no reset); the door swings to against the chair; Carrow: "Champ." |
+
 - **Archetype ids.** Encounters use the engine's archetype ids: `collector`, `thug`, `trained_boxer`, `guard`, `director`, `boss collector`, `champion`, sparring partner, heavy bag / dummy (with a light "swing dummy" variant that launches like a light enemy, Ch5). There is no ally-combatant AI, no protector archetype, no hazard-tile system and no enemy ladder-climbing anywhere in the bible; scenes that seemed to need them are staged with scripted beats, trigger zones and spawn points (Ch4, Ch6, Ch9, Ch10).
 
 ## Cast bible

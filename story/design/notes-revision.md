@@ -14,9 +14,9 @@ Task: apply the fidelity + buildability critic findings (66 findings) to story/B
 - [x] Read BRIEF.md
 - [x] Read ref-story.pdf (12/12), ref-movement-art.pdf (10/10) via PDFKit text (Read tool has no pdftoppm)
 - [x] ch00  - [x] ch01  - [x] ch02  - [x] ch03  - [x] ch04  - [x] ch05
-- [x] ch06  - [x] ch07  - [x] ch08  - [x] ch09  - [ ] ch10  - [ ] global  - [ ] decisions
-- [ ] 99-revision-log.md written
-- [ ] BIBLE.md rebuilt + id cross-check
+- [x] ch06  - [x] ch07  - [x] ch08  - [x] ch09  - [ ] ch10  - [x] global  - [x] decisions
+- [x] 99-revision-log.md written
+- [x] BIBLE.md rebuilt + id cross-check (flags/ev/mem/bel/locations all consistent; every section grew)
 
 ## Decisions taken in this run
 (see 00-decisions.md items 21+ once written)
@@ -29,3 +29,4 @@ Task: apply the fidelity + buildability critic findings (66 findings) to story/B
 - NEXT: ch10 then global, decisions, revision log, rebuild.
 - Ch10 done: Tran/Pryor renames, Slim covered line, gate thoughts split + pike_unpromised + pull thought (7) before fixed last (8), holdE cut/door, Restrain = E scripted seq, cutter-man scripted path, Deshawn scripted tackle (wave 3 -1), title fight no pause, epilogue reordered by date, Teddy knuckles line, Thursday props per visit, courthouse_steps/room_above_hans. ch03 boxer->trained_boxer. ch06 Arnie Dukes, button holdE.
 - NOW: global (01-global.md), then decisions, then 99-revision-log.md, rebuild.
+- RUN COMPLETE (2026-11-22): 72 findings, 71 applied, 1 no change, 0 rejected. BIBLE.md rebuilt from bible-parts with assemble.sh (scratchpad). Assembly recipe for a rebuild: cat 00-decisions (drop '<!-- end' lines), then '\n## Contents' block (13 lines, see top of BIBLE.md), '\n', 01-global, then '\n\n'+each of ch00..ch10 and 99-revision-log, trailing '\n\n'.
