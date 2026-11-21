@@ -56,3 +56,7 @@ Weekly budget left before 95%: ~32 points; the last full run used ~13. Chapters 
 
 Engine run wf_a47653da-b10 complete (15 agents; 24 findings handled; verify PASS; commit 2060907). Bible run wf_b87e3322-06d complete (72 findings, 71 applied; commit 37a02cf). `story/BIBLE.md` is 555 KB; authors should read `story/design/bible-parts/01-global.md` + their `chNN.md`.
 Next: chapters phase, lean (weekly line 95% leaves ~23 points): one agent for `chapters/cast.js` + `places.js`, then one author per chapter with headless `chapter N` self-test, then a campaign phase (headless both endings, fidelity + choices-wiring reviewers, fixers, final browser pass). Waiting for the user's go and the 5-hour reset at 04:59 KST.
+
+## Chapters phase approved — start at the 05:00 KST reset, 2026-11-22
+
+The user said "Yes, at the reset". Script: `~/.claude/projects/-Users-elliot-jeong-Desktop-Inside-the-Impact/ca804261-1003-4979-b90e-1f8fbae65bec/workflows/scripts/story-chapters.js` — foundation (cast.js, places.js, README) -> 11 chapter authors (each self-tests headless under both policies) -> campaign integrator (both endings) -> 5 reviewers (fidelity 0-3 / 4-7 / 8-10, choices wiring, in-browser play) -> 3 fixers by chapter group -> final verifier. A session cron starts it at 05:02 KST; usage is checked every ~15 minutes and the run pauses at 74% and waits for the user (no auto-resume after a reset).
