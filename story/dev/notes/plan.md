@@ -46,3 +46,8 @@ The user said: "dont resume the code until i tell u". No workflow is running and
 ## Resumed by the user ("continue") — 18:19 KST, 2026-11-21 (5-hour 7%, weekly 50%)
 
 Design task wjgu399fh, engine task wz9gs7ydg (same run ids). Per the user, no timer polling of usage; check at natural checkpoints (a workflow finishing, before the next phase). If the account limit cuts agents off, the run resumes from partial files.
+
+## Retried by the user ("Try again") — 00:10 KST, 2026-11-22 (5-hour 4%, weekly 63%)
+
+Last run: all eight engine builders and all three drafts finished (cached). Failed and now re-running: bible synthesize (network error), critics, revise; engine integrate, reviews, fixes, verify (5-hour limit). To fit the weekly 95% line, reviews were trimmed to movement + visual (engine) and fidelity + buildability (bible). Design task wtnqgz7p1, engine task wxvhvxhoc.
+Weekly budget left before 95%: ~32 points; the last full run used ~13. Chapters and campaign verification will need a leaner plan or the weekly reset (Nov 26 15:00 KST).
