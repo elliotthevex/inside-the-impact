@@ -78,3 +78,10 @@ The single chapters run (wf_06933f2e-cd8) was stopped after a minute and replace
 4. `story-review-a.js` and `story-review-b.js` at the same time: per-chapter reviewer -> fixer pipelines.
 5. `story-verify.js` — two browser play-testers, shared fixer, final verifier.
 Usage: one-shot checks about every 15 minutes; at 74% of the 5-hour window stop every running Story Mode workflow, commit WIP, and wait for the user.
+
+## Foundation done; 11 chapter authors running — 05:47 KST, 2026-11-22 (5-hour 25%, weekly 76%)
+
+Foundation run wf_d5463e14-ce8 complete (commit 09367aa). RUNNING now:
+- `story-chapters-a.js` (chapters 0–5): task wcuwnepn3, run wf_eab357b2-3c0
+- `story-chapters-b.js` (chapters 6–10): task w2k75uq5k, run wf_a842f7ec-ec9
+Resume either after a stop: Workflow({scriptPath: <session scripts>/story-chapters-a.js or -b.js, resumeFromRunId}) — only when the user says so.
