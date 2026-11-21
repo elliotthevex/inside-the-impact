@@ -93,3 +93,7 @@ Eleven chapter authors took the 5-hour window from 25% to 70% in 12 minutes (and
 - `story-chapters-b.js` (6–10): run wf_a842f7ec-ec9
 Resume: Workflow({scriptPath: <session scripts>/story-chapters-a.js | -b.js, resumeFromRunId}) — only when the user says so.
 Weekly line 95% leaves ~13 points; at this rate the chapters need more than that. Options for the user: wait for the weekly reset (Nov 26, 15:00 KST), raise the weekly line, or run fewer authors at a time.
+
+## Chapters 0–2 started now — 06:03 KST, 2026-11-22 (the user: "Chapters 0–2 at 10:00", then "do it right now")
+
+RUNNING: `story-chapters-012.js` — task wbspxx5bl, run wf_747d9e2f-9a8 (three authors at once). The 5-hour window was at 70% when the user said to start now, so this run goes past the 80% line and may hit the 5-hour limit around 06:30; agents keep their partial files and the run resumes from them after the 10:00 KST reset, when the user says so. Weekly guard: stop at 93%.
