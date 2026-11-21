@@ -68,3 +68,13 @@ The user asked to "push it to live", then chose to wait for the chapters: push t
 ## Chapters phase started — 05:04 KST, 2026-11-22 (5-hour 1%, weekly 73%)
 
 Task wrfokh85v, run wf_06933f2e-cd8, script `~/.claude/projects/-Users-elliot-jeong-Desktop-Inside-the-Impact/ca804261-1003-4979-b90e-1f8fbae65bec/workflows/scripts/story-chapters.js`. Resume after a stop: Workflow({scriptPath, resumeFromRunId: "wf_06933f2e-cd8"}) — only when the user says so.
+
+## More agents in parallel — 05:12 KST, 2026-11-22 (the user: "apply a lot of agents, so it works faster")
+
+The single chapters run (wf_06933f2e-cd8) was stopped after a minute and replaced by parallel workflows (scripts in the session's workflows/scripts folder), launched in this order as each finishes:
+1. `story-foundation.js` — cast.js and places.js + README in parallel. RUNNING: task wj1vos3vk, run wf_d5463e14-ce8.
+2. `story-chapters-a.js` (chapters 0–5) and `story-chapters-b.js` (6–10) at the same time: 11 authors at once.
+3. `story-integrate.js` — campaign integrator (both endings).
+4. `story-review-a.js` and `story-review-b.js` at the same time: per-chapter reviewer -> fixer pipelines.
+5. `story-verify.js` — two browser play-testers, shared fixer, final verifier.
+Usage: one-shot checks about every 15 minutes; at 74% of the 5-hour window stop every running Story Mode workflow, commit WIP, and wait for the user.
