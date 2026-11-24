@@ -646,9 +646,13 @@
     // Remember the decision in plain words for the completion screen.
     const entry = { chapter: S.G.chapter, id: line.choiceId || (line.text ? line.text.slice(0, 60) : null), text: o.record || o.text,
       value: jsonSafe(value), minor: !(o.record || line.recordAll) };
-    S.G.choices.push(entry);
-    if (S.G.choices.length > 400) S.G.choices.splice(0, S.G.choices.length - 400);
-    lastChoice = { entry, runner: D.cur || line.owner };
+    // A choice opened with { record: false } (a puzzle answer, not a decision) is never listed.
+    if (line.noRecord) { lastChoice = null; }
+    else {
+      S.G.choices.push(entry);
+      if (S.G.choices.length > 400) S.G.choices.splice(0, S.G.choices.length - 400);
+      lastChoice = { entry, runner: D.cur || line.owner };
+    }
     S.events.emit('choice', { id: entry.id, text: o.text, value: entry.value });
     S.audio.play('ui');
     D.progress++;
@@ -738,6 +742,7 @@
     line.options = vis;
     line.choiceId = opts.id || null;
     line.recordAll = !!opts.record;
+    line.noRecord = opts.record === false;
     line.choices = vis.map((o) => ({ text: String(o.text), enabled: enabledOf(o), hint: o.hint || null }));
     line.sel = Math.max(0, line.choices.findIndex((c) => c.enabled));
     S.events.emit('choices', line);

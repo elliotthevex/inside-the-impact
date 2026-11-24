@@ -89,3 +89,18 @@ opponent ladder, the medical thresholds and the sign logic that reads them, the
 progression maths, and a seeded exchange model built on the real constants. It
 does NOT drive the DOM bout flow, which is a timer chain and needs a headless
 driver. That is the next layer, not this one.
+
+## 4. `accounts/e2e.py` — does the login work?
+
+The Corner Pass (login screen) and its accounts API, `functions/api/[[route]].js`:
+
+```sh
+python3 -I tools/accounts/e2e.py --shots /tmp/cp-shots
+```
+
+Starts `accounts/devserver.py` with a throwaway database and drives two
+muted headless Chromes through sign-up, sign-in, sync between computers,
+the wrong-password pause, Text Size, Reduced Motion and guest-only mode.
+Exit code 0 means every check passed. `smoke.js` continues past the Corner
+Pass as a guest, so layers 2 and 3 still run as before. Switching accounts
+on in Cloudflare: `accounts/SETUP.md`.

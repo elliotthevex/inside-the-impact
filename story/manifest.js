@@ -6,8 +6,11 @@
 (function (root) {
   'use strict';
 
+  // The last chapter in this build. Raise it as chapters are written (the story has 0..10);
+  // the title lists only chapters that register, and finishing the last one shows "to be continued".
+  const LAST_CHAPTER = 2;
   const CHAPTERS = [];
-  for (let n = 0; n <= 10; n++) CHAPTERS.push('story/chapters/c' + (n < 10 ? '0' : '') + n + '.js');
+  for (let n = 0; n <= LAST_CHAPTER; n++) CHAPTERS.push('story/chapters/c' + (n < 10 ? '0' : '') + n + '.js');
 
   // Load order matters: each file extends window.STORY created by core.js; main.js comes last.
   root.STORY_FILES = [

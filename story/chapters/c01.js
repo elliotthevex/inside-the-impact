@@ -1716,7 +1716,7 @@
         yield A.say('earl', "Sunday's crossword. Seven letters. 'A fighter throws it first.' I've got an O at the front and a G at the end.");
         const v = yield A.choice('Seven letters, O _ _ _ _ _ G.', [
           { text: 'OPENING', value: 'ok', autoplay: true }, { text: 'JAB', value: 'no' }, { text: 'OVERHAND', value: 'no' },
-        ], { who: 'earl', id: 'c01_clue1' });
+        ], { who: 'earl', id: 'c01_clue1', record: false });
         if (v !== 'ok') { yield A.say('earl', "Doesn't fit. Count the boxes, kid. Seven."); return; }
         yield A.say('earl', 'Opening. Huh. You\'d know.');
         yield A.think("You throw it first or you don't throw anything.");
@@ -1724,11 +1724,11 @@
         return;
       }
       if (n === 1) {
-        yield A.say('earl', "Seven letters. 'Calder's old employer, closed in '92.' F, then a U.");
-        const v = yield A.choice('Seven letters, F U _ _ _ _ _.', [
+        yield A.say('earl', "Seven letters. 'Calder's old employer, closed in '92.' F, O, U up front.");
+        const v = yield A.choice('Seven letters, F O U _ _ _ _.', [
           { text: 'FOUNDRY', value: 'ok', autoplay: true }, { text: 'FORGE', value: 'no' }, { text: 'FACTORY', value: 'no' },
-        ], { who: 'earl', id: 'c01_clue2' });
-        if (v !== 'ok') { yield A.say('earl', "Second letter's a U. Read it again."); return; }
+        ], { who: 'earl', id: 'c01_clue2', record: false });
+        if (v !== 'ok') { yield A.say('earl', "Third letter's a U. Read it again."); return; }
         yield A.say('earl', 'Foundry. Ha. Forty years I rigged steel down there.');
         yield A.say('earl', "Closed in March of '92. Chained the gates. The bank's men took the copper out that summer and nobody went in after. Nobody.");
         yield A.say('earl', "Salvage. Huh. There was nothing left to salvage by '93.");
@@ -1739,7 +1739,7 @@
       yield A.say('earl', "Four letters. 'What's on a bed card.' Ends in an E.");
       const v = yield A.choice('Four letters, _ _ _ E.', [
         { text: 'NAME', value: 'ok', autoplay: true }, { text: 'TAG', value: 'no' }, { text: 'NUMBER', value: 'no' },
-      ], { who: 'earl', id: 'c01_clue3' });
+      ], { who: 'earl', id: 'c01_clue3', record: false });
       if (v !== 'ok') { yield A.say('earl', "Four boxes. Ends in E."); return; }
       yield A.say('earl', 'Name.');
       yield 0.8;

@@ -7,7 +7,8 @@
  *
  * Run it in the browser pane against the LOCAL file before deploying:
  *   1. open file:///…/index.html
- *   2. wait ~9s for the boot screen to clear
+ *   2. wait ~9s for the boot screen to clear (the Corner Pass login then
+ *      shows; this script continues past it as a guest)
  *   3. paste this whole file into the JS console / javascript_tool
  * It returns {pass, failures, checks}. Deploy only on pass: true.
  */
@@ -29,6 +30,20 @@
      "init threw before bootUp(); check the console for a ReferenceError");
   ok("lobby built", !!document.querySelector(".lobby"));
   ok("reward hook installed", typeof end === "function" && !!end.__wrapped);
+
+  /* ── 1b. the Corner Pass (login) comes up after boot; continue as a
+     guest so the rest of the checks reach the hub. If it was already
+     dismissed by hand, that is fine too. ── */
+  ok("corner pass defined", typeof cornerPassOpen === "function" && typeof cornerSaved === "function");
+  if (document.querySelector(".cpass")) {
+    for (let i = 0; i < 40 && !document.querySelector("#cp-guest"); i++) await wait(150);
+    const guest = document.querySelector("#cp-guest");
+    ok("corner pass offers guest play", !!guest);
+    if (guest) guest.click();
+    await wait(400);
+    ok("corner pass closes for a guest", !document.querySelector(".cpass"));
+    ok("hub is reachable again", !document.querySelector(".lobby[inert]"));
+  }
 
   /* ── 2. every global the screens rely on ── */
   const needed = [
