@@ -101,3 +101,7 @@ RUNNING: `story-chapters-012.js` — task wbspxx5bl, run wf_747d9e2f-9a8 (three 
 ## Chapters 0–2 done — 2026-11-22 (usage limit reached)
 
 Run wf_747d9e2f-9a8 complete: c00.js, c01.js, c02.js written; each reaches its end headless under the restraint policy with no errors (commit 903ebc0). Left: chapters 3–10 (scripts story-chapters-a.js / -b.js with CHAPTERS trimmed to the rest), then story-integrate.js, story-review-a/-b.js, story-verify.js; then merge origin/main and ask the user before pushing live. Wait for the user before starting anything.
+
+## Released chapters 0–2 — 12:39 KST, 2026-11-24 (the user: "publish chapter 0-2, put it live")
+
+`main` = `dc0eb44`, live and checked (file hashes equal, smoke 24/24, parity 3bea3b59, Story Mode lists chapters 0–2). Next, when the user says so: chapters 3–10 (raise `LAST_CHAPTER` in story/manifest.js as they land), then integrate / per-chapter review / verify, then merge origin/main again and ask before the next push.
